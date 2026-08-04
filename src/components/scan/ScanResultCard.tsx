@@ -80,7 +80,7 @@ export function ScanResultCard({
       <div className="flex items-start gap-3">
         <span
           className={cn(
-            'grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-xl font-black',
+            'grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-xl font-bold',
             style.badge,
           )}
         >
@@ -88,11 +88,11 @@ export function ScanResultCard({
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black">{style.title}</p>
+          <p className="text-sm font-bold">{style.title}</p>
 
           {result.guest ? (
             <>
-              <p className="mt-0.5 truncate font-display text-xl font-black">
+              <p className="mt-0.5 truncate font-display text-xl font-bold">
                 {result.guest.name}
               </p>
               <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">

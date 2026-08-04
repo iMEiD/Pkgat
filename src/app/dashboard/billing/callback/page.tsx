@@ -20,7 +20,7 @@ export default async function PaymentCallbackPage({
     return (
       <Card className="mx-auto max-w-lg p-8 text-center">
         <p className="text-4xl">🤔</p>
-        <h1 className="mt-4 font-display text-2xl font-black text-ink">صفحة غير مكتملة</h1>
+        <h1 className="mt-4 font-display text-2xl font-bold text-ink">صفحة غير مكتملة</h1>
         <p className="mt-2 text-sm text-ink-soft">لم نستلم معرّف عملية الدفع.</p>
         <ButtonLink href="/dashboard/billing" className="mt-6">
           العودة لصفحة الدفع
@@ -41,7 +41,7 @@ export default async function PaymentCallbackPage({
   return (
     <Card className="mx-auto max-w-lg p-8 text-center">
       <p className="text-5xl">{visual.emoji}</p>
-      <h1 className="mt-4 font-display text-2xl font-black text-ink">{visual.title}</h1>
+      <h1 className="mt-4 font-display text-2xl font-bold text-ink">{visual.title}</h1>
 
       <Alert tone={visual.tone} className="mt-5 text-right">
         {result.message}

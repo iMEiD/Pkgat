@@ -48,7 +48,7 @@ export default async function AboutPage() {
           {values.map((v, i) => (
             <Reveal key={v.title} delay={i * 90}>
               <Card interactive className="h-full p-6">
-                <span className="font-display text-3xl font-black text-grape-200">
+                <span className="font-display text-3xl font-bold text-grape-200">
                   {String(i + 1).padStart(2, '0')}
                 </span>
                 <h3 className="mt-2 text-base font-bold text-ink">{v.title}</h3>

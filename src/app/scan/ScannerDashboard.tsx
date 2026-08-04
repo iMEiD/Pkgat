@@ -258,7 +258,7 @@ export function ScannerDashboard({
 function Counter({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
     <div className="px-3 py-3 text-center">
-      <p className={cn('font-display text-2xl font-black tabular-nums', tone)}>
+      <p className={cn('font-display text-2xl font-bold tabular-nums', tone)}>
         {formatNumber(value)}
       </p>
       <p className="text-[11px] text-white/50">{label}</p>

@@ -198,7 +198,7 @@ export function QrCamera({
             {state === 'denied' && (
               <>
                 <p className="text-3xl">📷</p>
-                <h2 className="mt-3 font-display text-lg font-black text-white">
+                <h2 className="mt-3 font-display text-lg font-bold text-white">
                   الكاميرا محجوبة
                 </h2>
                 <p className="mt-2 text-sm leading-7 text-white/65">
@@ -214,7 +214,7 @@ export function QrCamera({
             {state === 'unsupported' && (
               <>
                 <p className="text-3xl">🚫</p>
-                <h2 className="mt-3 font-display text-lg font-black text-white">
+                <h2 className="mt-3 font-display text-lg font-bold text-white">
                   المتصفح لا يدعم الكاميرا
                 </h2>
                 <p className="mt-2 text-sm leading-7 text-white/65">
@@ -227,7 +227,7 @@ export function QrCamera({
             {state === 'error' && (
               <>
                 <p className="text-3xl">⚠️</p>
-                <h2 className="mt-3 font-display text-lg font-black text-white">
+                <h2 className="mt-3 font-display text-lg font-bold text-white">
                   تعذّر تشغيل الكاميرا
                 </h2>
                 <p className="mt-2 text-sm leading-7 text-white/65">

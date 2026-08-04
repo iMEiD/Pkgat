@@ -30,7 +30,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <Card className="p-7 sm:p-8">
-      <h1 className="font-display text-2xl font-black text-ink">استعادة كلمة المرور</h1>
+      <h1 className="font-display text-2xl font-bold text-ink">استعادة كلمة المرور</h1>
       <p className="mt-1.5 text-sm text-ink-soft">
         أدخل بريدك وسنرسل لك رابط إعادة تعيين كلمة المرور.
       </p>

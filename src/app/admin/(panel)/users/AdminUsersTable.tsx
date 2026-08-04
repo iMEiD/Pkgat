@@ -56,7 +56,7 @@ export function AdminUsersTable({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-black text-ink">المستخدمون</h1>
+        <h1 className="font-display text-3xl font-bold text-ink">المستخدمون</h1>
         <p className="mt-1.5 text-sm text-ink-soft">
           {formatNumber(users.length)} حساب مسجّل على المنصة.
         </p>

@@ -70,7 +70,7 @@ export function BillingClient({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-black text-ink">الاشتراك والدفع</h1>
+        <h1 className="font-display text-3xl font-bold text-ink">الاشتراك والدفع</h1>
         <p className="mt-1.5 text-sm text-ink-soft">
           ادفع لمناسبة واحدة، أو اشترك لمناسبات غير محدودة.
         </p>
@@ -231,7 +231,7 @@ function PlanCard({
       )}
 
       <p className="mt-4 flex items-baseline gap-2">
-        <span className="font-display text-2xl font-black text-ink">
+        <span className="font-display text-2xl font-bold text-ink">
           {formatPrice(plan.price_halalas, plan.currency)}
         </span>
         <span className="text-xs text-ink-faint">{billingLabel(plan.billing_period)}</span>

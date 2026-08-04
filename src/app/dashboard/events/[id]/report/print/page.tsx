@@ -64,7 +64,7 @@ export default async function PrintReportPage({ params }: { params: Promise<{ id
         {/* الترويسة */}
         <header className="flex items-start justify-between gap-6 border-b-2 border-ink pb-5">
           <div>
-            <h1 className="font-display text-2xl font-black text-ink">تقرير حضور المناسبة</h1>
+            <h1 className="font-display text-2xl font-bold text-ink">تقرير حضور المناسبة</h1>
             <p className="mt-1.5 text-lg font-bold text-ink">{event.title}</p>
             <p className="mt-1 text-sm text-ink-soft">
               {EVENT_TYPE_LABELS[event.event_type] ?? 'مناسبة'} · {formatDate(event.starts_at)}
@@ -97,7 +97,7 @@ export default async function PrintReportPage({ params }: { params: Promise<{ id
         {/* حسب الفئة */}
         {byTag.length > 0 && (
           <section className="pk-avoid-break mt-8">
-            <h2 className="font-display text-lg font-black text-ink">الحضور حسب الفئة</h2>
+            <h2 className="font-display text-lg font-bold text-ink">الحضور حسب الفئة</h2>
             <table className="mt-3 w-full text-sm">
               <thead>
                 <tr className="border-b border-ink/20 text-right text-xs text-ink-soft">
@@ -133,7 +133,7 @@ export default async function PrintReportPage({ params }: { params: Promise<{ id
 
         {/* التفصيل */}
         <section className="mt-8">
-          <h2 className="font-display text-lg font-black text-ink">
+          <h2 className="font-display text-lg font-bold text-ink">
             القائمة التفصيلية ({formatNumber(sorted.length)})
           </h2>
           <table className="mt-3 w-full text-sm">
@@ -181,7 +181,7 @@ export default async function PrintReportPage({ params }: { params: Promise<{ id
         {/* التجاوزات */}
         {(overrides ?? []).length > 0 && (
           <section className="pk-avoid-break mt-8">
-            <h2 className="font-display text-lg font-black text-ink">
+            <h2 className="font-display text-lg font-bold text-ink">
               حالات التجاوز اليدوي ({formatNumber((overrides ?? []).length)})
             </h2>
             <p className="mt-1 text-xs text-ink-soft">
@@ -236,7 +236,7 @@ function SummaryBox({
       }`}
     >
       <p className="text-[11px] font-semibold text-ink-soft">{label}</p>
-      <p className="mt-1 font-display text-2xl font-black tabular-nums text-ink">{value}</p>
+      <p className="mt-1 font-display text-2xl font-bold tabular-nums text-ink">{value}</p>
     </div>
   );
 }

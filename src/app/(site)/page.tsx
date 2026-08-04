@@ -58,7 +58,7 @@ export default async function HomePage() {
               {text(c, 'home.hero.eyebrow', 'دعوات إلكترونية بباركود دخول')}
             </span>
 
-            <h1 className="mt-5 font-display text-4xl font-black leading-[1.15] text-ink pk-balance sm:text-5xl lg:text-6xl">
+            <h1 className="mt-5 font-display text-4xl/[1.3] font-bold text-ink pk-balance sm:text-5xl/[1.26] lg:text-6xl/[1.24]">
               {text(c, 'home.hero.title', 'مناسبتك تبدأ من دعوة… وتنتهي بتقرير')}
             </h1>
 
@@ -83,7 +83,7 @@ export default async function HomePage() {
             <dl className="mt-12 grid max-w-lg grid-cols-3 gap-4">
               {stats.map((s, i) => (
                 <Reveal key={s.label} delay={i * 90}>
-                  <dt className="font-display text-xl font-black text-grape-600">{s.value}</dt>
+                  <dt className="font-display text-xl font-bold text-grape-600">{s.value}</dt>
                   <dd className="mt-1 text-xs leading-5 text-ink-soft">{s.label}</dd>
                 </Reveal>
               ))}
@@ -135,7 +135,7 @@ export default async function HomePage() {
             {steps.map((s, i) => (
               <Reveal key={s.title} delay={i * 90} as="li">
                 <div className="relative">
-                  <span className="grid h-11 w-11 place-items-center rounded-2xl bg-grape-500 font-display text-lg font-black text-white shadow-pop">
+                  <span className="grid h-11 w-11 place-items-center rounded-2xl bg-grape-500 font-display text-lg font-bold text-white shadow-pop">
                     {i + 1}
                   </span>
                   {i < steps.length - 1 && (
@@ -166,7 +166,7 @@ export default async function HomePage() {
               aria-hidden="true"
             />
             <div className="relative">
-              <h2 className="font-display text-3xl font-black leading-tight pk-balance sm:text-4xl">
+              <h2 className="font-display text-3xl/snug font-bold pk-balance sm:text-4xl/snug">
                 {text(c, 'home.cta.title', 'جرّب بكجات على أول ١٠ دعوات مجاناً')}
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-base leading-8 text-white/85">
@@ -207,13 +207,13 @@ function HeroArtwork() {
           <div className="flex h-full flex-col items-center justify-between text-center">
             <div>
               <p className="text-[11px] font-bold tracking-[0.3em] text-ink-faint">دعوة خاصة</p>
-              <p className="mt-6 font-display text-2xl font-black text-ink">حفل زواج</p>
+              <p className="mt-6 font-display text-2xl font-bold text-ink">حفل زواج</p>
               <p className="mt-1 text-xs text-ink-soft">الجمعة ١٢ سبتمبر · قاعة الماسة</p>
             </div>
 
             <div>
               <p className="text-[11px] text-ink-faint">المدعو الكريم</p>
-              <p className="mt-1 font-display text-xl font-black text-grape-600">عبدالله الشمري</p>
+              <p className="mt-1 font-display text-xl font-bold text-grape-600">عبدالله الشمري</p>
             </div>
 
             <div className="rounded-2xl bg-white p-3 shadow-soft">

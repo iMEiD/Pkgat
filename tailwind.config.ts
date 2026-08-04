@@ -73,8 +73,20 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-ui)', 'Tajawal', 'system-ui', 'sans-serif'],
-        display: ['var(--font-display)', 'Cairo', 'system-ui', 'sans-serif'],
+        // المصدر الحقيقي للقيم هو متغيّرا CSS في globals.css
+        sans: ['var(--font-ui)', 'IBM Plex Sans Arabic', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'El Messiri', 'system-ui', 'sans-serif'],
+      },
+      fontWeight: {
+        /*
+         * خطا الواجهة (El Messiri وIBM Plex Sans Arabic) يتوقفان عند ٧٠٠.
+         * طلب وزن أثقل يجعل المتصفح يزوّر السُمك (faux bold) بنتيجة مشوّهة،
+         * لذلك نقصر الأدوات على الأوزان المتاحة فعلاً.
+         */
+        normal: '400',
+        medium: '500',
+        semibold: '600',
+        bold: '700',
       },
       borderRadius: {
         xl: '0.875rem',

@@ -57,7 +57,7 @@ export function AdminVerifyForm({ alreadyEnabled }: { alreadyEnabled: boolean })
       <div className="w-full max-w-md animate-fade-up">
         <div className="mb-6 flex flex-col items-center text-center">
           <LogoMark className="h-14 w-14 rounded-3xl bg-ink" />
-          <h1 className="mt-4 font-display text-2xl font-black text-ink">تحقق الأدمن</h1>
+          <h1 className="mt-4 font-display text-2xl font-bold text-ink">تحقق الأدمن</h1>
           <p className="mt-1.5 text-sm text-ink-soft">
             لوحة الأدمن تتحكم بالمنصة كاملة — تحتاج طبقة أمان إضافية.
           </p>

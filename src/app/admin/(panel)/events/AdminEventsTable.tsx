@@ -61,7 +61,7 @@ export function AdminEventsTable({ events }: { events: AdminEventRow[] }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-black text-ink">كل المناسبات</h1>
+        <h1 className="font-display text-3xl font-bold text-ink">كل المناسبات</h1>
         <p className="mt-1.5 text-sm text-ink-soft">
           {formatNumber(events.length)} مناسبة لكل المستخدمين. تقدر تدخل على أي مناسبة وتعدّل
           عليها نيابة عن صاحبها.

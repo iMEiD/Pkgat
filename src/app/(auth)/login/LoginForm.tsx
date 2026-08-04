@@ -47,7 +47,7 @@ export function LoginForm({
 
   return (
     <Card className="p-7 sm:p-8">
-      <h1 className="font-display text-2xl font-black text-ink">أهلاً بعودتك</h1>
+      <h1 className="font-display text-2xl font-bold text-ink">أهلاً بعودتك</h1>
       <p className="mt-1.5 text-sm text-ink-soft">سجّل دخولك لإدارة مناسباتك ودعواتك.</p>
 
       {justRegistered && (

@@ -24,7 +24,7 @@ export function AccountSettings({ profile, email }: { profile: Profile; email: s
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-black text-ink">إعدادات الحساب</h1>
+        <h1 className="font-display text-3xl font-bold text-ink">إعدادات الحساب</h1>
         <p className="mt-1.5 text-sm text-ink-soft">
           عضو منذ {formatDate(profile.created_at)}
         </p>

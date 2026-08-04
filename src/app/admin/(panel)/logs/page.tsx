@@ -38,7 +38,7 @@ export default async function AdminLogsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-black text-ink">السجلات</h1>
+        <h1 className="font-display text-3xl font-bold text-ink">السجلات</h1>
         <p className="mt-1.5 text-sm text-ink-soft">
           الأخطاء التقنية العامة للمنصة، وسجل الإجراءات الإدارية.
         </p>

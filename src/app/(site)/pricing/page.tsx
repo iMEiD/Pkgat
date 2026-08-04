@@ -117,7 +117,7 @@ function PlanGrid({
   return (
     <div className={cn('mt-12', className)}>
       <div className="mb-6 text-center">
-        <h3 className="font-display text-xl font-black text-ink">{title}</h3>
+        <h3 className="font-display text-xl font-bold text-ink">{title}</h3>
         <p className="mt-1 text-sm text-ink-soft">{subtitle}</p>
       </div>
 
@@ -146,7 +146,7 @@ function PlanGrid({
               )}
 
               <p className="mt-5 flex items-baseline gap-2">
-                <span className="font-display text-3xl font-black text-ink">
+                <span className="font-display text-3xl font-bold text-ink">
                   {formatPrice(plan.price_halalas, plan.currency)}
                 </span>
                 {plan.price_halalas > 0 && (

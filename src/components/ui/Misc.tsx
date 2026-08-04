@@ -60,7 +60,7 @@ export function Stat({
     >
       <span className={cn('absolute inset-y-0 right-0 w-1', bars[tone])} />
       <p className="text-xs font-semibold text-ink-faint">{label}</p>
-      <p className="mt-1 font-display text-2xl font-black tabular-nums text-ink">{value}</p>
+      <p className="mt-1 font-display text-2xl font-bold tabular-nums text-ink">{value}</p>
       {hint && <p className="mt-0.5 text-xs text-ink-soft">{hint}</p>}
     </div>
   );
@@ -123,7 +123,7 @@ export function SectionTitle({
           {eyebrow}
         </span>
       )}
-      <h2 className="mt-3 font-display text-3xl font-black leading-tight text-ink pk-balance sm:text-4xl">
+      <h2 className="mt-3 font-display text-3xl/snug font-bold text-ink pk-balance sm:text-4xl/snug">
         {title}
       </h2>
       {subtitle && <p className="mt-3 text-base leading-8 text-ink-soft">{subtitle}</p>}

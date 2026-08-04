@@ -71,7 +71,7 @@ export function SignupForm() {
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-mint-50 text-3xl">
           ✉️
         </div>
-        <h1 className="mt-5 font-display text-2xl font-black text-ink">فعّل بريدك</h1>
+        <h1 className="mt-5 font-display text-2xl font-bold text-ink">فعّل بريدك</h1>
         <p className="mt-3 text-sm leading-8 text-ink-soft">
           أرسلنا رابط تأكيد إلى <span className="font-bold text-ink" dir="ltr">{email}</span>.
           <br />
@@ -89,7 +89,7 @@ export function SignupForm() {
 
   return (
     <Card className="p-7 sm:p-8">
-      <h1 className="font-display text-2xl font-black text-ink">أنشئ حسابك</h1>
+      <h1 className="font-display text-2xl font-bold text-ink">أنشئ حسابك</h1>
       <p className="mt-1.5 text-sm text-ink-soft">
         أول ١٠ دعوات في كل مناسبة مجاناً — بدون بطاقة.
       </p>

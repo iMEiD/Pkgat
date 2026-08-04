@@ -31,11 +31,44 @@ export const FONTS: FontOption[] = [
 
 export const DEFAULT_FONT = 'Tajawal';
 
-/** رابط Google Fonts موحّد يغطي كل الخطوط أعلاه */
+/**
+ * خطوط واجهة الموقع نفسه (مستقلة عن قائمة خطوط الدعوات أعلاه).
+ *
+ * - El Messiri: العناوين والشعار وعناوين الأقسام البارزة.
+ * - IBM Plex Sans Arabic: النصوص العادية والفقرات وكل عناصر الواجهة.
+ *
+ * كلاهما يغطي العربية والإنجليزية والأرقام العربية والهندية بأوزان
+ * ٤٠٠ و٥٠٠ و٦٠٠ و٧٠٠ — وهذه أثقل الأوزان المتاحة فيهما، فلا يُطلب
+ * وزن أعلى منها في أي مكان حتى لا يزوّر المتصفح السُمك.
+ */
+export const UI_FONTS: FontOption[] = [
+  { family: 'El Messiri', label: 'المصيري — عناوين', weights: [400, 500, 600, 700], display: true },
+  { family: 'IBM Plex Sans Arabic', label: 'IBM بلكس — نصوص', weights: [400, 500, 600, 700] },
+];
+
+/** أثقل وزن متاح في خطوط الواجهة — تُبنى عليه أدوات Tailwind */
+export const UI_MAX_WEIGHT = 700;
+
+/**
+ * رابط Google Fonts موحّد يغطي خطوط الواجهة وخطوط الدعوات معاً.
+ * العائلات المكرّرة تُدمج بأوزانها مجتمعة حتى لا يتكرر التحميل.
+ */
 export function googleFontsHref(): string {
-  const families = FONTS.map(
-    (f) => `family=${f.family.replace(/ /g, '+')}:wght@${f.weights.join(';')}`,
-  ).join('&');
+  const byFamily = new Map<string, Set<number>>();
+
+  for (const font of [...UI_FONTS, ...FONTS]) {
+    const weights = byFamily.get(font.family) ?? new Set<number>();
+    font.weights.forEach((w) => weights.add(w));
+    byFamily.set(font.family, weights);
+  }
+
+  const families = [...byFamily.entries()]
+    .map(([family, weights]) => {
+      const sorted = [...weights].sort((a, b) => a - b).join(';');
+      return `family=${family.replace(/ /g, '+')}:wght@${sorted}`;
+    })
+    .join('&');
+
   return `https://fonts.googleapis.com/css2?${families}&display=swap`;
 }
 

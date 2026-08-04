@@ -41,7 +41,7 @@ export function Logo({
     >
       <LogoMark className="transition-transform duration-300 group-hover:rotate-[-6deg]" />
       <span className="flex flex-col leading-none">
-        <span className="font-display text-xl font-black tracking-[0.14em] text-ink" dir="ltr">
+        <span className="font-display text-xl font-bold tracking-[0.14em] text-ink" dir="ltr">
           PKGAT
         </span>
         {showTagline && (

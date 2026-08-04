@@ -17,7 +17,7 @@ export default async function SuspendedPage() {
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-coral-50 text-3xl">
           🔒
         </div>
-        <h1 className="mt-5 font-display text-2xl font-black text-ink">حسابك موقوف مؤقتاً</h1>
+        <h1 className="mt-5 font-display text-2xl font-bold text-ink">حسابك موقوف مؤقتاً</h1>
         <p className="mt-3 text-sm leading-8 text-ink-soft">
           تم إيقاف هذا الحساب من قِبل إدارة المنصة. للاستفسار أو إعادة التفعيل تواصل معنا على:
         </p>

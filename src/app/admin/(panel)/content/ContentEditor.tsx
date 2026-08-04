@@ -51,7 +51,7 @@ export function ContentEditor({
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-black text-ink">محتوى الموقع</h1>
+          <h1 className="font-display text-3xl font-bold text-ink">محتوى الموقع</h1>
           <p className="mt-1.5 text-sm text-ink-soft">
             كل نص في الموقع مخزّن هنا كبيانات — عدّله واحفظ، والتغيير يظهر مباشرة بدون كود.
           </p>

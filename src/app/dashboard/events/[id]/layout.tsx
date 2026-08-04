@@ -27,7 +27,7 @@ export default async function EventLayout({
           ← كل المناسبات
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-2xl font-black text-ink sm:text-3xl">{event.title}</h1>
+          <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">{event.title}</h1>
           <Badge tone={PHASE_TONES[phase]} dot>
             {PHASE_LABELS[phase]}
           </Badge>

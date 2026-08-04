@@ -48,7 +48,7 @@ export function ScannerLoginForm() {
       <div className="w-full max-w-sm animate-fade-up">
         <div className="mb-6 flex flex-col items-center text-center">
           <LogoMark className="h-14 w-14 rounded-3xl" />
-          <h1 className="mt-4 font-display text-2xl font-black text-ink">لوحة مسح الدعوات</h1>
+          <h1 className="mt-4 font-display text-2xl font-bold text-ink">لوحة مسح الدعوات</h1>
           <p className="mt-1.5 text-sm text-ink-soft">
             سجّل دخولك بالبيانات اللي وصلتك من صاحب المناسبة.
           </p>
