@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { DEFAULT_THEME, parseTheme, type Theme } from '@/lib/design/theme';
 
 export type ContentMap = Record<string, unknown>;
 
@@ -45,6 +46,22 @@ export async function getSettings(): Promise<Record<string, unknown>> {
     return Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
   } catch {
     return {};
+  }
+}
+
+/** هوية الموقع اللونية كما حفظها الأدمن — أو الافتراضية */
+export async function getTheme(): Promise<Theme> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'theme')
+      .maybeSingle();
+
+    return parseTheme(data?.value);
+  } catch {
+    return DEFAULT_THEME;
   }
 }
 

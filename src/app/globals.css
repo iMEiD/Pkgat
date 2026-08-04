@@ -15,6 +15,32 @@
   --font-ui: 'IBM Plex Sans Arabic';
   /* العناوين والشعار وعناوين الأقسام البارزة */
   --font-display: 'El Messiri';
+
+  /*
+   * ألوان الهوية الافتراضية (قنوات RGB مفصولة بمسافات).
+   * الخادم يحقن بدلاً منها ما حفظه الأدمن في لوحته — راجع
+   * src/lib/design/theme.ts و/admin/theme.
+   */
+  --pk-canvas: 255 253 249;
+  --pk-ink: 42 37 33;
+  --pk-ink-soft: 92 84 75;
+  --pk-ink-faint: 140 131 119;
+
+  --pk-primary-50: 242 238 255;
+  --pk-primary-100: 227 219 255;
+  --pk-primary-200: 199 184 255;
+  --pk-primary-300: 164 142 255;
+  --pk-primary-400: 132 104 255;
+  --pk-primary-500: 109 74 255;
+  --pk-primary-600: 90 52 232;
+  --pk-primary-700: 71 38 184;
+
+  --pk-sand-50: 253 250 244;
+  --pk-sand-100: 249 243 233;
+  --pk-sand-200: 242 233 217;
+  --pk-sand-300: 231 218 195;
+  --pk-sand-400: 216 198 168;
+  --pk-sand-500: 194 172 136;
 }
 
 @layer base {
@@ -25,7 +51,7 @@
   body {
     @apply bg-canvas text-ink font-sans antialiased;
     background-image:
-      radial-gradient(1100px 520px at 100% -8%, rgba(109, 74, 255, 0.07), transparent 60%),
+      radial-gradient(1100px 520px at 100% -8%, rgb(var(--pk-primary-500) / 0.07), transparent 60%),
       radial-gradient(900px 480px at -10% 4%, rgba(255, 107, 74, 0.07), transparent 60%);
     background-attachment: fixed;
   }
@@ -63,7 +89,7 @@
 
   /* شبكة نقطية خفيفة تُستخدم كخلفية للأقسام التسويقية */
   .pk-dots {
-    background-image: radial-gradient(rgba(194, 172, 136, 0.35) 1px, transparent 1px);
+    background-image: radial-gradient(rgb(var(--pk-sand-500) / 0.35) 1px, transparent 1px);
     background-size: 22px 22px;
   }
 

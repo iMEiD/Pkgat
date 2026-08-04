@@ -7,6 +7,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { markAdmin2faPassed, requireAdmin, requireUser } from '@/lib/auth/session';
 import type { ActionResult } from '@/lib/actions/events';
 import type { DesignConfig } from '@/lib/types/database';
+import { isValidHex, normalizeHex, type Theme } from '@/lib/design/theme';
 
 const ISSUER = 'PKGAT';
 
@@ -176,6 +177,39 @@ export async function deleteContentKey(key: string): Promise<ActionResult> {
 
   await logAdminAction('content.deleted', 'site_content', null, { key });
   revalidatePath('/admin/content');
+  revalidatePath('/', 'layout');
+  return { ok: true };
+}
+
+/** يحفظ ألوان الهوية — تُطبَّق على كل الصفحات فوراً */
+export async function saveTheme(theme: Theme): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  for (const [key, value] of Object.entries(theme)) {
+    if (!isValidHex(value)) {
+      return { ok: false, error: `اللون «${key}» غير صالح. استخدم صيغة #RRGGBB.` };
+    }
+  }
+
+  const clean: Theme = {
+    primary: normalizeHex(theme.primary),
+    canvas: normalizeHex(theme.canvas),
+    sand: normalizeHex(theme.sand),
+    ink: normalizeHex(theme.ink),
+  };
+
+  const { error } = await supabase
+    .from('site_settings')
+    .upsert(
+      { key: 'theme', value: clean, label: 'ألوان هوية الموقع', updated_at: new Date().toISOString() },
+      { onConflict: 'key' },
+    );
+
+  if (error) return { ok: false, error: 'تعذّر حفظ الألوان.' };
+
+  await logAdminAction('theme.updated', 'site_settings', null, { ...clean });
+  // الألوان تُحقن في التخطيط الجذري، فنُحدّث كل الصفحات
   revalidatePath('/', 'layout');
   return { ok: true };
 }

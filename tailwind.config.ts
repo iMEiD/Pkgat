@@ -10,31 +10,36 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // القاعدة الهادئة
-        canvas: '#FFFDF9',
+        /*
+         * القاعدة الهادئة واللون الأساسي يُقرآن من متغيرات CSS، فيقدر
+         * الأدمن يغيّر هوية الموقع من لوحته بدون إعادة بناء. القيم
+         * الافتراضية معرَّفة في globals.css ويستبدلها الخادم بما هو
+         * محفوظ في قاعدة البيانات.
+         */
+        canvas: 'rgb(var(--pk-canvas) / <alpha-value>)',
         sand: {
-          50: '#FDFAF4',
-          100: '#F9F3E9',
-          200: '#F2E9D9',
-          300: '#E7DAC3',
-          400: '#D8C6A8',
-          500: '#C2AC88',
+          50: 'rgb(var(--pk-sand-50) / <alpha-value>)',
+          100: 'rgb(var(--pk-sand-100) / <alpha-value>)',
+          200: 'rgb(var(--pk-sand-200) / <alpha-value>)',
+          300: 'rgb(var(--pk-sand-300) / <alpha-value>)',
+          400: 'rgb(var(--pk-sand-400) / <alpha-value>)',
+          500: 'rgb(var(--pk-sand-500) / <alpha-value>)',
         },
         ink: {
-          DEFAULT: '#2A2521',
-          soft: '#5C544B',
-          faint: '#8C8377',
+          DEFAULT: 'rgb(var(--pk-ink) / <alpha-value>)',
+          soft: 'rgb(var(--pk-ink-soft) / <alpha-value>)',
+          faint: 'rgb(var(--pk-ink-faint) / <alpha-value>)',
         },
-        // اللمسات الحيوية
+        // اللون الأساسي (قابل للتغيير من لوحة الأدمن)
         grape: {
-          50: '#F2EEFF',
-          100: '#E3DBFF',
-          200: '#C7B8FF',
-          300: '#A48EFF',
-          400: '#8468FF',
-          500: '#6D4AFF',
-          600: '#5A34E8',
-          700: '#4726B8',
+          50: 'rgb(var(--pk-primary-50) / <alpha-value>)',
+          100: 'rgb(var(--pk-primary-100) / <alpha-value>)',
+          200: 'rgb(var(--pk-primary-200) / <alpha-value>)',
+          300: 'rgb(var(--pk-primary-300) / <alpha-value>)',
+          400: 'rgb(var(--pk-primary-400) / <alpha-value>)',
+          500: 'rgb(var(--pk-primary-500) / <alpha-value>)',
+          600: 'rgb(var(--pk-primary-600) / <alpha-value>)',
+          700: 'rgb(var(--pk-primary-700) / <alpha-value>)',
         },
         coral: {
           50: '#FFF0EC',
@@ -97,7 +102,7 @@ const config: Config = {
       boxShadow: {
         soft: '0 1px 2px rgba(42,37,33,0.04), 0 8px 24px -12px rgba(42,37,33,0.16)',
         lift: '0 2px 4px rgba(42,37,33,0.05), 0 18px 40px -16px rgba(42,37,33,0.24)',
-        pop: '0 10px 30px -10px rgba(109,74,255,0.45)',
+        pop: '0 10px 30px -10px rgb(var(--pk-primary-500) / 0.45)',
       },
       keyframes: {
         'fade-up': {

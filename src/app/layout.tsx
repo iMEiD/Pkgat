@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 
 import { googleFontsHref } from '@/lib/design/fonts';
+import { themeToCssVars } from '@/lib/design/theme';
+import { getTheme } from '@/lib/cms';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -32,10 +34,18 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // ألوان الهوية تُقرأ من قاعدة البيانات وتُحقن كمتغيرات CSS، فتغييرها من
+  // لوحة الأدمن ينعكس على كل صفحات الموقع بدون إعادة بناء.
+  const theme = await getTheme();
+
   return (
     <html lang="ar" dir="rtl">
       <head>
+        <style
+          id="pk-theme"
+          dangerouslySetInnerHTML={{ __html: themeToCssVars(theme) }}
+        />
         {/*
           الخطوط تُحمَّل هنا وليس عبر next/font لأن نفس العائلات تُستخدم
           في الرسم على الكانفس، ونحتاج أسماء عائلات ثابتة نمررها إلى

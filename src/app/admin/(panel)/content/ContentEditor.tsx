@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Field, Input, Select, Textarea } from '@/components/ui/Field';
+import { ListEditor } from '@/components/admin/ListEditor';
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
 import {
@@ -113,6 +114,11 @@ function ContentRow({ item }: { item: SiteContent }) {
   const [value, setValue] = useState(() =>
     isList ? JSON.stringify(item.value, null, 2) : String(item.value ?? ''),
   );
+  // القوائم تُحرَّر بحقول مرتّبة؛ الوضع الخام متاح للحالات الاستثنائية
+  const [listValue, setListValue] = useState<Record<string, string>[]>(() =>
+    Array.isArray(item.value) ? (item.value as Record<string, string>[]) : [],
+  );
+  const [rawMode, setRawMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -123,11 +129,15 @@ function ContentRow({ item }: { item: SiteContent }) {
 
     let parsed: unknown = value;
     if (isList) {
-      try {
-        parsed = JSON.parse(value);
-      } catch {
-        setError('صيغة JSON غير صحيحة — راجع الأقواس والفواصل.');
-        return;
+      if (rawMode) {
+        try {
+          parsed = JSON.parse(value);
+        } catch {
+          setError('صيغة JSON غير صحيحة — راجع الأقواس والفواصل.');
+          return;
+        }
+      } else {
+        parsed = listValue;
       }
     }
 
@@ -182,13 +192,17 @@ function ContentRow({ item }: { item: SiteContent }) {
         )}
 
         {isList ? (
-          <Textarea
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            rows={Math.min(18, value.split('\n').length + 1)}
-            dir="ltr"
-            className="font-mono text-xs leading-6"
-          />
+          rawMode ? (
+            <Textarea
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              rows={Math.min(18, value.split('\n').length + 1)}
+              dir="ltr"
+              className="font-mono text-xs leading-6"
+            />
+          ) : (
+            <ListEditor value={listValue} onChange={setListValue} />
+          )
         ) : item.kind === 'richtext' ? (
           <Textarea value={value} onChange={(e) => setValue(e.target.value)} rows={6} />
         ) : (
@@ -201,9 +215,27 @@ function ContentRow({ item }: { item: SiteContent }) {
           </Button>
           {saved && <span className="text-xs font-bold text-mint-600">تم الحفظ ✓</span>}
           {isList && (
-            <span className="text-xs text-ink-faint">
-              القوائم تُحرَّر بصيغة JSON — حافظ على أسماء الحقول كما هي.
-            </span>
+            <button
+              type="button"
+              onClick={() => {
+                // المزامنة بين الوضعين حتى لا تضيع تعديلات المستخدم
+                if (rawMode) {
+                  try {
+                    setListValue(JSON.parse(value));
+                    setError(null);
+                  } catch {
+                    setError('صيغة JSON غير صحيحة — صحّحها قبل العودة للحقول.');
+                    return;
+                  }
+                } else {
+                  setValue(JSON.stringify(listValue, null, 2));
+                }
+                setRawMode(!rawMode);
+              }}
+              className="text-xs font-semibold text-ink-faint transition-colors hover:text-grape-600"
+            >
+              {rawMode ? 'العودة لمحرّر الحقول' : 'تحرير كـ JSON'}
+            </button>
           )}
         </div>
       </CardBody>
