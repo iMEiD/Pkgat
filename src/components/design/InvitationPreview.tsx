@@ -109,9 +109,10 @@ export function InvitationPreview({
     return { x: layer.x, y: layer.y };
   };
 
-  /** يبدأ قرصة عندما يصبح على المقبض إصبعان */
+  /** يبدأ قرصة عندما يصبح عدد الأصابع اثنين */
   const beginPinch = useCallback(
-    (target: 'name' | 'qr') => {
+    (target: 'name' | 'qr' | null) => {
+      if (!target) return;
       const [a, b] = [...pointers.current.values()];
       if (!a || !b) return;
 
@@ -187,15 +188,31 @@ export function InvitationPreview({
       if (pointers.current.size === 0) setDragging(null);
     };
 
+    /*
+     * الإصبع الثاني يُلتقط من كامل مساحة المعاينة لا من المقبض وحده.
+     * مقبض الباركود صغير (قد يكون ١٢٪ من العرض)، فاشتراط نزول الإصبعين
+     * فوقه كان يجعل القرص شبه مستحيل عليه بينما ينجح مع الاسم الأعرض.
+     */
+    const onExtraPointerDown = (e: PointerEvent) => {
+      if (pointers.current.has(e.pointerId)) return;
+      if (!wrapRef.current?.contains(e.target as Node)) return;
+
+      e.preventDefault();
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.current.size === 2) beginPinch(dragging);
+    };
+
+    window.addEventListener('pointerdown', onExtraPointerDown, { passive: false });
     window.addEventListener('pointermove', onPointerMove, { passive: false });
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', onPointerUp);
     return () => {
+      window.removeEventListener('pointerdown', onExtraPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
       window.removeEventListener('pointercancel', onPointerUp);
     };
-  }, [dragging, onMove, onResize, relativePos]);
+  }, [dragging, onMove, onResize, relativePos, beginPinch]);
 
   function onHandlePointerDown(e: React.PointerEvent, target: 'name' | 'qr') {
     e.preventDefault();

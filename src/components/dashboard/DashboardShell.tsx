@@ -38,7 +38,7 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-sand-200 bg-canvas/90 backdrop-blur-md">
+      <header className="pk-chrome sticky top-0 z-40 border-b border-sand-200 bg-canvas/90 backdrop-blur-md">
         <div className="mx-auto flex h-[68px] max-w-7xl items-center gap-4 px-4 sm:px-6">
           <Logo href="/dashboard" showTagline={false} />
 
@@ -124,8 +124,8 @@ export function DashboardShell({
         )}
       </header>
 
-      <div className="mx-auto flex max-w-7xl gap-8 px-4 py-8 sm:px-6">
-        <aside className="hidden w-56 shrink-0 lg:block">
+      <div className="pk-shell mx-auto flex max-w-7xl gap-8 px-4 py-8 sm:px-6">
+        <aside className="pk-chrome hidden w-56 shrink-0 lg:block">
           <nav className="sticky top-[92px] space-y-1">
             {nav.map((item) => (
               <Link
