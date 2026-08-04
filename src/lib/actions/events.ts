@@ -8,6 +8,7 @@ import { requireUser } from '@/lib/auth/session';
 import { getFreeQuota } from '@/lib/cms';
 import { defaultDesign, SUGGESTED_TAGS } from '@/lib/design/defaults';
 import type { DesignConfig, EventType } from '@/lib/types/database';
+import { parseEventLocal } from '@/lib/utils/time';
 
 export interface ActionResult {
   ok: boolean;
@@ -32,10 +33,12 @@ export async function createEvent(_prev: ActionResult | null, formData: FormData
   if (!EVENT_TYPES.has(eventType)) return { ok: false, error: 'نوع المناسبة غير صالح.' };
   if (!startsAt) return { ok: false, error: 'تاريخ ووقت المناسبة مطلوب.' };
 
-  const startDate = new Date(startsAt);
-  if (Number.isNaN(startDate.getTime())) return { ok: false, error: 'تاريخ غير صالح.' };
+  // الوقت المُدخل يُفسَّر بتوقيت السعودية دائماً — لا بتوقيت خادم Vercel (UTC)
+  const startDate = parseEventLocal(startsAt);
+  if (!startDate) return { ok: false, error: 'تاريخ غير صالح.' };
 
-  const endDate = endsAt ? new Date(endsAt) : null;
+  const endDate = endsAt ? parseEventLocal(endsAt) : null;
+  if (endsAt && !endDate) return { ok: false, error: 'وقت الانتهاء غير صالح.' };
   if (endDate && endDate <= startDate) {
     return { ok: false, error: 'وقت انتهاء المناسبة يجب أن يكون بعد وقت البداية.' };
   }
@@ -92,17 +95,18 @@ export async function updateEventDetails(
   const endsAt = String(formData.get('ends_at') ?? '');
   const venue = String(formData.get('venue') ?? '').trim();
   const notes = String(formData.get('notes') ?? '').trim();
-  const lead = Number(formData.get('activation_lead_minutes') ?? 120);
+  const lead = Number(formData.get('activation_lead_minutes') ?? 15);
   const grace = Number(formData.get('expiry_grace_minutes') ?? 1440);
 
   if (!id) return { ok: false, error: 'مناسبة غير معروفة.' };
   if (!title) return { ok: false, error: 'اسم المناسبة مطلوب.' };
   if (!EVENT_TYPES.has(eventType)) return { ok: false, error: 'نوع المناسبة غير صالح.' };
 
-  const startDate = new Date(startsAt);
-  if (Number.isNaN(startDate.getTime())) return { ok: false, error: 'تاريخ غير صالح.' };
+  const startDate = parseEventLocal(startsAt);
+  if (!startDate) return { ok: false, error: 'تاريخ غير صالح.' };
 
-  const endDate = endsAt ? new Date(endsAt) : null;
+  const endDate = endsAt ? parseEventLocal(endsAt) : null;
+  if (endsAt && !endDate) return { ok: false, error: 'وقت الانتهاء غير صالح.' };
   if (endDate && endDate <= startDate) {
     return { ok: false, error: 'وقت الانتهاء يجب أن يكون بعد وقت البداية.' };
   }
@@ -116,7 +120,7 @@ export async function updateEventDetails(
       ends_at: endDate ? endDate.toISOString() : null,
       venue: venue || null,
       notes: notes || null,
-      activation_lead_minutes: Number.isFinite(lead) ? Math.max(0, Math.min(10080, lead)) : 120,
+      activation_lead_minutes: Number.isFinite(lead) ? Math.max(0, Math.min(10080, lead)) : 15,
       expiry_grace_minutes: Number.isFinite(grace) ? Math.max(0, Math.min(20160, grace)) : 1440,
       updated_at: new Date().toISOString(),
     })
@@ -178,6 +182,33 @@ export async function saveDesign(
   if (error) return { ok: false, error: 'تعذّر حفظ التصميم.' };
 
   revalidatePath(`/dashboard/events/${eventId}`);
+  return { ok: true };
+}
+
+/**
+ * تحكم يدوي بحالة الباركودات يتجاوز التوقيت التلقائي.
+ * open = مفعّلة الآن · closed = موقوفة الآن · auto = حسب توقيت المناسبة
+ */
+export async function setActivationOverride(
+  eventId: string,
+  override: 'auto' | 'open' | 'closed',
+): Promise<ActionResult> {
+  await requireUser();
+  const supabase = await createClient();
+
+  if (!['auto', 'open', 'closed'].includes(override)) {
+    return { ok: false, error: 'حالة غير صالحة.' };
+  }
+
+  const { error } = await supabase
+    .from('events')
+    .update({ activation_override: override, updated_at: new Date().toISOString() })
+    .eq('id', eventId);
+
+  if (error) return { ok: false, error: 'تعذّر تغيير حالة الباركودات.' };
+
+  revalidatePath(`/dashboard/events/${eventId}`);
+  revalidatePath(`/dashboard/events/${eventId}/settings`);
   return { ok: true };
 }
 

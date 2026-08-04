@@ -18,8 +18,12 @@ export interface HistoryEntry {
   at: string;
 }
 
-/** فترة تجاهل نفس الرمز بعد مسحه — تمنع الطلبات المتكررة من الكاميرا */
-const REPEAT_COOLDOWN_MS = 2500;
+/**
+ * فترة تجاهل نفس الرمز بعد مسحه.
+ * طويلة عمداً: الباركود يبقى أمام الكاميرا بعد المسح، وبدون هذي المهلة
+ * يعاد إرساله للخادم مراراً فتبدو اللوحة وكأنها «تمسح بشكل عشوائي».
+ */
+const REPEAT_COOLDOWN_MS = 6000;
 
 export function ScannerDashboard({
   scannerName,
@@ -113,7 +117,7 @@ export function ScannerDashboard({
       recentCodes.current.set(code, now);
       // ننظّف الرموز القديمة حتى لا تكبر الخريطة طوال الليلة
       for (const [key, time] of recentCodes.current) {
-        if (now - time > REPEAT_COOLDOWN_MS * 4) recentCodes.current.delete(key);
+        if (now - time > REPEAT_COOLDOWN_MS * 2) recentCodes.current.delete(key);
       }
 
       void submit(code);
@@ -159,7 +163,10 @@ export function ScannerDashboard({
 
       {/* الكاميرا */}
       <div className="relative flex-1">
-        <QrCamera onDetected={onDetected} paused={paused || busy || manualOpen} />
+        <QrCamera
+          onDetected={onDetected}
+          paused={paused || busy || manualOpen || result !== null}
+        />
 
         {result && (
           <div className="absolute inset-x-0 bottom-0 z-20 p-3">

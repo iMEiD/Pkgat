@@ -7,6 +7,10 @@ export type EventPhase = 'upcoming' | 'active' | 'ended';
  * تُستخدم للعرض فقط — القرار النهائي في المسح يبقى على قاعدة البيانات.
  */
 export function computeEventPhase(event: EventRow): EventPhase {
+  // التجاوز اليدوي يسبق أي حساب زمني — مطابق لمنطق قاعدة البيانات
+  if (event.activation_override === 'open') return 'active';
+  if (event.activation_override === 'closed') return 'ended';
+
   const now = Date.now();
   const activation = new Date(event.starts_at).getTime() - event.activation_lead_minutes * 60_000;
 

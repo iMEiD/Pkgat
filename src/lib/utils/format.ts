@@ -1,3 +1,5 @@
+import { EVENT_TIME_ZONE, toEventLocalInput } from './time';
+
 const AR_LOCALE = 'ar-SA';
 
 const dateTimeFmt = new Intl.DateTimeFormat(AR_LOCALE, {
@@ -5,17 +7,20 @@ const dateTimeFmt = new Intl.DateTimeFormat(AR_LOCALE, {
   timeStyle: 'short',
   numberingSystem: 'latn',
   calendar: 'gregory',
+  timeZone: EVENT_TIME_ZONE,
 });
 
 const dateFmt = new Intl.DateTimeFormat(AR_LOCALE, {
   dateStyle: 'long',
   numberingSystem: 'latn',
   calendar: 'gregory',
+  timeZone: EVENT_TIME_ZONE,
 });
 
 const timeFmt = new Intl.DateTimeFormat(AR_LOCALE, {
   timeStyle: 'short',
   numberingSystem: 'latn',
+  timeZone: EVENT_TIME_ZONE,
 });
 
 export function formatDateTime(value: string | Date | null | undefined): string {
@@ -82,13 +87,8 @@ export function relativeTime(value: string | Date): string {
   return 'الآن';
 }
 
-/** لتعبئة حقول datetime-local من قيمة ISO */
-export function toLocalInputValue(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+/** لتعبئة حقول datetime-local — بتوقيت المناسبة لا بتوقيت جهاز المستخدم */
+export const toLocalInputValue = toEventLocalInput;
 
 export const EVENT_TYPE_LABELS: Record<string, string> = {
   wedding: 'عرس',

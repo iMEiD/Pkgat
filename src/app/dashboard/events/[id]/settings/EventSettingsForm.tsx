@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Field, Input, Select, Textarea } from '@/components/ui/Field';
 import { deleteEvent, updateEventDetails, type ActionResult } from '@/lib/actions/events';
+import { ActivationControl } from './ActivationControl';
 import { EVENT_TYPES } from '@/lib/design/defaults';
 import { formatDateTime, toLocalInputValue } from '@/lib/utils/format';
 import { activationMoment, expiryMoment } from '@/lib/utils/event-phase';
@@ -106,7 +107,7 @@ export function EventSettingsForm({ event }: { event: EventRow }) {
               </p>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <Field label="تفعيل قبل البداية بـ (دقيقة)" htmlFor="lead">
+                <Field label="تفعيل قبل البداية بـ (دقيقة)" htmlFor="lead" hint="الافتراضي ١٥ دقيقة">
                   <Input
                     id="lead"
                     name="activation_lead_minutes"
@@ -117,7 +118,7 @@ export function EventSettingsForm({ event }: { event: EventRow }) {
                     onChange={(e) => setLead(Number(e.target.value))}
                   />
                 </Field>
-                <Field label="انتهاء بعد النهاية بـ (دقيقة)" htmlFor="grace">
+                <Field label="انتهاء بعد النهاية بـ (دقيقة)" htmlFor="grace" hint="الافتراضي ١٤٤٠ = اليوم التالي">
                   <Input
                     id="grace"
                     name="expiry_grace_minutes"
@@ -150,6 +151,16 @@ export function EventSettingsForm({ event }: { event: EventRow }) {
               حفظ التعديلات
             </Button>
           </form>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="حالة الباركودات الآن"
+          description="تجاوز التوقيت التلقائي يدوياً — يفيد لو بدأت المناسبة مبكراً أو تأخرت."
+        />
+        <CardBody>
+          <ActivationControl event={event} />
         </CardBody>
       </Card>
 

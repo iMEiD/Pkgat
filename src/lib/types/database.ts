@@ -89,6 +89,7 @@ export type EventRow = {
   template_id: string | null;
   activation_lead_minutes: number;
   expiry_grace_minutes: number;
+  activation_override: 'auto' | 'open' | 'closed';
   free_quota: number;
   is_paid: boolean;
   paid_at: string | null;

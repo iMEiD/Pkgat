@@ -267,6 +267,8 @@ export async function saveTemplate(input: {
 
   await logAdminAction(input.id ? 'template.updated' : 'template.created', 'templates', input.id ?? null);
   revalidatePath('/admin/templates');
+  // خطوة التصميم عند المستخدمين تقرأ نفس الجدول
+  revalidatePath('/dashboard/events', 'layout');
   return { ok: true };
 }
 
@@ -279,6 +281,7 @@ export async function deleteTemplate(id: string): Promise<ActionResult> {
 
   await logAdminAction('template.deleted', 'templates', id);
   revalidatePath('/admin/templates');
+  revalidatePath('/dashboard/events', 'layout');
   return { ok: true };
 }
 
