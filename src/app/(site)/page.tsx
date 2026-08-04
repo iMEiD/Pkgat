@@ -99,7 +99,7 @@ export default async function HomePage() {
         <Reveal>
           <SectionTitle
             center
-            eyebrow="المميزات"
+            eyebrow={text(c, 'home.features.eyebrow', 'المميزات')}
             title={text(c, 'home.features.title', 'كل اللي تحتاجه في مكان واحد')}
           />
         </Reveal>
@@ -128,7 +128,11 @@ export default async function HomePage() {
       <section className="border-y border-sand-200 bg-sand-50/60 py-16 lg:py-24">
         <div className="pk-container">
           <Reveal>
-            <SectionTitle center eyebrow="كيف تشتغل" title={text(c, 'home.steps.title', 'كيف تشتغل بكجات؟')} />
+            <SectionTitle
+              center
+              eyebrow={text(c, 'home.steps.eyebrow', 'كيف تشتغل')}
+              title={text(c, 'home.steps.title', 'كيف تشتغل بكجات؟')}
+            />
           </Reveal>
 
           <ol className="mt-12 grid gap-6 md:grid-cols-4">
@@ -178,14 +182,14 @@ export default async function HomePage() {
                   size="lg"
                   className="bg-white text-grape-600 shadow-none hover:bg-sand-50"
                 >
-                  أنشئ حسابك الآن
+                  {text(c, 'home.cta.primary', 'أنشئ حسابك الآن')}
                 </ButtonLink>
                 <ButtonLink
                   href="/pricing"
                   size="lg"
                   className="border-2 border-white/40 bg-transparent text-white shadow-none hover:bg-white/10"
                 >
-                  شوف الباقات
+                  {text(c, 'home.cta.secondary', 'شوف الباقات')}
                 </ButtonLink>
               </div>
             </div>
