@@ -7,6 +7,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { markAdmin2faPassed, requireAdmin, requireUser } from '@/lib/auth/session';
 import type { ActionResult } from '@/lib/actions/events';
 import type { DesignConfig } from '@/lib/types/database';
+import type { Profile } from '@/lib/types/database';
 import { isValidHex, normalizeHex, type Theme } from '@/lib/design/theme';
 
 const ISSUER = 'PKGAT';
@@ -114,6 +115,64 @@ export async function setUserSuspended(
   if (error) return { ok: false, error: 'تعذّر تغيير حالة الحساب.' };
 
   await logAdminAction(suspended ? 'user.suspended' : 'user.activated', 'profiles', userId);
+  revalidatePath('/admin/users');
+  return { ok: true };
+}
+
+/**
+ * تعديل بيانات مستخدم من لوحة الأدمن.
+ * تغيير البريد يمر عبر واجهة إدارة Supabase لأن البريد مخزّن في auth.users
+ * وليس في جدول الملفات — ثم نزامن النسخة المحلية.
+ */
+export async function adminUpdateUser(
+  userId: string,
+  patch: { fullName?: string; phone?: string | null; email?: string },
+): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const profileUpdate: Partial<Profile> = { updated_at: new Date().toISOString() };
+
+  if (patch.fullName !== undefined) {
+    const name = patch.fullName.trim();
+    if (!name) return { ok: false, error: 'الاسم مطلوب.' };
+    profileUpdate.full_name = name;
+  }
+
+  if (patch.phone !== undefined) {
+    profileUpdate.phone = patch.phone?.trim() || null;
+  }
+
+  if (patch.email !== undefined) {
+    const email = patch.email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { ok: false, error: 'صيغة البريد غير صحيحة.' };
+    }
+
+    const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
+      email,
+      email_confirm: true,
+    });
+
+    if (authError) {
+      return {
+        ok: false,
+        error: authError.message.includes('already')
+          ? 'هذا البريد مستخدم في حساب آخر.'
+          : 'تعذّر تغيير البريد.',
+      };
+    }
+
+    profileUpdate.email = email;
+  }
+
+  const { error } = await supabase.from('profiles').update(profileUpdate).eq('id', userId);
+  if (error) return { ok: false, error: 'تعذّر حفظ البيانات.' };
+
+  await logAdminAction('user.updated', 'profiles', userId, {
+    fields: Object.keys(patch).join(','),
+  });
+
   revalidatePath('/admin/users');
   return { ok: true };
 }

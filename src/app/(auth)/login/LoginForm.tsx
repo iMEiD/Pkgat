@@ -22,6 +22,10 @@ export function LoginForm({
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // يظهر خيار إعادة الإرسال فقط حين يكون البريد غير مؤكَّد فعلاً
+  const [needsConfirm, setNeedsConfirm] = useState(false);
+  const [resent, setResent] = useState(false);
+  const [resending, setResending] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,9 +37,11 @@ export function LoginForm({
 
     if (authError) {
       setLoading(false);
+      const unconfirmed = authError.message.includes('Email not confirmed');
+      setNeedsConfirm(unconfirmed);
       setError(
-        authError.message.includes('Email not confirmed')
-          ? 'لم يتم تفعيل بريدك بعد. افتح رابط التأكيد المُرسل إليك.'
+        unconfirmed
+          ? 'لم يتم تفعيل بريدك بعد. افتح رابط التأكيد المُرسل إليك، أو أعد إرساله من الأسفل.'
           : 'البريد أو كلمة المرور غير صحيحة.',
       );
       return;
@@ -43,6 +49,18 @@ export function LoginForm({
 
     router.push(nextPath || '/dashboard');
     router.refresh();
+  }
+
+  async function resendConfirmation() {
+    setResending(true);
+    const supabase = createClient();
+    await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard` },
+    });
+    setResending(false);
+    setResent(true);
   }
 
   return (
@@ -57,8 +75,24 @@ export function LoginForm({
       )}
 
       {error && (
-        <Alert tone="danger" className="mt-5">
+        <Alert
+          tone="danger"
+          className="mt-5"
+          action={
+            needsConfirm && !resent ? (
+              <Button size="sm" variant="secondary" onClick={resendConfirmation} loading={resending}>
+                أعد إرسال رابط التفعيل
+              </Button>
+            ) : undefined
+          }
+        >
           {error}
+        </Alert>
+      )}
+
+      {resent && (
+        <Alert tone="success" className="mt-5" title="أُرسل الرابط">
+          افحص بريدك — وتحقق من مجلد الرسائل غير المرغوبة (Spam) إن لم يصل خلال دقيقة.
         </Alert>
       )}
 

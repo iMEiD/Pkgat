@@ -7,6 +7,8 @@ import { Icon } from '@/components/ui/Icon';
 import { LogoMark } from '@/components/ui/Logo';
 import { QrCamera } from '@/components/scan/QrCamera';
 import { ScanResultCard } from '@/components/scan/ScanResultCard';
+import { GuestSearch, type FoundGuest } from '@/components/scan/GuestSearch';
+import { playScanTone } from '@/lib/scan/sound';
 import { formatNumber, formatTime } from '@/lib/utils/format';
 import type { ScanResponse } from '@/lib/types/database';
 import { cn } from '@/lib/utils/cn';
@@ -42,7 +44,9 @@ export function ScannerDashboard({
   const [busy, setBusy] = useState(false);
   const [offline, setOffline] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [manualCode, setManualCode] = useState('');
+  const [soundOn, setSoundOn] = useState(true);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [paused, setPaused] = useState(false);
 
@@ -95,6 +99,7 @@ export function ScannerDashboard({
         );
 
         vibrate(data.result);
+        if (soundOn) playScanTone(data.result);
       } catch {
         setResult({
           ok: false,
@@ -105,7 +110,7 @@ export function ScannerDashboard({
         setBusy(false);
       }
     },
-    [busy],
+    [busy, soundOn],
   );
 
   const onDetected = useCallback(
@@ -137,6 +142,21 @@ export function ScannerDashboard({
             {eventVenue ? ` · ${eventVenue}` : ''}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setSoundOn((v) => !v)}
+          aria-label={soundOn ? 'إيقاف الصوت' : 'تشغيل الصوت'}
+          aria-pressed={soundOn}
+          className={`grid h-9 w-9 place-items-center rounded-xl transition-colors ${
+            soundOn ? 'text-white' : 'text-white/40'
+          } hover:bg-white/10`}
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+            {soundOn ? <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /> : <path d="m17 9 4 6m0-6-4 6" />}
+          </svg>
+        </button>
+
         <form action="/api/scan/logout" method="post">
           <button
             type="submit"
@@ -165,7 +185,7 @@ export function ScannerDashboard({
       <div className="relative flex-1">
         <QrCamera
           onDetected={onDetected}
-          paused={paused || busy || manualOpen || result !== null}
+          paused={paused || busy || manualOpen || searchOpen || result !== null}
         />
 
         {result && (
@@ -186,7 +206,15 @@ export function ScannerDashboard({
 
       {/* أدوات */}
       <div className="border-t border-white/10 p-3">
-        {manualOpen ? (
+        {searchOpen ? (
+          <GuestSearch
+            onClose={() => setSearchOpen(false)}
+            onPick={(guest: FoundGuest) => {
+              setSearchOpen(false);
+              void submit(guest.code);
+            }}
+          />
+        ) : manualOpen ? (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -222,6 +250,13 @@ export function ScannerDashboard({
               className="flex-1 rounded-2xl border border-white/15 py-3 text-sm font-bold text-white/80 transition-colors hover:bg-white/10"
             >
               {paused ? 'استئناف المسح' : 'إيقاف مؤقت'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="flex-1 rounded-2xl border border-white/15 py-3 text-sm font-bold text-white/80 transition-colors hover:bg-white/10"
+            >
+              بحث بالاسم
             </button>
             <button
               type="button"
