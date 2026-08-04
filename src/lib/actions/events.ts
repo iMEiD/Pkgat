@@ -1,0 +1,223 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+
+import { createClient } from '@/lib/supabase/server';
+import { requireUser } from '@/lib/auth/session';
+import { getFreeQuota } from '@/lib/cms';
+import { defaultDesign, SUGGESTED_TAGS } from '@/lib/design/defaults';
+import type { DesignConfig, EventType } from '@/lib/types/database';
+
+export interface ActionResult {
+  ok: boolean;
+  error?: string;
+  id?: string;
+}
+
+const EVENT_TYPES = new Set(['wedding', 'graduation', 'party', 'other']);
+
+/** ينشئ مناسبة جديدة مع فئاتها المقترحة */
+export async function createEvent(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  const session = await requireUser();
+  const supabase = await createClient();
+
+  const title = String(formData.get('title') ?? '').trim();
+  const eventType = String(formData.get('event_type') ?? 'other');
+  const startsAt = String(formData.get('starts_at') ?? '');
+  const endsAt = String(formData.get('ends_at') ?? '');
+  const venue = String(formData.get('venue') ?? '').trim();
+
+  if (!title) return { ok: false, error: 'اسم المناسبة مطلوب.' };
+  if (!EVENT_TYPES.has(eventType)) return { ok: false, error: 'نوع المناسبة غير صالح.' };
+  if (!startsAt) return { ok: false, error: 'تاريخ ووقت المناسبة مطلوب.' };
+
+  const startDate = new Date(startsAt);
+  if (Number.isNaN(startDate.getTime())) return { ok: false, error: 'تاريخ غير صالح.' };
+
+  const endDate = endsAt ? new Date(endsAt) : null;
+  if (endDate && endDate <= startDate) {
+    return { ok: false, error: 'وقت انتهاء المناسبة يجب أن يكون بعد وقت البداية.' };
+  }
+
+  const freeQuota = await getFreeQuota();
+
+  const { data, error } = await supabase
+    .from('events')
+    .insert({
+      owner_id: session.id,
+      title,
+      event_type: eventType as EventType,
+      starts_at: startDate.toISOString(),
+      ends_at: endDate ? endDate.toISOString() : null,
+      venue: venue || null,
+      free_quota: freeQuota,
+      design: defaultDesign() as unknown as DesignConfig,
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    return { ok: false, error: 'تعذّر إنشاء المناسبة. حاول مرة أخرى.' };
+  }
+
+  // الفئات المقترحة حسب نوع المناسبة (قابلة للتعديل والحذف لاحقاً)
+  const suggested = SUGGESTED_TAGS[eventType] ?? [];
+  if (suggested.length > 0) {
+    await supabase.from('event_tags').insert(
+      suggested.map((t, i) => ({
+        event_id: data.id,
+        name: t.name,
+        color: t.color,
+        sort_order: i,
+      })),
+    );
+  }
+
+  revalidatePath('/dashboard');
+  redirect(`/dashboard/events/${data.id}/design`);
+}
+
+export async function updateEventDetails(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireUser();
+  const supabase = await createClient();
+
+  const id = String(formData.get('id') ?? '');
+  const title = String(formData.get('title') ?? '').trim();
+  const eventType = String(formData.get('event_type') ?? 'other');
+  const startsAt = String(formData.get('starts_at') ?? '');
+  const endsAt = String(formData.get('ends_at') ?? '');
+  const venue = String(formData.get('venue') ?? '').trim();
+  const notes = String(formData.get('notes') ?? '').trim();
+  const lead = Number(formData.get('activation_lead_minutes') ?? 120);
+  const grace = Number(formData.get('expiry_grace_minutes') ?? 1440);
+
+  if (!id) return { ok: false, error: 'مناسبة غير معروفة.' };
+  if (!title) return { ok: false, error: 'اسم المناسبة مطلوب.' };
+  if (!EVENT_TYPES.has(eventType)) return { ok: false, error: 'نوع المناسبة غير صالح.' };
+
+  const startDate = new Date(startsAt);
+  if (Number.isNaN(startDate.getTime())) return { ok: false, error: 'تاريخ غير صالح.' };
+
+  const endDate = endsAt ? new Date(endsAt) : null;
+  if (endDate && endDate <= startDate) {
+    return { ok: false, error: 'وقت الانتهاء يجب أن يكون بعد وقت البداية.' };
+  }
+
+  const { error } = await supabase
+    .from('events')
+    .update({
+      title,
+      event_type: eventType as EventType,
+      starts_at: startDate.toISOString(),
+      ends_at: endDate ? endDate.toISOString() : null,
+      venue: venue || null,
+      notes: notes || null,
+      activation_lead_minutes: Number.isFinite(lead) ? Math.max(0, Math.min(10080, lead)) : 120,
+      expiry_grace_minutes: Number.isFinite(grace) ? Math.max(0, Math.min(20160, grace)) : 1440,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  if (error) return { ok: false, error: 'تعذّر حفظ التعديلات.' };
+
+  revalidatePath(`/dashboard/events/${id}`);
+  revalidatePath('/dashboard');
+  return { ok: true };
+}
+
+/** يحفظ إعدادات التصميم (القالب/الرفع + موضع الاسم + الباركود) */
+export async function saveDesign(
+  eventId: string,
+  design: DesignConfig,
+  templateId: string | null,
+): Promise<ActionResult> {
+  await requireUser();
+  const supabase = await createClient();
+
+  // تحقق من القيم قبل الحفظ حتى لا تُخزَّن إحداثيات خارج التصميم
+  const clamp01 = (n: number) => Math.min(1, Math.max(0, Number(n) || 0));
+  const safe: DesignConfig = {
+    ...design,
+    width: Math.min(4000, Math.max(200, Math.round(design.width) || 1080)),
+    height: Math.min(4000, Math.max(200, Math.round(design.height) || 1920)),
+    name: {
+      ...design.name,
+      x: clamp01(design.name.x),
+      y: clamp01(design.name.y),
+      fontSize: Math.min(0.3, Math.max(0.01, design.name.fontSize)),
+    },
+    qr: {
+      ...design.qr,
+      x: clamp01(design.qr.x),
+      y: clamp01(design.qr.y),
+      size: Math.min(0.6, Math.max(0.05, design.qr.size)),
+      margin: Math.min(8, Math.max(0, Math.round(design.qr.margin))),
+    },
+    extras: (design.extras ?? []).map((e) => ({
+      ...e,
+      x: clamp01(e.x),
+      y: clamp01(e.y),
+      fontSize: Math.min(0.3, Math.max(0.01, e.fontSize)),
+    })),
+  };
+
+  const { error } = await supabase
+    .from('events')
+    .update({
+      design: safe,
+      template_id: templateId,
+      status: safe.backgroundUrl ? 'ready' : 'draft',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', eventId);
+
+  if (error) return { ok: false, error: 'تعذّر حفظ التصميم.' };
+
+  revalidatePath(`/dashboard/events/${eventId}`);
+  return { ok: true };
+}
+
+export async function endEvent(eventId: string): Promise<ActionResult> {
+  await requireUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('events')
+    .update({ status: 'ended', ended_manually_at: new Date().toISOString() })
+    .eq('id', eventId);
+
+  if (error) return { ok: false, error: 'تعذّر إنهاء المناسبة.' };
+
+  revalidatePath(`/dashboard/events/${eventId}`);
+  return { ok: true };
+}
+
+export async function reopenEvent(eventId: string): Promise<ActionResult> {
+  await requireUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('events')
+    .update({ status: 'ready', ended_manually_at: null })
+    .eq('id', eventId);
+
+  if (error) return { ok: false, error: 'تعذّر إعادة فتح المناسبة.' };
+
+  revalidatePath(`/dashboard/events/${eventId}`);
+  return { ok: true };
+}
+
+export async function deleteEvent(eventId: string): Promise<ActionResult> {
+  await requireUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase.from('events').delete().eq('id', eventId);
+  if (error) return { ok: false, error: 'تعذّر حذف المناسبة.' };
+
+  revalidatePath('/dashboard');
+  redirect('/dashboard');
+}

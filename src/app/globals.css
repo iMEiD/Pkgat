@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * الخطوط تُحمَّل عبر <link> في الـ layout (وليس next/font) لأن نفس القائمة
+ * تُستخدم في رسم النصوص على الكانفس، ونحتاج أسماء عائلات ثابتة ومعروفة
+ * حتى نتمكن من انتظار تحميلها عبر document.fonts.load قبل الرسم.
+ */
+:root {
+  --font-ui: 'Tajawal';
+  --font-display: 'Cairo';
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    background-image:
+      radial-gradient(1100px 520px at 100% -8%, rgba(109, 74, 255, 0.07), transparent 60%),
+      radial-gradient(900px 480px at -10% 4%, rgba(255, 107, 74, 0.07), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    @apply bg-grape-200 text-ink;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+  }
+
+  /* حلقات التركيز موحّدة لكل العناصر التفاعلية */
+  :focus-visible {
+    @apply outline-none ring-2 ring-grape-400 ring-offset-2 ring-offset-canvas;
+  }
+
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+@layer components {
+  .pk-container {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+  }
+
+  /* شبكة نقطية خفيفة تُستخدم كخلفية للأقسام التسويقية */
+  .pk-dots {
+    background-image: radial-gradient(rgba(194, 172, 136, 0.35) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  .pk-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .pk-scrollbar::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-sand-300;
+  }
+}
+
+@layer utilities {
+  .pk-balance {
+    text-wrap: balance;
+  }
+
+  /* يحترم تفضيل تقليل الحركة لدى المستخدم */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ===== تنسيق الطباعة (تقرير ما بعد المناسبة) ===== */
+@media print {
+  body {
+    background: #fff !important;
+    background-image: none !important;
+  }
+
+  .print\:hidden,
+  .pk-no-print {
+    display: none !important;
+  }
+
+  .pk-print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  .pk-avoid-break {
+    break-inside: avoid;
+  }
+
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+}

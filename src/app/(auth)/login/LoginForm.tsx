@@ -1,0 +1,122 @@
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { Alert } from '@/components/ui/Alert';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Field, Input } from '@/components/ui/Field';
+import { createClient } from '@/lib/supabase/client';
+
+export function LoginForm({
+  nextPath,
+  justRegistered,
+}: {
+  nextPath?: string;
+  justRegistered?: boolean;
+}) {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (authError) {
+      setLoading(false);
+      setError(
+        authError.message.includes('Email not confirmed')
+          ? 'لم يتم تفعيل بريدك بعد. افتح رابط التأكيد المُرسل إليك.'
+          : 'البريد أو كلمة المرور غير صحيحة.',
+      );
+      return;
+    }
+
+    router.push(nextPath || '/dashboard');
+    router.refresh();
+  }
+
+  return (
+    <Card className="p-7 sm:p-8">
+      <h1 className="font-display text-2xl font-black text-ink">أهلاً بعودتك</h1>
+      <p className="mt-1.5 text-sm text-ink-soft">سجّل دخولك لإدارة مناسباتك ودعواتك.</p>
+
+      {justRegistered && (
+        <Alert tone="success" className="mt-5" title="تم إنشاء حسابك">
+          أرسلنا رابط تأكيد إلى بريدك. فعّل حسابك ثم سجّل دخولك من هنا.
+        </Alert>
+      )}
+
+      {error && (
+        <Alert tone="danger" className="mt-5">
+          {error}
+        </Alert>
+      )}
+
+      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+        <Field label="البريد الإلكتروني" htmlFor="email" required>
+          <Input
+            id="email"
+            type="email"
+            dir="ltr"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+          />
+        </Field>
+
+        <Field label="كلمة المرور" htmlFor="password" required>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+          />
+        </Field>
+
+        <div className="flex justify-end">
+          <Link
+            href="/forgot-password"
+            className="text-xs font-semibold text-grape-600 transition-colors hover:text-grape-700"
+          >
+            نسيت كلمة المرور؟
+          </Link>
+        </div>
+
+        <Button type="submit" fullWidth size="lg" loading={loading}>
+          دخول
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-ink-soft">
+        ما عندك حساب؟{' '}
+        <Link href="/signup" className="font-bold text-grape-600 hover:text-grape-700">
+          أنشئ حساب جديد
+        </Link>
+      </p>
+
+      <div className="mt-6 border-t border-sand-200 pt-5 text-center">
+        <Link
+          href="/scan/login"
+          className="text-xs font-semibold text-ink-faint transition-colors hover:text-ink"
+        >
+          مسؤول استقبال؟ ادخل من هنا ←
+        </Link>
+      </div>
+    </Card>
+  );
+}
