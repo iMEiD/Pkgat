@@ -44,6 +44,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="stylesheet" href={googleFontsHref()} />
+
+        {/* بدون جافاسكربت لن يعمل مراقب التمرير — نُظهر كل المحتوى مباشرة */}
+        <noscript>
+          <style>{`.pk-reveal{opacity:1!important;transform:none!important}`}</style>
+        </noscript>
       </head>
       <body>{children}</body>
     </html>

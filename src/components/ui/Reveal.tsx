@@ -50,7 +50,9 @@ export function Reveal({
       ref={ref as never}
       style={{ transitionDelay: `${delay}ms` }}
       className={cn(
-        'transition-all duration-700 ease-[cubic-bezier(.22,1,.36,1)]',
+        // pk-reveal يسمح بإظهار المحتوى عبر <noscript> لو تعطّلت الجافاسكربت،
+        // فلا تختفي الصفحة كاملة لمجرد أن المراقب لم يعمل.
+        'pk-reveal transition-all duration-700 ease-[cubic-bezier(.22,1,.36,1)]',
         shown ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0',
         className,
       )}

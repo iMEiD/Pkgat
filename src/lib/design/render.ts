@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 
 import type { DesignConfig, TextLayer } from '@/lib/types/database';
-import { ensureFontsLoaded } from './fonts';
+import { ensureFontsLoaded, resolveWeight } from './fonts';
 
 export interface RenderInput {
   design: DesignConfig;
@@ -51,7 +51,8 @@ function drawTextLayer(
 ) {
   const px = Math.round(layer.fontSize * W);
   ctx.save();
-  ctx.font = `${layer.weight} ${px}px "${layer.fontFamily}", sans-serif`;
+  // نثبّت الوزن على وجه متاح فعلاً حتى لا يزوّر المتصفح السُمك
+  ctx.font = `${resolveWeight(layer.fontFamily, layer.weight)} ${px}px "${layer.fontFamily}", sans-serif`;
   ctx.fillStyle = layer.color;
   ctx.textAlign = layer.align;
   ctx.textBaseline = 'middle';
@@ -111,17 +112,28 @@ async function drawQr(
       if (!data[row * count + col]) continue;
       const x = left + offset + col * cell;
       const y = top + offset + row * cell;
-      // +0.6 يمنع خطوط شعرية بيضاء بين الوحدات بعد التقريب
-      if (q.rounded) {
-        roundRect(ctx, x, y, cell + 0.6, cell + 0.6, cell * 0.35);
+
+      // مربعات الكشف الثلاث (Finder patterns) تبقى حادّة دائماً — تدويرها
+      // يكسر اكتشاف الباركود ويجعله غير قابل للمسح.
+      if (q.rounded && !isFinderModule(row, col, count)) {
+        roundRect(ctx, x, y, cell + 0.6, cell + 0.6, cell * 0.28);
         ctx.fill();
       } else {
+        // +0.6 يمنع خطوط شعرية بيضاء بين الوحدات بعد التقريب
         ctx.fillRect(x, y, cell + 0.6, cell + 0.6);
       }
     }
   }
 
   ctx.restore();
+}
+
+/** هل هذه الوحدة ضمن أحد مربعات الكشف الثلاثة (٧×٧ في الزوايا)؟ */
+function isFinderModule(row: number, col: number, count: number): boolean {
+  const inTopLeft = row < 7 && col < 7;
+  const inTopRight = row < 7 && col >= count - 7;
+  const inBottomLeft = row >= count - 7 && col < 7;
+  return inTopLeft || inTopRight || inBottomLeft;
 }
 
 function roundRect(

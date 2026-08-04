@@ -47,13 +47,30 @@ export function googleFontsHref(): string {
  * ملاحظة: `document.fonts.ready` وحده لا يكفي لأن الخط لا يبدأ التحميل
  * أصلاً إلا عند استخدامه، لذلك نطلبه صراحة عبر `document.fonts.load`.
  */
+/**
+ * أقرب وزن تدعمه العائلة فعلاً.
+ *
+ * لو طلبنا وزناً غير موجود (مثل Lalezar 700) فالمتصفح «يزوّر» السُمك
+ * (faux bold) بدل استخدام وجه حقيقي — والنتيجة تختلف عن الخط الأصلي.
+ * تثبيت الوزن على وجه متاح يجعل المعاينة والتوليد متطابقين ومتوقّعين.
+ */
+export function resolveWeight(family: string, weight: number): number {
+  const font = FONTS.find((f) => f.family === family);
+  if (!font || font.weights.includes(weight)) return weight;
+
+  return font.weights.reduce((best, w) =>
+    Math.abs(w - weight) < Math.abs(best - weight) ? w : best,
+  );
+}
+
 export async function ensureFontLoaded(family: string, weight: number = 400): Promise<void> {
   if (typeof document === 'undefined' || !('fonts' in document)) return;
 
-  const spec = `${weight} 64px "${family}"`;
+  // عينة عربية وإنجليزية وأرقام لضمان تحميل كل المحارف المطلوبة
+  const SAMPLE = 'الدعوة Invitation ٠١٢٣';
+
   try {
-    // نمرّر عينة عربية وإنجليزية لضمان تحميل كل المحارف المطلوبة
-    await document.fonts.load(spec, 'الدعوة Invitation ٠١٢٣');
+    await document.fonts.load(`${resolveWeight(family, weight)} 64px "${family}"`, SAMPLE);
     await document.fonts.ready;
   } catch {
     // إن فشل التحميل نكمل بالخط البديل بدل أن نُعطّل التوليد بالكامل
