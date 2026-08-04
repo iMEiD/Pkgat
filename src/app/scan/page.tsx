@@ -2,8 +2,10 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
 import { ScannerDashboard } from './ScannerDashboard';
+import { SetupRequired } from '@/components/SetupRequired';
 import { getScannerSession } from '@/lib/auth/scanner-session';
 import { createServiceClient } from '@/lib/supabase/server';
+import { SCANNER_ENV, checkEnv } from '@/lib/config';
 
 export const metadata: Metadata = {
   title: 'مسح الدعوات',
@@ -13,8 +15,21 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function ScanPage() {
+  // بدون جلسة صالحة نعيده للدخول — وهناك تظهر رسالة الإعداد الناقص إن وُجد
   const session = await getScannerSession();
   if (!session) redirect('/scan/login');
+
+  const problems = checkEnv(SCANNER_ENV);
+  if (problems.length > 0) {
+    return (
+      <SetupRequired
+        title="لوحة المسح تحتاج إعداداً"
+        problems={problems}
+        backHref="/scan/login"
+        backLabel="العودة لصفحة الدخول"
+      />
+    );
+  }
 
   const supabase = createServiceClient();
 

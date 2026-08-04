@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { createServiceClient } from '@/lib/supabase/server';
 import { getScannerSession } from '@/lib/auth/scanner-session';
+import { SCANNER_ENV, checkEnv } from '@/lib/config';
 import type { ScanResponse } from '@/lib/types/database';
 
 /**
@@ -14,6 +15,14 @@ import type { ScanResponse } from '@/lib/types/database';
  * الاستجابة خفيفة عمداً لأنها تعمل على شبكة القاعة الضعيفة.
  */
 export async function POST(request: NextRequest) {
+  const problems = checkEnv(SCANNER_ENV);
+  if (problems.length > 0) {
+    return NextResponse.json(
+      { ok: false, result: 'invalid', message: 'لوحة المسح غير مهيّأة على الخادم' },
+      { status: 503 },
+    );
+  }
+
   const session = await getScannerSession();
   if (!session) {
     return NextResponse.json({ ok: false, result: 'invalid', message: 'انتهت الجلسة' }, { status: 401 });

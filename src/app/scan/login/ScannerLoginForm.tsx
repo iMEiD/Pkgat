@@ -27,10 +27,23 @@ export function ScannerLoginForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-      const data = await res.json();
 
-      if (!res.ok || !data.ok) {
-        setError(data.error ?? 'تعذّر تسجيل الدخول');
+      // لا نفترض أن الرد JSON دائماً: خطأ خادم غير متوقّع يرجع HTML،
+      // وتحليله كان يرمي استثناءً فتظهر رسالة «تعذّر الاتصال» المضلِّلة.
+      let data: { ok?: boolean; error?: string } | null = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+
+      if (!res.ok || !data?.ok) {
+        setError(
+          data?.error ??
+            (res.status >= 500
+              ? `خطأ في الخادم (${res.status}). لوحة المسح غير مهيّأة — راجع صاحب المناسبة.`
+              : 'تعذّر تسجيل الدخول'),
+        );
         setLoading(false);
         return;
       }
@@ -38,7 +51,7 @@ export function ScannerLoginForm() {
       router.push('/scan');
       router.refresh();
     } catch {
-      setError('تعذّر الاتصال. تأكد من شبكة الإنترنت.');
+      setError('تعذّر الوصول للخادم. تأكد من اتصال الإنترنت وحاول مرة أخرى.');
       setLoading(false);
     }
   }

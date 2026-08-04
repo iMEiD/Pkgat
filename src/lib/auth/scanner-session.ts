@@ -60,8 +60,15 @@ export async function clearScannerCookie() {
   store.delete(SCANNER_COOKIE);
 }
 
-/** جلسة مسؤول المسح الحالية من الكوكي — أو null */
+/**
+ * جلسة مسؤول المسح الحالية من الكوكي — أو null.
+ *
+ * لا ترمي عند غياب السرّ: بدون سرّ لا توجد جلسة صالحة أصلاً، والانهيار هنا
+ * كان يحوّل صفحة إعداد ناقص إلى خطأ خادم غامض.
+ */
 export async function getScannerSession(): Promise<ScannerSession | null> {
+  if (!process.env.SCANNER_SESSION_SECRET) return null;
+
   const store = await cookies();
   const token = store.get(SCANNER_COOKIE)?.value;
   if (!token) return null;

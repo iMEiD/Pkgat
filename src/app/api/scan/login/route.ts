@@ -3,12 +3,29 @@ import bcrypt from 'bcryptjs';
 
 import { createServiceClient } from '@/lib/supabase/server';
 import { setScannerCookie } from '@/lib/auth/scanner-session';
+import { SCANNER_ENV, checkEnv, describeMissing } from '@/lib/config';
 
 /**
  * مصادقة مسؤول الاستقبال — مستقلة تماماً عن Supabase Auth.
  * تستخدم مفتاح الخدمة لأن حسابات المسح ليست مستخدمي منصة.
  */
 export async function POST(request: NextRequest) {
+  // نفحص الإعداد أولاً: بدونه كان الخادم يرمي استثناءً فتظهر للمسؤول
+  // رسالة «تعذّر الاتصال» المضلِّلة رغم أن الشبكة سليمة.
+  const problems = checkEnv(SCANNER_ENV);
+  if (problems.length > 0) {
+    // تفاصيل الإعداد تُسجَّل للمالك ولا تُعرض للزائر — لا نكشف بنية الخادم
+    console.error('scan/login misconfigured:', problems.map(describeMissing).join(', '));
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: 'لوحة المسح غير مهيّأة على الخادم بعد. راجع صاحب المناسبة.',
+      },
+      { status: 503 },
+    );
+  }
+
   let body: { username?: string; password?: string };
   try {
     body = await request.json();
