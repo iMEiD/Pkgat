@@ -13,19 +13,19 @@ export function SiteFooter({ tagline, note }: { tagline: string; note: string })
 
         <div>
           <h4 className="text-sm font-bold text-ink">المنصة</h4>
-          <ul className="mt-4 space-y-2.5 text-sm text-ink-soft">
-            <li><Link className="transition-colors hover:text-grape-600" href="/gallery">معرض الأعمال</Link></li>
-            <li><Link className="transition-colors hover:text-grape-600" href="/pricing">الأسعار والباقات</Link></li>
-            <li><Link className="transition-colors hover:text-grape-600" href="/about">من نحن</Link></li>
+          <ul className="mt-1 text-sm text-ink-soft">
+            <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/gallery">معرض الأعمال</Link></li>
+            <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/pricing">الأسعار والباقات</Link></li>
+            <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/about">من نحن</Link></li>
           </ul>
         </div>
 
         <div>
           <h4 className="text-sm font-bold text-ink">حسابك</h4>
-          <ul className="mt-4 space-y-2.5 text-sm text-ink-soft">
-            <li><Link className="transition-colors hover:text-grape-600" href="/signup">إنشاء حساب</Link></li>
-            <li><Link className="transition-colors hover:text-grape-600" href="/login">تسجيل الدخول</Link></li>
-            <li><Link className="transition-colors hover:text-grape-600" href="/scan/login">دخول مسؤول الاستقبال</Link></li>
+          <ul className="mt-1 text-sm text-ink-soft">
+            <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/signup">إنشاء حساب</Link></li>
+            <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/login">تسجيل الدخول</Link></li>
+            <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/scan/login">دخول مسؤول الاستقبال</Link></li>
           </ul>
         </div>
       </div>

@@ -91,7 +91,7 @@ export function LoginForm({
         <div className="flex justify-end">
           <Link
             href="/forgot-password"
-            className="text-xs font-semibold text-grape-600 transition-colors hover:text-grape-700"
+            className="pk-tap text-xs font-semibold text-grape-600 transition-colors hover:text-grape-700"
           >
             نسيت كلمة المرور؟
           </Link>
@@ -104,7 +104,7 @@ export function LoginForm({
 
       <p className="mt-6 text-center text-sm text-ink-soft">
         ما عندك حساب؟{' '}
-        <Link href="/signup" className="font-bold text-grape-600 hover:text-grape-700">
+        <Link href="/signup" className="pk-tap font-bold text-grape-600 hover:text-grape-700">
           أنشئ حساب جديد
         </Link>
       </p>
@@ -112,7 +112,7 @@ export function LoginForm({
       <div className="mt-6 border-t border-sand-200 pt-5 text-center">
         <Link
           href="/scan/login"
-          className="text-xs font-semibold text-ink-faint transition-colors hover:text-ink"
+          className="pk-tap text-xs font-semibold text-ink-faint transition-colors hover:text-ink"
         >
           مسؤول استقبال؟ ادخل من هنا ←
         </Link>

@@ -156,7 +156,7 @@ export function SignupForm() {
 
       <p className="mt-6 text-center text-sm text-ink-soft">
         عندك حساب؟{' '}
-        <Link href="/login" className="font-bold text-grape-600 hover:text-grape-700">
+        <Link href="/login" className="pk-tap font-bold text-grape-600 hover:text-grape-700">
           سجّل دخولك
         </Link>
       </p>

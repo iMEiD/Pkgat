@@ -270,9 +270,16 @@ function TemplateModal({
                   return d;
                 })
               }
+              onResize={(target, size) =>
+                patch((d) => {
+                  if (target === 'name') d.name.fontSize = size;
+                  else d.qr.size = size;
+                  return d;
+                })
+              }
             />
-            <p className="mt-2 text-center text-xs text-ink-faint">
-              اسحب لتحديد المواضع الافتراضية
+            <p className="mt-2 text-center text-xs leading-6 text-ink-faint">
+              اسحب بإصبع للتحريك، وبإصبعين للتكبير والتصغير
             </p>
           </div>
         </div>

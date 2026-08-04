@@ -9,7 +9,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       <header className="pk-container flex h-[72px] items-center justify-between">
         <Logo />
-        <Link href="/" className="text-sm font-semibold text-ink-soft transition-colors hover:text-grape-600">
+        <Link href="/" className="pk-tap text-sm font-semibold text-ink-soft transition-colors hover:text-grape-600">
           ← العودة للموقع
         </Link>
       </header>

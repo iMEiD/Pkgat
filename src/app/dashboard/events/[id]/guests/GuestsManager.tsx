@@ -265,7 +265,74 @@ export function GuestsManager({
           ) : filtered.length === 0 ? (
             <p className="py-8 text-center text-sm text-ink-soft">لا نتائج مطابقة للبحث.</p>
           ) : (
-            <div className="overflow-x-auto pk-scrollbar">
+            <>
+              {/* الجوال: بطاقات — الجدول يتطلب تمريراً أفقياً غير مريح */}
+              <ul className="space-y-2 sm:hidden">
+                {filtered.map((guest) => {
+                  const tag = guest.tag_id ? tagMap.get(guest.tag_id) : null;
+                  return (
+                    <li
+                      key={guest.id}
+                      className={cn(
+                        'rounded-2xl border border-sand-200 p-3.5 transition-colors',
+                        selected.has(guest.id) ? 'border-grape-300 bg-grape-50/60' : 'bg-white',
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(guest.id)}
+                          onChange={() => toggle(guest.id)}
+                          aria-label={`تحديد ${guest.name}`}
+                          className="mt-1 h-5 w-5 shrink-0 accent-grape-500"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => setEditing(guest)}
+                          className="min-w-0 flex-1 text-right"
+                        >
+                          <span className="block truncate font-semibold text-ink">
+                            {guest.name}
+                            {guest.seats > 1 && (
+                              <span className="mr-1.5 text-xs font-normal text-ink-faint">
+                                ({guest.seats} أشخاص)
+                              </span>
+                            )}
+                          </span>
+                          {guest.phone && (
+                            <span className="mt-0.5 block text-xs text-ink-faint" dir="ltr">
+                              {guest.phone}
+                            </span>
+                          )}
+                        </button>
+
+                        <DownloadSingle
+                          design={event.design}
+                          guest={guest}
+                          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-ink-faint transition-colors hover:bg-sand-100 hover:text-grape-600 disabled:opacity-40"
+                        />
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-sand-100 pt-3">
+                        <StatusBadge
+                          status={guest.code_state}
+                          label={CODE_STATE_LABELS[guest.code_state] ?? guest.code_state}
+                        />
+                        {tag && <Badge tone={tag.color}>{tag.name}</Badge>}
+                        {guest.checked_in_at && (
+                          <span className="text-xs text-ink-soft">
+                            دخل {formatDateTime(guest.checked_in_at)}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {/* الشاشات الأكبر: جدول كامل */}
+              <div className="hidden overflow-x-auto pk-scrollbar sm:block">
               <table className="w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="border-b border-sand-200 text-right text-xs text-ink-faint">
@@ -362,7 +429,8 @@ export function GuestsManager({
                   })}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </>
           )}
         </CardBody>
       </Card>

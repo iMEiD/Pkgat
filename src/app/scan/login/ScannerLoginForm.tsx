@@ -109,7 +109,7 @@ export function ScannerLoginForm() {
           هذه الصفحة لمسؤولي الاستقبال فقط.
           <br />
           صاحب المناسبة يدخل من{' '}
-          <a href="/login" className="font-bold text-grape-600">
+          <a href="/login" className="pk-tap font-bold text-grape-600">
             صفحة الدخول الرئيسية
           </a>
           .

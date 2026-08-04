@@ -71,6 +71,15 @@ export function DesignEditor({
     });
   }
 
+  /** التكبير بإصبعين — المعاينة ترسل الحجم النهائي مضبوطاً ضمن الحدود */
+  function onResize(target: 'name' | 'qr', size: number) {
+    patch((d) => {
+      if (target === 'name') d.name.fontSize = size;
+      else d.qr.size = size;
+      return d;
+    });
+  }
+
   function applyTemplate(template: TemplateRow) {
     const merged = mergeDesign({
       ...template.config,
@@ -123,11 +132,15 @@ export function DesignEditor({
             design={design}
             sampleCode={SAMPLE_CODE}
             onMove={onMove}
+            onResize={onResize}
             selected={selected}
             onSelect={setSelected}
           />
-          <p className="mt-3 text-center text-xs text-ink-faint">
-            اسحب الإطار لتحريك الاسم أو الباركود — أو استخدم أسهم لوحة المفاتيح بعد تحديده.
+          <p className="mt-3 text-center text-xs leading-6 text-ink-faint">
+            اسحب الإطار بإصبع لتحريكه، وباستخدام إصبعين للتكبير والتصغير.
+            <br className="sm:hidden" />
+            <span className="hidden sm:inline"> </span>
+            على الحاسب: الأسهم للتحريك و + و − للحجم.
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
