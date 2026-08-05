@@ -12,14 +12,21 @@ export default async function ScannersPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const supabase = await createClient();
 
-  const [event, { data }] = await Promise.all([
+  const [event, { data }, { count: guestCount }] = await Promise.all([
     getOwnedEvent(id),
     supabase
       .from('scanner_accounts')
       .select('*')
       .eq('event_id', id)
       .order('created_at'),
+    supabase.from('guests').select('id', { count: 'exact', head: true }).eq('event_id', id),
   ]);
 
-  return <ScannersManager event={event} scanners={(data ?? []) as ScannerAccount[]} />;
+  return (
+    <ScannersManager
+      event={event}
+      scanners={(data ?? []) as ScannerAccount[]}
+      guestCount={guestCount ?? 0}
+    />
+  );
 }

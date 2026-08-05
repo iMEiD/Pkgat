@@ -39,6 +39,30 @@ export const PHASE_TONES: Record<EventPhase, string> = {
   ended: 'sand',
 };
 
+/**
+ * النهاية الاسمية للمناسبة — قبل مهلة التسامح.
+ * مهلة التسامح تمدّد صلاحية الباركود، لكنها لا تجعل الوصول «في الوقت».
+ */
+export function nominalEnd(event: EventRow): Date {
+  if (event.ended_manually_at) return new Date(event.ended_manually_at);
+  return event.ends_at
+    ? new Date(event.ends_at)
+    : new Date(new Date(event.starts_at).getTime() + 6 * 3_600_000);
+}
+
+/**
+ * هل دخل هذا المدعو بعد نهاية المناسبة؟
+ *
+ * محسوبة عند العرض لا مخزّنة، ولا تمسّ مسار المسح إطلاقاً: الباركود
+ * يُقبل كما هو داخل مهلة التسامح، وهذا مجرد تمييز في التقرير بين من
+ * حضر في وقته ومن جاء متأخراً — معلومة يحتاجها صاحب المناسبة عند
+ * ضبط مهلة التسامح للمرة القادمة.
+ */
+export function isLateArrival(event: EventRow, checkedInAt: string | null): boolean {
+  if (!checkedInAt) return false;
+  return new Date(checkedInAt).getTime() > nominalEnd(event).getTime();
+}
+
 /** متى تتفعّل الباركودات فعلياً */
 export function activationMoment(event: EventRow): Date {
   return new Date(new Date(event.starts_at).getTime() - event.activation_lead_minutes * 60_000);

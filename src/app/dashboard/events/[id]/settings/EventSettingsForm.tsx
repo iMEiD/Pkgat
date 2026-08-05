@@ -14,7 +14,15 @@ import { formatDateTime, toLocalInputValue } from '@/lib/utils/format';
 import { activationMoment, expiryMoment } from '@/lib/utils/event-phase';
 import type { EventRow } from '@/lib/types/database';
 
-export function EventSettingsForm({ event }: { event: EventRow }) {
+export function EventSettingsForm({
+  event,
+  guestCount,
+  guestLimit,
+}: {
+  event: EventRow;
+  guestCount: number;
+  guestLimit: number | null;
+}) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     updateEventDetails,
@@ -160,7 +168,7 @@ export function EventSettingsForm({ event }: { event: EventRow }) {
           description="تجاوز التوقيت التلقائي يدوياً — يفيد لو بدأت المناسبة مبكراً أو تأخرت."
         />
         <CardBody>
-          <ActivationControl event={event} />
+          <ActivationControl event={event} guestCount={guestCount} guestLimit={guestLimit} />
         </CardBody>
       </Card>
 

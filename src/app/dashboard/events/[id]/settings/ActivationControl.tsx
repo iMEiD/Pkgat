@@ -6,7 +6,7 @@ import { useState, useTransition } from 'react';
 import { Alert } from '@/components/ui/Alert';
 import { Icon } from '@/components/ui/Icon';
 import { setActivationOverride } from '@/lib/actions/events';
-import { formatDateTime } from '@/lib/utils/format';
+import { formatDateTime, formatNumber } from '@/lib/utils/format';
 import { activationMoment, expiryMoment } from '@/lib/utils/event-phase';
 import type { EventRow } from '@/lib/types/database';
 import { cn } from '@/lib/utils/cn';
@@ -37,7 +37,21 @@ const OPTIONS: { value: Override; label: string; hint: string; icon: string; ton
   },
 ];
 
-export function ActivationControl({ event }: { event: EventRow }) {
+export function ActivationControl({
+  event,
+  guestCount,
+  guestLimit,
+}: {
+  event: EventRow;
+  guestCount: number;
+  guestLimit: number | null;
+}) {
+  // التفعيل اليدوي يتجاوز التوقيت وحده — حدّ الباقة يبقى مطبَّقاً في
+  // قاعدة البيانات. بدون هذا التنبيه تقول اللوحة «مفعّلة» بينما الدعوات
+  // الزائدة عن الحد تخرج «غير مفعّلة» على الباب.
+  const overQuota = guestLimit !== null && guestCount > guestLimit;
+  const blockedCount = overQuota ? guestCount - guestLimit : 0;
+
   const router = useRouter();
   const [current, setCurrent] = useState<Override>(event.activation_override ?? 'auto');
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +77,17 @@ export function ActivationControl({ event }: { event: EventRow }) {
   return (
     <div className="space-y-4">
       {error && <Alert tone="danger">{error}</Alert>}
+
+      {overQuota && (
+        <Alert tone="warning">
+          <span className="font-bold">
+            {formatNumber(blockedCount)} دعوة من {formatNumber(guestCount)} غير مفعّلة
+          </span>{' '}
+          — لأن الباقة الحالية تغطي {formatNumber(guestLimit ?? 0)} دعوة فقط. هذا الحد يبقى
+          مطبَّقاً حتى لو اخترت «مفعّلة الآن»، والدعوات الزائدة لن تُمسح على الباب. ادفع باقة
+          أكبر أو احذف الدعوات الزائدة.
+        </Alert>
+      )}
 
       <div className="grid gap-2 sm:grid-cols-3">
         {OPTIONS.map((option) => {
@@ -105,9 +130,11 @@ export function ActivationControl({ event }: { event: EventRow }) {
           </p>
         </div>
       ) : (
-        <Alert tone={current === 'open' ? 'success' : 'warning'}>
+        <Alert tone={current === 'open' && !overQuota ? 'success' : 'warning'}>
           {current === 'open'
-            ? 'الباركودات مفعّلة يدوياً الآن — التوقيت التلقائي متجاوَز حتى ترجعه لـ«تلقائي».'
+            ? overQuota
+              ? `التوقيت التلقائي متجاوَز، لكن ${formatNumber(blockedCount)} دعوة ما زالت غير مفعّلة بسبب حدّ الباقة — التفعيل اليدوي لا يتجاوز الحد.`
+              : 'الباركودات مفعّلة يدوياً الآن — التوقيت التلقائي متجاوَز حتى ترجعه لـ«تلقائي».'
             : 'الباركودات موقوفة يدوياً — لن يدخل أي مدعو حتى ترجعها لـ«تلقائي» أو «مفعّلة».'}
         </Alert>
       )}

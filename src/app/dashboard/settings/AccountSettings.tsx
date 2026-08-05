@@ -1,12 +1,12 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState, useTransition } from 'react';
 
 import { Alert } from '@/components/ui/Alert';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Field, Input } from '@/components/ui/Field';
-import { changePassword, updateProfile } from '@/lib/actions/account';
+import { changePassword, deleteMyAccount, updateProfile } from '@/lib/actions/account';
 import type { ActionResult } from '@/lib/actions/events';
 import { formatDate } from '@/lib/utils/format';
 import type { Profile } from '@/lib/types/database';
@@ -113,6 +113,94 @@ export function AccountSettings({ profile, email }: { profile: Profile; email: s
           </CardBody>
         </Card>
       )}
+
+      {!profile.is_super_admin && <DeleteAccountCard />}
     </div>
+  );
+}
+
+/**
+ * حذف الحساب — سياسة الخصوصية تَعِد بهذا الحق، فلا بد أن يكون موجوداً فعلاً.
+ * التأكيد بكتابة كلمة صريحة لا بضغطة واحدة، لأن الحذف نهائي ويشمل المناسبات
+ * والمدعوين وسجل المسح.
+ */
+function DeleteAccountCard() {
+  const [open, setOpen] = useState(false);
+  const [word, setWord] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function remove() {
+    setError(null);
+    startTransition(async () => {
+      const res = await deleteMyAccount(word);
+      if (!res.ok) {
+        setError(res.error ?? 'تعذّر حذف الحساب.');
+        return;
+      }
+      // الجلسة صارت لحساب محذوف — نخرج عبر مسار الخروج لتُمسح الكوكيز
+      const form = document.createElement('form');
+      form.method = 'post';
+      form.action = '/api/auth/signout';
+      document.body.appendChild(form);
+      form.submit();
+    });
+  }
+
+  return (
+    <Card className="border-coral-200">
+      <CardHeader
+        title="حذف الحساب"
+        description="يحذف حسابك وكل مناسباتك ومدعويك وسجل المسح نهائياً — بلا رجعة."
+      />
+      <CardBody className="space-y-3">
+        {error && <Alert tone="danger">{error}</Alert>}
+
+        {!open ? (
+          <Button variant="secondary" onClick={() => setOpen(true)}>
+            أريد حذف حسابي
+          </Button>
+        ) : (
+          <>
+            <Alert tone="danger" title="هذا الإجراء لا يمكن التراجع عنه">
+              ستُحذف كل مناسباتك وقوائم مدعويك وتقاريرك وحسابات المسح. لو عندك مناسبة قادمة،
+              حمّل دعواتك وتقاريرك قبل الحذف.
+            </Alert>
+
+            <Field label="اكتب كلمة «حذف» للتأكيد" htmlFor="confirm-delete" required>
+              <Input
+                id="confirm-delete"
+                value={word}
+                onChange={(e) => setWord(e.target.value)}
+                placeholder="حذف"
+                autoComplete="off"
+              />
+            </Field>
+
+            <div className="flex gap-2">
+              <Button
+                variant="danger"
+                onClick={remove}
+                loading={pending}
+                disabled={word.trim() !== 'حذف'}
+              >
+                احذف حسابي نهائياً
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setOpen(false);
+                  setWord('');
+                  setError(null);
+                }}
+                disabled={pending}
+              >
+                إلغاء
+              </Button>
+            </div>
+          </>
+        )}
+      </CardBody>
+    </Card>
   );
 }

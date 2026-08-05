@@ -17,15 +17,26 @@ import {
   toggleScannerActive,
   updateScannerPassword,
 } from '@/lib/actions/scanners';
-import { formatDateTime } from '@/lib/utils/format';
+import { formatDateTime, formatNumber } from '@/lib/utils/format';
 import type { EventRow, ScannerAccount } from '@/lib/types/database';
+
+/**
+ * طاقة المسح التقديرية لكل مسؤول.
+ *
+ * مسح الباركود والترحيب بالضيف يستغرق قرابة ١٥ ثانية عملياً — أي نحو
+ * ٤ ضيوف في الدقيقة — ونفترض أن الدخول يتركّز في أول ٤٥ دقيقة، لأن
+ * الطابور هو ما يهم لا المتوسط على الليلة كلها.
+ */
+const GUESTS_PER_SCANNER = 180;
 
 export function ScannersManager({
   event,
   scanners,
+  guestCount,
 }: {
   event: EventRow;
   scanners: ScannerAccount[];
+  guestCount: number;
 }) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
@@ -51,8 +62,39 @@ export function ScannersManager({
     });
   }
 
+  const activeScanners = scanners.filter((s) => s.is_active).length;
+  const recommended = Math.max(1, Math.ceil(guestCount / GUESTS_PER_SCANNER));
+  const understaffed = guestCount > 0 && activeScanners < recommended;
+
   return (
     <div className="space-y-6">
+      {understaffed && (
+        <Alert
+          tone="warning"
+          title={
+            activeScanners === 0
+              ? 'ما أنشأت أي حساب مسح بعد'
+              : `مسؤول واحد لن يكفي ${formatNumber(guestCount)} مدعو`
+          }
+        >
+          {activeScanners === 0 ? (
+            <>
+              عندك {formatNumber(guestCount)} مدعو وما فيه حساب مسح فعّال — بدونه ما أحد يقدر
+              يمسح الباركودات على الباب. أنشئ {formatNumber(recommended)}{' '}
+              {recommended === 1 ? 'حساباً' : 'حسابات'} على الأقل.
+            </>
+          ) : (
+            <>
+              عندك {formatNumber(guestCount)} مدعو و{formatNumber(activeScanners)}{' '}
+              {activeScanners === 1 ? 'مسؤول فعّال' : 'مسؤولين فعّالين'} — نقترح{' '}
+              {formatNumber(recommended)} على الأقل. التقدير مبني على أن كل مسؤول يمسح نحو ٤
+              ضيوف في الدقيقة، وأن معظم الضيوف يصلون في أول ٤٥ دقيقة. مسؤول واحد على باب مزدحم
+              يعني طابوراً.
+            </>
+          )}
+        </Alert>
+      )}
+
       <Alert tone="info" title="كيف يعمل مسؤول الاستقبال؟">
         كل مسؤول له اسم مستخدم وكلمة مرور خاصة به، منفصلة تماماً عن حسابك. يفتح رابط لوحة
         المسح من متصفح جواله، يسجّل دخوله، ويبدأ المسح — بدون تحميل أي تطبيق. تقدر تنشئ حساباً

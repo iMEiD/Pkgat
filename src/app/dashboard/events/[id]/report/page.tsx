@@ -6,9 +6,10 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { ButtonLink } from '@/components/ui/Button';
 import { Stat } from '@/components/ui/Misc';
 import { EndEventControls } from './EndEventControls';
+import { ExportAttendance } from './ExportAttendance';
 import { getEventCounts, getEventGuests, getEventTags, getOwnedEvent } from '@/lib/data/event';
 import { formatDateTime, formatNumber, formatPercent } from '@/lib/utils/format';
-import { computeEventPhase } from '@/lib/utils/event-phase';
+import { computeEventPhase, isLateArrival } from '@/lib/utils/event-phase';
 import { Icon } from '@/components/ui/Icon';
 
 export const metadata: Metadata = { title: 'تقرير المناسبة' };
@@ -26,6 +27,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   const phase = computeEventPhase(event);
   const tagMap = new Map(tags.map((t) => [t.id, t]));
+  const lateCount = guests.filter((g) => isLateArrival(event, g.checked_in_at)).length;
 
   const byTag = [...tags, null].map((tag) => {
     const list = guests.filter((g) => (tag ? g.tag_id === tag.id : !g.tag_id));
@@ -67,10 +69,18 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           description="نسخة مرتبة جاهزة للطباعة أو الحفظ كملف PDF."
         />
         <CardBody className="space-y-4">
-          <ButtonLink href={`/dashboard/events/${id}/report/print`} target="_blank" size="lg">
-            <Icon name="download" className="h-4 w-4" />
-            افتح التقرير للطباعة / الحفظ PDF
-          </ButtonLink>
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href={`/dashboard/events/${id}/report/print`} target="_blank" size="lg">
+              <Icon name="download" className="h-4 w-4" />
+              افتح التقرير للطباعة / الحفظ PDF
+            </ButtonLink>
+            <ExportAttendance event={event} guests={guests} tags={tags} />
+          </div>
+
+          <p className="text-xs leading-6 text-ink-soft">
+            ملف Excel يعطيك قائمة الأسماء بحالة كل مدعو ووقت دخوله — للفرز والتصفية
+            والتسويات، بينما ملف PDF للعرض والأرشفة.
+          </p>
 
           <p className="text-xs leading-6 text-ink-soft">
             التقرير يفتح في تبويب جديد بتنسيق مخصص للطباعة (A4). من نافذة الطباعة اختر
@@ -118,6 +128,14 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             </div>
           </CardBody>
         </Card>
+      )}
+
+      {lateCount > 0 && (
+        <Alert tone="info" title={`${formatNumber(lateCount)} مدعو دخلوا بعد نهاية المناسبة`}>
+          دخلوا داخل مهلة التسامح ({formatNumber(event.expiry_grace_minutes)} دقيقة بعد النهاية)
+          فقُبلت باركوداتهم. لو كان العدد كبيراً، فالمهلة عندك أوسع من اللازم — أو أن المناسبة
+          امتدت فعلياً بعد وقتها المسجّل. تقدر تضبط المهلة من إعدادات المناسبة.
+        </Alert>
       )}
 
       {counts.overrides > 0 && (
