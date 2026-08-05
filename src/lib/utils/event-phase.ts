@@ -44,12 +44,18 @@ export function activationMoment(event: EventRow): Date {
   return new Date(new Date(event.starts_at).getTime() - event.activation_lead_minutes * 60_000);
 }
 
-/** متى تنتهي صلاحية الباركودات */
+/**
+ * متى تنتهي صلاحية الباركودات.
+ *
+ * الإنهاء اليدوي يوقف المسح في لحظته بلا مهلة — المهلة معناها التسامح مع
+ * المدعوين المتأخرين عن النهاية التلقائية، لا تمديد إنهاء صريح.
+ */
 export function expiryMoment(event: EventRow): Date {
-  const rawEnd = event.ended_manually_at
-    ? new Date(event.ended_manually_at).getTime()
-    : event.ends_at
-      ? new Date(event.ends_at).getTime()
-      : new Date(event.starts_at).getTime() + 6 * 3_600_000;
+  if (event.ended_manually_at) return new Date(event.ended_manually_at);
+
+  const rawEnd = event.ends_at
+    ? new Date(event.ends_at).getTime()
+    : new Date(event.starts_at).getTime() + 6 * 3_600_000;
+
   return new Date(rawEnd + event.expiry_grace_minutes * 60_000);
 }
