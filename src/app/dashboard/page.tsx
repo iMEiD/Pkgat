@@ -24,13 +24,31 @@ export default async function DashboardHome() {
   const session = await requireUser('/dashboard');
   const supabase = await createClient();
 
-  const { data: events } = await supabase
-    .from('events')
-    .select('*')
-    .eq('owner_id', session.id)
-    .order('starts_at', { ascending: false });
+  async function loadEvents() {
+    const { data } = await supabase
+      .from('events')
+      .select('*')
+      .eq('owner_id', session.id)
+      .order('starts_at', { ascending: false });
+    return (data ?? []) as EventRow[];
+  }
 
-  const rows = (events ?? []) as EventRow[];
+  let rows = await loadEvents();
+
+  // أول زيارة بلا مناسبات: نزرع مناسبة تجريبية ليجرّب المسح فوراً.
+  // seedDemoEvent يحرس نفسه بعلامة demo_seeded فلا يتكرر الزرع.
+  if (rows.length === 0) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('demo_seeded')
+      .eq('id', session.id)
+      .maybeSingle();
+
+    if (profile && !profile.demo_seeded) {
+      const { seedDemoEvent } = await import('@/lib/data/demo-event');
+      if (await seedDemoEvent(session.id)) rows = await loadEvents();
+    }
+  }
 
   // نجلب عدّادات المدعوين لكل المناسبات في استعلام واحد
   const ids = rows.map((e) => e.id);

@@ -77,6 +77,8 @@ export type Profile = {
   marketing_consent_at: string | null;
   // حصة دعوات خاصة منحها الأدمن — null يعني الإعداد العام
   free_quota_override: number | null;
+  // زُرعت المناسبة التجريبية لهذا المستخدم
+  demo_seeded: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -101,6 +103,9 @@ export type EventRow = {
   paid_at: string | null;
   plan_id: string | null;
   ended_manually_at: string | null;
+  // مناسبة تجريبية مزروعة تلقائياً للتعرّف على المنصة
+  is_demo: boolean;
+  reminder_sent_at: string | null;
   created_at: string;
   updated_at: string;
 }
