@@ -257,10 +257,11 @@ export function ScannerDashboard({
             >
               {paused ? 'استئناف المسح' : 'إيقاف مؤقت'}
             </button>
+            {/* بارز عمداً: هذا مخرج الحارس حين يقف أمامه كبير سنّ بلا باركود */}
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="flex-1 rounded-2xl border border-white/15 py-3 text-sm font-bold text-white/80 transition-colors hover:bg-white/10"
+              className="flex-1 rounded-2xl border border-mint-300/40 bg-mint-500/15 py-3 text-sm font-bold text-mint-200 transition-colors hover:bg-mint-500/25"
             >
               بحث بالاسم
             </button>

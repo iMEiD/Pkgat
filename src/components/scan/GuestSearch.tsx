@@ -137,7 +137,7 @@ export function GuestSearch({
       )}
 
       <p className="text-center text-[11px] leading-5 text-white/40">
-        اضغط على الاسم لتسجيل دخوله — يفيد لو ضاعت الدعوة أو تلف الباركود.
+        اضغط على الاسم لتسجيل دخوله — لكبار السن ومن ضاعت دعوته أو تلف باركوده.
       </p>
     </div>
   );
