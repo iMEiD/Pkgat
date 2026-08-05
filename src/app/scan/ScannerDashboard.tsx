@@ -24,8 +24,11 @@ export interface HistoryEntry {
  * فترة تجاهل نفس الرمز بعد مسحه.
  * طويلة عمداً: الباركود يبقى أمام الكاميرا بعد المسح، وبدون هذي المهلة
  * يعاد إرساله للخادم مراراً فتبدو اللوحة وكأنها «تمسح بشكل عشوائي».
+ *
+ * لا بد أن تتجاوز أطول مهلة إخفاء لبطاقة النتيجة (٥ ثوانٍ)، وإلا عادت
+ * البطاقة للظهور فور اختفائها ما دام الباركود أمام الكاميرا.
  */
-const REPEAT_COOLDOWN_MS = 6000;
+const REPEAT_COOLDOWN_MS = 8000;
 
 export function ScannerDashboard({
   scannerName,
@@ -131,7 +134,10 @@ export function ScannerDashboard({
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-ink text-white">
+    // h-dvh لا min-h-screen: على الجوال 100vh أطول من المساحة المرئية فعلياً
+    // (شريط عنوان المتصفح)، وoverflow-hidden يمنع سجلّ العمليات من دفع
+    // اللوحة تحت حافة الشاشة. اللوحة تشغل الشاشة بالضبط ولا تُمرَّر أبداً.
+    <div className="flex h-dvh flex-col overflow-hidden bg-ink text-white">
       {/* الشريط العلوي */}
       <header className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
         <LogoMark className="h-9 w-9 rounded-xl" />
@@ -181,8 +187,8 @@ export function ScannerDashboard({
         <Counter label="الإجمالي" value={stats.total} tone="text-white/70" />
       </div>
 
-      {/* الكاميرا */}
-      <div className="relative flex-1">
+      {/* الكاميرا — min-h-0 ضروري ليتقلّص العنصر بدل أن يدفع ما تحته */}
+      <div className="relative min-h-0 flex-1">
         <QrCamera
           onDetected={onDetected}
           paused={paused || busy || manualOpen || searchOpen || result !== null}
@@ -205,7 +211,7 @@ export function ScannerDashboard({
       </div>
 
       {/* أدوات */}
-      <div className="border-t border-white/10 p-3">
+      <div className="shrink-0 border-t border-white/10 p-3">
         {searchOpen ? (
           <GuestSearch
             onClose={() => setSearchOpen(false)}
@@ -271,11 +277,11 @@ export function ScannerDashboard({
 
       {/* آخر العمليات */}
       {history.length > 0 && (
-        <details className="border-t border-white/10">
+        <details className="shrink-0 border-t border-white/10">
           <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-white/70">
             آخر عمليات المسح ({history.length})
           </summary>
-          <ul className="max-h-56 overflow-y-auto px-4 pb-4">
+          <ul className="max-h-40 overflow-y-auto px-4 pb-4">
             {history.map((entry) => (
               <li
                 key={entry.id}

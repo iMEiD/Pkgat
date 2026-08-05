@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { formatTime } from '@/lib/utils/format';
@@ -67,16 +67,30 @@ export function ScanResultCard({
 }) {
   const style = STYLES[result.result] ?? STYLES.invalid;
 
-  // النتائج الناجحة تختفي تلقائياً حتى يستمر الطابور بلا ضغطات إضافية.
-  // الحالات التي تحتاج قراراً (مكرر/تجاوز) تبقى حتى يغلقها المسؤول.
+  // كل النتائج تختفي تلقائياً — الكاميرا متوقفة ما دامت البطاقة ظاهرة،
+  // فإبقاء بطاقة «مكرر» حتى يضغط المسؤول ✕ كان يوقف الطابور عند الباب.
+  // الحالات التي تحتاج قراراً تأخذ مهلة أطول، وأي لمسة على البطاقة تلغي
+  // الإخفاء التلقائي حتى لا يُسحب زر «تجاوز» من تحت إصبع المسؤول.
+  const [held, setHeld] = useState(false);
+
+  // نتيجة جديدة على نفس البطاقة (بعد «تجاوز» مثلاً) تستأنف الإخفاء التلقائي،
+  // وإلا بقيت البطاقة معلّقة إلى الأبد لأن اللمسة السابقة أوقفت المؤقّت.
   useEffect(() => {
-    if (result.result !== 'granted') return;
-    const timer = setTimeout(onDismiss, 2600);
+    setHeld(false);
+  }, [result]);
+
+  useEffect(() => {
+    if (held) return;
+    const ms = result.result === 'granted' || result.result === 'override' ? 2600 : 5000;
+    const timer = setTimeout(onDismiss, ms);
     return () => clearTimeout(timer);
-  }, [result, onDismiss]);
+  }, [result, onDismiss, held]);
 
   return (
-    <div className={cn('rounded-3xl p-4 shadow-lift animate-pop-in', style.box)}>
+    <div
+      onPointerDown={() => setHeld(true)}
+      className={cn('rounded-3xl p-4 shadow-lift animate-pop-in', style.box)}
+    >
       <div className="flex items-start gap-3">
         <span
           className={cn(
