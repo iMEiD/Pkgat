@@ -7,13 +7,16 @@ import { useState } from 'react';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Field, Input } from '@/components/ui/Field';
+import { Field, Input, Select } from '@/components/ui/Field';
 import { createClient } from '@/lib/supabase/client';
+import { COUNTRIES, DEFAULT_COUNTRY, buildPhone, findCountry } from '@/lib/countries';
 
 export function SignupForm() {
   const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [country, setCountry] = useState(DEFAULT_COUNTRY);
+  const [localPhone, setLocalPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   // موافقتان منفصلتان: قبول الشروط شرط للتسجيل، والاستخدام التسويقي اختياري
@@ -28,6 +31,12 @@ export function SignupForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const phoneResult = buildPhone(country, localPhone);
+    if (!phoneResult.ok) {
+      setError(phoneResult.error);
+      return;
+    }
 
     if (password.length < 8) {
       setError('كلمة المرور يجب أن تكون ٨ أحرف على الأقل.');
@@ -48,7 +57,11 @@ export function SignupForm() {
       email,
       password,
       options: {
-        data: { full_name: fullName, marketing_consent: marketingConsent },
+        data: {
+          full_name: fullName,
+          phone: phoneResult.phone,
+          marketing_consent: marketingConsent,
+        },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
       },
     });
@@ -132,6 +145,42 @@ export function SignupForm() {
             placeholder="you@example.com"
             autoComplete="email"
           />
+        </Field>
+
+        <Field
+          label="رقم الجوال"
+          htmlFor="phone"
+          hint={`اختر دولتك ثم اكتب الرقم بدون الصفر — مثال: ${
+            findCountry(country).code === 'SA' ? '512345678' : 'رقمك المحلي'
+          }`}
+          required
+        >
+          <div className="flex gap-2" dir="ltr">
+            <Select
+              aria-label="مفتاح الدولة"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="w-[8.5rem] shrink-0 px-3 text-center"
+            >
+              {COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.flag} +{c.dial}
+                </option>
+              ))}
+            </Select>
+            <Input
+              id="phone"
+              type="tel"
+              inputMode="numeric"
+              required
+              dir="ltr"
+              value={localPhone}
+              onChange={(e) => setLocalPhone(e.target.value)}
+              placeholder="512345678"
+              autoComplete="tel-national"
+              className="flex-1"
+            />
+          </div>
         </Field>
 
         <Field label="كلمة المرور" htmlFor="password" hint="٨ أحرف على الأقل" required>

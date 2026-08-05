@@ -75,6 +75,8 @@ export type Profile = {
   terms_accepted_at: string | null;
   marketing_consent: boolean;
   marketing_consent_at: string | null;
+  // حصة دعوات خاصة منحها الأدمن — null يعني الإعداد العام
+  free_quota_override: number | null;
   created_at: string;
   updated_at: string;
 }

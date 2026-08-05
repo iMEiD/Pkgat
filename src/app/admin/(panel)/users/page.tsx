@@ -12,6 +12,11 @@ export interface AdminUserRow extends Profile {
   event_count: number;
   guest_count: number;
   has_subscription: boolean;
+  // تفاصيل العضوية الفعّالة — تظهر في نافذة التعديل
+  membership_plan_id: string | null;
+  membership_plan_name: string | null;
+  membership_ends_at: string | null;
+  membership_granted: boolean;
   last_sign_in_at: string | null;
   email_confirmed: boolean;
 }
@@ -20,13 +25,20 @@ export default async function AdminUsersPage() {
   const admin = await requireAdmin();
   const supabase = createServiceClient();
 
-  const [{ data: profiles }, { data: events }, { data: subs }, authList] = await Promise.all([
-    supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(500),
-    supabase.from('events').select('id, owner_id'),
-    supabase.from('subscriptions').select('user_id, current_period_end').eq('status', 'active'),
-    // بيانات الدخول والتأكيد تعيش في auth.users لا في جدول الملفات
-    supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-  ]);
+  const [{ data: profiles }, { data: events }, { data: subs }, { data: plans }, authList] =
+    await Promise.all([
+      supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(500),
+      supabase.from('events').select('id, owner_id'),
+      supabase
+        .from('subscriptions')
+        .select('user_id, plan_id, current_period_end, provider_ref')
+        .eq('status', 'active'),
+      supabase.from('plans').select('id, name, billing_period').order('sort_order'),
+      // بيانات الدخول والتأكيد تعيش في auth.users لا في جدول الملفات
+      supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+    ]);
+
+  const planNames = new Map((plans ?? []).map((p) => [p.id, p.name]));
 
   const eventCounts = new Map<string, number>();
   const eventOwner = new Map<string, string>();
@@ -46,10 +58,10 @@ export default async function AdminUsersPage() {
     }
   }
 
-  const subscribed = new Set(
+  const activeSubs = new Map(
     (subs ?? [])
       .filter((s) => !s.current_period_end || new Date(s.current_period_end) > new Date())
-      .map((s) => s.user_id),
+      .map((s) => [s.user_id, s]),
   );
 
   const authUsers = new Map(
@@ -65,17 +77,28 @@ export default async function AdminUsersPage() {
 
   const rows: AdminUserRow[] = ((profiles ?? []) as Profile[]).map((profile) => {
     const auth = authUsers.get(profile.id);
+    const sub = activeSubs.get(profile.id);
     return {
       ...profile,
       // نُفضّل الجوال المحفوظ في الملف، ونرجع لما سجّله في المصادقة
       phone: profile.phone ?? auth?.phone ?? null,
       event_count: eventCounts.get(profile.id) ?? 0,
       guest_count: guestCounts.get(profile.id) ?? 0,
-      has_subscription: subscribed.has(profile.id),
+      has_subscription: Boolean(sub),
+      membership_plan_id: sub?.plan_id ?? null,
+      membership_plan_name: sub ? (planNames.get(sub.plan_id) ?? null) : null,
+      membership_ends_at: sub?.current_period_end ?? null,
+      membership_granted: sub?.provider_ref === 'admin_grant',
       last_sign_in_at: auth?.lastSignIn ?? null,
       email_confirmed: auth?.confirmed ?? false,
     };
   });
 
-  return <AdminUsersTable users={rows} currentAdminId={admin.id} />;
+  return (
+    <AdminUsersTable
+      users={rows}
+      currentAdminId={admin.id}
+      plans={(plans ?? []).map((p) => ({ id: p.id, name: p.name }))}
+    />
+  );
 }

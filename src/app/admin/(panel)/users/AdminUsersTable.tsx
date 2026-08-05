@@ -11,16 +11,29 @@ import { Field, Input, Select } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
 import { Stat } from '@/components/ui/Misc';
-import { adminUpdateUser, setUserSuspended } from '@/lib/actions/admin';
+import {
+  adminGrantMembership,
+  adminRevokeMembership,
+  adminSetUserQuota,
+  adminUpdateUser,
+  setUserSuspended,
+} from '@/lib/actions/admin';
 import { formatDate, formatDateTime, formatNumber } from '@/lib/utils/format';
 import type { AdminUserRow } from './page';
+
+export interface PlanOption {
+  id: string;
+  name: string;
+}
 
 export function AdminUsersTable({
   users,
   currentAdminId,
+  plans,
 }: {
   users: AdminUserRow[];
   currentAdminId: string;
+  plans: PlanOption[];
 }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -281,7 +294,9 @@ export function AdminUsersTable({
         حماية البيانات الشخصية السعودي — يُفضّل إضافة خانة موافقة صريحة عند التسجيل قبل أي حملة.
       </p>
 
-      {editing && <EditUserModal user={editing} onClose={() => setEditing(null)} />}
+      {editing && (
+        <EditUserModal user={editing} plans={plans} onClose={() => setEditing(null)} />
+      )}
     </div>
   );
 }
@@ -298,7 +313,188 @@ function UserBadges({ user }: { user: AdminUserRow }) {
   );
 }
 
-function EditUserModal({ user, onClose }: { user: AdminUserRow; onClose: () => void }) {
+/**
+ * منح العضوية وسحبها.
+ * كل الأزرار type="button" لأن اللوحة تعيش داخل نموذج تعديل البيانات،
+ * وأي زر بلا نوع صريح يُرسل النموذج الخارجي بدل تنفيذ إجراءه.
+ */
+function MembershipPanel({ user, plans }: { user: AdminUserRow; plans: PlanOption[] }) {
+  const router = useRouter();
+  const [planId, setPlanId] = useState(user.membership_plan_id ?? plans[0]?.id ?? '');
+  const [months, setMonths] = useState<string>('12');
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function grant() {
+    setErr(null);
+    setMsg(null);
+    if (!planId) return setErr('اختر باقة أولاً.');
+
+    startTransition(async () => {
+      const res = await adminGrantMembership(user.id, planId, months === 'forever' ? null : Number(months));
+      if (!res.ok) return setErr(res.error ?? 'تعذّر منح العضوية.');
+      setMsg('تم منح العضوية.');
+      router.refresh();
+    });
+  }
+
+  function revoke() {
+    if (!confirm(`سحب العضوية من «${user.full_name || user.email}»؟`)) return;
+    setErr(null);
+    setMsg(null);
+
+    startTransition(async () => {
+      const res = await adminRevokeMembership(user.id);
+      if (!res.ok) return setErr(res.error ?? 'تعذّر سحب العضوية.');
+      setMsg('تم سحب العضوية.');
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="rounded-2xl border border-sand-200 p-4">
+      <h3 className="text-sm font-bold text-ink">العضوية</h3>
+
+      {user.has_subscription ? (
+        <p className="mt-2 text-xs leading-6 text-ink-soft">
+          الحالية: <span className="font-bold text-ink">{user.membership_plan_name ?? '—'}</span>
+          {user.membership_granted && <Badge tone="grape" className="mr-1.5">ممنوحة</Badge>}
+          <br />
+          {user.membership_ends_at
+            ? `تنتهي في ${formatDate(user.membership_ends_at)}`
+            : 'بلا تاريخ انتهاء (دائمة)'}
+        </p>
+      ) : (
+        <p className="mt-2 text-xs text-ink-faint">ما عنده عضوية فعّالة.</p>
+      )}
+
+      {err && <Alert tone="danger" className="mt-3">{err}</Alert>}
+      {msg && <Alert tone="success" className="mt-3">{msg}</Alert>}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Select
+          aria-label="الباقة"
+          value={planId}
+          onChange={(e) => setPlanId(e.target.value)}
+          className="min-w-[9rem] flex-1"
+        >
+          {plans.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </Select>
+
+        <Select
+          aria-label="المدة"
+          value={months}
+          onChange={(e) => setMonths(e.target.value)}
+          className="min-w-[7rem] flex-1"
+        >
+          <option value="1">شهر</option>
+          <option value="3">٣ أشهر</option>
+          <option value="6">٦ أشهر</option>
+          <option value="12">سنة</option>
+          <option value="forever">دائمة</option>
+        </Select>
+      </div>
+
+      <div className="mt-3 flex gap-2">
+        <Button type="button" size="sm" onClick={grant} loading={pending}>
+          {user.has_subscription ? 'استبدال العضوية' : 'منح العضوية'}
+        </Button>
+        {user.has_subscription && (
+          <Button type="button" size="sm" variant="secondary" onClick={revoke} disabled={pending}>
+            سحب العضوية
+          </Button>
+        )}
+      </div>
+
+      <p className="mt-2 text-[11px] leading-5 text-ink-faint">
+        العضوية الفعّالة تعني مناسبات ومدعوين بلا حدود — بدون دفع.
+      </p>
+    </div>
+  );
+}
+
+/** تحديد عدد دعوات مجانية خاص بهذا المستخدم */
+function QuotaPanel({ user }: { user: AdminUserRow }) {
+  const router = useRouter();
+  const [value, setValue] = useState(
+    user.free_quota_override === null ? '' : String(user.free_quota_override),
+  );
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function save() {
+    setErr(null);
+    setMsg(null);
+    const raw = value.trim();
+    const quota = raw === '' ? null : Number(raw);
+
+    if (quota !== null && (!Number.isInteger(quota) || quota < 0)) {
+      return setErr('اكتب رقماً صحيحاً، أو اترك الخانة فارغة للإعداد العام.');
+    }
+
+    startTransition(async () => {
+      const res = (await adminSetUserQuota(user.id, quota)) as {
+        ok: boolean;
+        error?: string;
+        updatedEvents?: number;
+      };
+      if (!res.ok) return setErr(res.error ?? 'تعذّر الحفظ.');
+
+      setMsg(
+        quota === null
+          ? 'رجع للإعداد العام — مناسباته القائمة ما تغيّرت.'
+          : `تم. وطُبّق على ${formatNumber(res.updatedEvents ?? 0)} مناسبة قائمة غير مدفوعة.`,
+      );
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="rounded-2xl border border-sand-200 p-4">
+      <h3 className="text-sm font-bold text-ink">عدد الدعوات المجانية</h3>
+      <p className="mt-1 text-[11px] leading-5 text-ink-faint">
+        خاص بهذا المستخدم ويسبق الإعداد العام. اتركه فارغاً ليتبع الإعداد العام.
+      </p>
+
+      {err && <Alert tone="danger" className="mt-3">{err}</Alert>}
+      {msg && <Alert tone="success" className="mt-3">{msg}</Alert>}
+
+      <div className="mt-3 flex gap-2">
+        <Input
+          type="number"
+          min={0}
+          inputMode="numeric"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="الإعداد العام"
+          className="flex-1"
+        />
+        <Button type="button" size="sm" onClick={save} loading={pending}>
+          حفظ
+        </Button>
+      </div>
+
+      <p className="mt-2 text-[11px] leading-5 text-ink-faint">
+        يُطبَّق فوراً على مناسباته القائمة غير المدفوعة — وإلا ظهر له أنه يقدر
+        يضيف مدعوين بينما باركوداتهم تخرج «غير مفعّلة» على الباب.
+      </p>
+    </div>
+  );
+}
+
+function EditUserModal({
+  user,
+  plans,
+  onClose,
+}: {
+  user: AdminUserRow;
+  plans: PlanOption[];
+  onClose: () => void;
+}) {
   const router = useRouter();
   const [fullName, setFullName] = useState(user.full_name ?? '');
   const [phone, setPhone] = useState(user.phone ?? '');
@@ -363,6 +559,9 @@ function EditUserModal({ user, onClose }: { user: AdminUserRow; onClose: () => v
             placeholder="9665xxxxxxxx"
           />
         </Field>
+
+        <MembershipPanel user={user} plans={plans} />
+        <QuotaPanel user={user} />
 
         <div className="rounded-2xl bg-sand-50 p-4 text-xs text-ink-soft">
           <p>

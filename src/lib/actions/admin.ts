@@ -177,6 +177,134 @@ export async function adminUpdateUser(
   return { ok: true };
 }
 
+// ===================== منح الأدمن للمستخدمين =====================
+
+/**
+ * منح عضوية لمستخدم بدون دفع — للتجارب والحسابات الخاصة والتعويضات.
+ *
+ * يُلغى أي اشتراك فعّال سابق قبل إنشاء الجديد، وإلا تراكمت اشتراكات
+ * متعددة فعّالة على نفس المستخدم وصار «أي واحد منها» هو المطبَّق.
+ * `months = null` تعني عضوية دائمة بلا تاريخ انتهاء.
+ */
+export async function adminGrantMembership(
+  userId: string,
+  planId: string,
+  months: number | null,
+): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { data: plan } = await supabase
+    .from('plans')
+    .select('id, name')
+    .eq('id', planId)
+    .maybeSingle();
+
+  if (!plan) return { ok: false, error: 'الباقة غير موجودة.' };
+
+  if (months !== null && (!Number.isInteger(months) || months < 1 || months > 120)) {
+    return { ok: false, error: 'مدة العضوية لازم تكون بين شهر و١٢٠ شهراً.' };
+  }
+
+  await supabase
+    .from('subscriptions')
+    .update({ status: 'canceled' })
+    .eq('user_id', userId)
+    .eq('status', 'active');
+
+  const periodEnd =
+    months === null
+      ? null
+      : new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { error } = await supabase.from('subscriptions').insert({
+    user_id: userId,
+    plan_id: planId,
+    status: 'active',
+    current_period_end: periodEnd,
+    // يميّز المنح اليدوي عن الاشتراكات المدفوعة في أي مراجعة لاحقة
+    provider_ref: 'admin_grant',
+  });
+
+  if (error) return { ok: false, error: 'تعذّر منح العضوية.' };
+
+  await logAdminAction('user.membership_granted', 'subscriptions', userId, {
+    plan: plan.name,
+    months: months === null ? 'دائمة' : String(months),
+  });
+
+  revalidatePath('/admin/users');
+  return { ok: true };
+}
+
+/** سحب العضوية الممنوحة — يلغي أي اشتراك فعّال للمستخدم */
+export async function adminRevokeMembership(userId: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { error } = await supabase
+    .from('subscriptions')
+    .update({ status: 'canceled' })
+    .eq('user_id', userId)
+    .eq('status', 'active');
+
+  if (error) return { ok: false, error: 'تعذّر سحب العضوية.' };
+
+  await logAdminAction('user.membership_revoked', 'subscriptions', userId);
+  revalidatePath('/admin/users');
+  return { ok: true };
+}
+
+/**
+ * تحديد عدد دعوات مجانية خاص بمستخدم.
+ *
+ * الحصة تُنسخ داخل كل مناسبة لحظة إنشائها، فتغيير الملف وحده لا يمس
+ * مناسباته القائمة. ولأن حالة الباركود في SQL تقرأ events.free_quota
+ * مباشرة، لو حدّثنا الملف فقط لظهر للمستخدم أنه يقدر يضيف مدعوين بينما
+ * باركوداتهم تخرج «غير مفعّلة» على الباب. لذلك نحدّث الاثنين معاً:
+ * الملف للمناسبات القادمة، والمناسبات غير المدفوعة القائمة فوراً.
+ */
+export async function adminSetUserQuota(
+  userId: string,
+  quota: number | null,
+): Promise<ActionResult> {
+  await requireAdmin();
+
+  if (quota !== null && (!Number.isInteger(quota) || quota < 0 || quota > 100000)) {
+    return { ok: false, error: 'عدد الدعوات لازم يكون رقماً بين ٠ و١٠٠٠٠٠.' };
+  }
+
+  const supabase = createServiceClient();
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ free_quota_override: quota, updated_at: new Date().toISOString() })
+    .eq('id', userId);
+
+  if (error) return { ok: false, error: 'تعذّر حفظ عدد الدعوات.' };
+
+  let updatedEvents = 0;
+  if (quota !== null) {
+    const { data } = await supabase
+      .from('events')
+      .update({ free_quota: quota })
+      .eq('owner_id', userId)
+      .eq('is_paid', false)
+      .neq('status', 'archived')
+      .select('id');
+
+    updatedEvents = data?.length ?? 0;
+  }
+
+  await logAdminAction('user.quota_set', 'profiles', userId, {
+    quota: quota === null ? 'الإعداد العام' : String(quota),
+    events_updated: String(updatedEvents),
+  });
+
+  revalidatePath('/admin/users');
+  return { ok: true, updatedEvents } as ActionResult & { updatedEvents: number };
+}
+
 // ===================== إدارة المحتوى (CMS) =====================
 
 export async function updateContent(key: string, value: unknown): Promise<ActionResult> {

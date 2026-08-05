@@ -43,7 +43,14 @@ export async function createEvent(_prev: ActionResult | null, formData: FormData
     return { ok: false, error: 'وقت انتهاء المناسبة يجب أن يكون بعد وقت البداية.' };
   }
 
-  const freeQuota = await getFreeQuota();
+  // حصة خاصة منحها الأدمن لهذا المستخدم تسبق الإعداد العام
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('free_quota_override')
+    .eq('id', session.id)
+    .maybeSingle();
+
+  const freeQuota = profile?.free_quota_override ?? (await getFreeQuota());
 
   const { data, error } = await supabase
     .from('events')
