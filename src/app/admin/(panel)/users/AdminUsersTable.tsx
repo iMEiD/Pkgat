@@ -25,7 +25,7 @@ export function AdminUsersTable({
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<
-    'all' | 'suspended' | 'subscribed' | 'admins' | 'with_phone' | 'unconfirmed'
+    'all' | 'suspended' | 'subscribed' | 'admins' | 'with_phone' | 'unconfirmed' | 'marketing'
   >('all');
   const [editing, setEditing] = useState<AdminUserRow | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,12 +47,14 @@ export function AdminUsersTable({
       if (filter === 'admins') return user.is_super_admin;
       if (filter === 'with_phone') return Boolean(user.phone);
       if (filter === 'unconfirmed') return !user.email_confirmed;
+      if (filter === 'marketing') return user.marketing_consent;
       return true;
     });
   }, [users, query, filter]);
 
   const withPhone = users.filter((u) => u.phone).length;
   const active = users.filter((u) => u.event_count > 0).length;
+  const marketingOptIn = users.filter((u) => u.marketing_consent).length;
 
   function toggle(user: AdminUserRow) {
     const action = user.is_suspended ? 'إعادة تفعيل' : 'إيقاف';
@@ -68,7 +70,10 @@ export function AdminUsersTable({
 
   /** تصدير القائمة المعروضة كملف CSV يفتح في Excel بالعربية */
   function exportCsv() {
-    const header = ['الاسم', 'البريد', 'الجوال', 'المناسبات', 'المدعوون', 'مشترك', 'التسجيل'];
+    const header = [
+      'الاسم', 'البريد', 'الجوال', 'المناسبات', 'المدعوون', 'مشترك',
+      'موافق على التسويق', 'تاريخ الموافقة', 'التسجيل',
+    ];
     const rows = filtered.map((u) => [
       u.full_name ?? '',
       u.email ?? '',
@@ -76,6 +81,9 @@ export function AdminUsersTable({
       String(u.event_count),
       String(u.guest_count),
       u.has_subscription ? 'نعم' : 'لا',
+      // عمود صريح حتى لا يُستخدم التصدير في حملة تسويقية بلا موافقة
+      u.marketing_consent ? 'نعم' : 'لا',
+      u.marketing_consent_at ? u.marketing_consent_at.slice(0, 10) : '',
       new Date(u.created_at).toISOString().slice(0, 10),
     ]);
 
@@ -107,7 +115,7 @@ export function AdminUsersTable({
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Stat label="إجمالي الحسابات" value={formatNumber(users.length)} tone="grape" />
         <Stat label="أنشأوا مناسبات" value={formatNumber(active)} tone="mint" />
         <Stat label="لديهم رقم جوال" value={formatNumber(withPhone)} tone="sky" />
@@ -116,6 +124,7 @@ export function AdminUsersTable({
           value={formatNumber(users.filter((u) => u.has_subscription).length)}
           tone="sunny"
         />
+        <Stat label="وافقوا على التسويق" value={formatNumber(marketingOptIn)} tone="coral" />
       </div>
 
       {error && <Alert tone="danger">{error}</Alert>}
@@ -132,6 +141,7 @@ export function AdminUsersTable({
             <Select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
               <option value="all">كل المستخدمين</option>
               <option value="with_phone">لديهم رقم جوال</option>
+              <option value="marketing">وافقوا على التسويق</option>
               <option value="subscribed">أصحاب اشتراكات</option>
               <option value="unconfirmed">لم يؤكدوا بريدهم</option>
               <option value="suspended">حسابات موقوفة</option>
@@ -283,6 +293,7 @@ function UserBadges({ user }: { user: AdminUserRow }) {
       {user.has_subscription && <Badge tone="mint">مشترك</Badge>}
       {user.is_suspended && <Badge tone="coral">موقوف</Badge>}
       {!user.email_confirmed && <Badge tone="sunny">بريد غير مؤكّد</Badge>}
+      {user.marketing_consent && <Badge tone="sky">موافق تسويقياً</Badge>}
     </>
   );
 }

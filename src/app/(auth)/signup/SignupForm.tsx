@@ -16,6 +16,11 @@ export function SignupForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  // موافقتان منفصلتان: قبول الشروط شرط للتسجيل، والاستخدام التسويقي اختياري
+  // ولا يجوز أن يكون مؤشَّراً مسبقاً — نظام حماية البيانات الشخصية يشترط
+  // أن تكون الموافقة التسويقية صريحة ومنفصلة.
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,6 +37,10 @@ export function SignupForm() {
       setError('كلمتا المرور غير متطابقتين.');
       return;
     }
+    if (!acceptedTerms) {
+      setError('لازم توافق على الشروط وسياسة الخصوصية قبل إنشاء الحساب.');
+      return;
+    }
 
     setLoading(true);
     const supabase = createClient();
@@ -39,7 +48,7 @@ export function SignupForm() {
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: { full_name: fullName, marketing_consent: marketingConsent },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
       },
     });
@@ -148,6 +157,41 @@ export function SignupForm() {
             autoComplete="new-password"
           />
         </Field>
+
+        <div className="space-y-3 rounded-2xl bg-sand-50 p-4">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0 accent-grape-500"
+            />
+            <span className="text-[13px] leading-6 text-ink-soft">
+              أوافق على{' '}
+              <Link href="/terms" target="_blank" className="font-bold text-grape-600 hover:text-grape-700">
+                الشروط والأحكام
+              </Link>{' '}
+              و
+              <Link href="/privacy" target="_blank" className="font-bold text-grape-600 hover:text-grape-700">
+                سياسة الخصوصية
+              </Link>
+              <span className="text-coral-500"> *</span>
+            </span>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={marketingConsent}
+              onChange={(e) => setMarketingConsent(e.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0 accent-grape-500"
+            />
+            <span className="text-[13px] leading-6 text-ink-soft">
+              أوافق على وصول عروض وتحديثات بكجات على بريدي{' '}
+              <span className="text-ink-faint">(اختياري — تقدر توقفه في أي وقت)</span>
+            </span>
+          </label>
+        </div>
 
         <Button type="submit" fullWidth size="lg" loading={loading}>
           إنشاء الحساب

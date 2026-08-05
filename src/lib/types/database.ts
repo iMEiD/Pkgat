@@ -71,6 +71,10 @@ export type Profile = {
   is_suspended: boolean;
   totp_secret: string | null;
   totp_enabled: boolean;
+  // موافقات المستخدم وقت التسجيل (PDPL)
+  terms_accepted_at: string | null;
+  marketing_consent: boolean;
+  marketing_consent_at: string | null;
   created_at: string;
   updated_at: string;
 }
