@@ -106,8 +106,34 @@ export type EventRow = {
   // مناسبة تجريبية مزروعة تلقائياً للتعرّف على المنصة
   is_demo: boolean;
   reminder_sent_at: string | null;
+  // وافق صاحبها على عرض تصميمها في الصفحة الرئيسية
+  shared_design: boolean;
+  shared_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** اقتراح مستخدم — بيانات التواصل منسوخة وقت الإرسال لا مرجعاً حيّاً */
+export type Suggestion = {
+  id: string;
+  user_id: string | null;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  category: string;
+  message: string;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+}
+
+/** تصميم شاركه صاحبه للعرض في الصفحة الرئيسية */
+export type SharedDesign = {
+  id: string;
+  title: string;
+  event_type: EventType;
+  background_url: string;
+  shared_at: string | null;
 }
 
 export type EventTag = {
@@ -349,9 +375,11 @@ export interface Database {
       gallery_items: Table<GalleryItem>;
       error_logs: Table<ErrorLog>;
       audit_logs: Table<AuditLog>;
+      suggestions: Table<Suggestion>;
     };
     Views: {
       guest_states: View<GuestState>;
+      shared_designs: View<SharedDesign>;
     };
     Functions: {
       process_scan: {
