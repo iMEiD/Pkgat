@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Field, Input, Select, Textarea } from '@/components/ui/Field';
+import { DateTimeInput } from '@/components/ui/DateTimeInput';
 import { deleteEvent, updateEventDetails, type ActionResult } from '@/lib/actions/events';
 import { ActivationControl } from './ActivationControl';
 import { EVENT_TYPES } from '@/lib/design/defaults';
@@ -81,20 +82,23 @@ export function EventSettingsForm({
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="تاريخ ووقت البداية" htmlFor="starts_at" required>
-                <Input
+              <Field
+                label="تاريخ ووقت البداية"
+                htmlFor="starts_at"
+                hint="اضغط أيقونة التقويم لاختياره"
+                required
+              >
+                <DateTimeInput
                   id="starts_at"
                   name="starts_at"
-                  type="datetime-local"
                   defaultValue={toLocalInputValue(event.starts_at)}
                   required
                 />
               </Field>
               <Field label="وقت الانتهاء" htmlFor="ends_at" hint="اختياري — الافتراضي ٦ ساعات">
-                <Input
+                <DateTimeInput
                   id="ends_at"
                   name="ends_at"
-                  type="datetime-local"
                   defaultValue={toLocalInputValue(event.ends_at)}
                 />
               </Field>

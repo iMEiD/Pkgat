@@ -6,6 +6,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Field, Input } from '@/components/ui/Field';
+import { DateTimeInput } from '@/components/ui/DateTimeInput';
 import { createEvent, type ActionResult } from '@/lib/actions/events';
 import { EVENT_TYPES, SUGGESTED_TAGS } from '@/lib/design/defaults';
 import { cn } from '@/lib/utils/cn';
@@ -74,15 +75,20 @@ export function NewEventForm() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="تاريخ ووقت البداية" htmlFor="starts_at" required>
-            <Input id="starts_at" name="starts_at" type="datetime-local" required />
+          <Field
+            label="تاريخ ووقت البداية"
+            htmlFor="starts_at"
+            hint="اضغط أيقونة التقويم لاختياره"
+            required
+          >
+            <DateTimeInput id="starts_at" name="starts_at" minNow required />
           </Field>
           <Field
             label="وقت الانتهاء"
             htmlFor="ends_at"
             hint="اختياري — الافتراضي ٦ ساعات بعد البداية"
           >
-            <Input id="ends_at" name="ends_at" type="datetime-local" />
+            <DateTimeInput id="ends_at" name="ends_at" minNow />
           </Field>
         </div>
 

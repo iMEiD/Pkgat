@@ -18,6 +18,13 @@ export interface ActionResult {
 
 const EVENT_TYPES = new Set(['wedding', 'graduation', 'party', 'other']);
 
+/**
+ * تسامح مع الماضي القريب عند إنشاء المناسبة.
+ * ساعتان تكفيان لمن يسجّل مناسبة بدأت للتو، وتمنع رفض الإدخال لمجرد
+ * فارق دقائق بين ساعة جهازه والخادم.
+ */
+const PAST_TOLERANCE_MS = 2 * 60 * 60 * 1000;
+
 /** ينشئ مناسبة جديدة مع فئاتها المقترحة */
 export async function createEvent(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const session = await requireUser();
@@ -36,6 +43,13 @@ export async function createEvent(_prev: ActionResult | null, formData: FormData
   // الوقت المُدخل يُفسَّر بتوقيت السعودية دائماً — لا بتوقيت خادم Vercel (UTC)
   const startDate = parseEventLocal(startsAt);
   if (!startDate) return { ok: false, error: 'تاريخ غير صالح.' };
+
+  // مناسبة بتاريخ ماضٍ تولد منتهية: حالة الباركود تُحسب من now()، فتخرج
+  // كل الباركودات 'expired' ولا يُمسح أحد — والمستخدم يظن أن المسح معطّل.
+  // نمنعها عند الإنشاء بدل أن يكتشفها على الباب.
+  if (startDate.getTime() < Date.now() - PAST_TOLERANCE_MS) {
+    return { ok: false, error: 'تاريخ المناسبة في الماضي. اختر تاريخاً ووقتاً قادمين.' };
+  }
 
   const endDate = endsAt ? parseEventLocal(endsAt) : null;
   if (endsAt && !endDate) return { ok: false, error: 'وقت الانتهاء غير صالح.' };

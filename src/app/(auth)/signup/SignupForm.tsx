@@ -11,6 +11,34 @@ import { Field, Input, Select } from '@/components/ui/Field';
 import { createClient } from '@/lib/supabase/client';
 import { COUNTRIES, DEFAULT_COUNTRY, buildPhone, findCountry } from '@/lib/countries';
 
+/**
+ * ترجمة أخطاء التسجيل لرسائل تدلّ على السبب الحقيقي.
+ *
+ * كانت كل الأخطاء تُعرض «تأكد من صحة البريد» — وهي رسالة مضلّلة حين
+ * يكون البريد سليماً تماماً وإنما فشل *إرسال* رسالة التفعيل (خطأ SMTP).
+ * المستخدم يظل يجرّب بريداً بعد بريد بلا فائدة، والسبب ليس عنده.
+ */
+function signupErrorMessage(raw: string): string {
+  const message = raw.toLowerCase();
+
+  if (message.includes('already registered') || message.includes('already been registered')) {
+    return 'هذا البريد مسجّل مسبقاً. جرّب تسجيل الدخول.';
+  }
+  if (message.includes('sending') || message.includes('smtp') || message.includes('email')) {
+    return 'تعذّر إرسال رسالة التفعيل — الخلل عندنا لا في بريدك. تواصل مع الدعم.';
+  }
+  if (message.includes('rate limit') || message.includes('too many')) {
+    return 'محاولات كثيرة في وقت قصير. انتظر دقيقة وحاول مرة أخرى.';
+  }
+  if (message.includes('password')) {
+    return 'كلمة المرور ضعيفة أو غير مقبولة. جرّب كلمة أطول.';
+  }
+  if (message.includes('invalid') && message.includes('email')) {
+    return 'صيغة البريد غير صحيحة.';
+  }
+  return 'تعذّر إنشاء الحساب. حاول مرة أخرى، وإذا تكرر تواصل مع الدعم.';
+}
+
 export function SignupForm() {
   const router = useRouter();
   const [fullName, setFullName] = useState('');
@@ -69,11 +97,15 @@ export function SignupForm() {
     setLoading(false);
 
     if (authError) {
-      setError(
-        authError.message.includes('already registered')
-          ? 'هذا البريد مسجّل مسبقاً. جرّب تسجيل الدخول.'
-          : 'تعذّر إنشاء الحساب. تأكد من صحة البريد وحاول مرة أخرى.',
-      );
+      setError(signupErrorMessage(authError.message));
+      return;
+    }
+
+    // Supabase لا يكشف أن البريد مسجّل مسبقاً — يرجع مستخدماً وهمياً بلا
+    // هويات (identities فارغة) بدل رسالة خطأ، منعاً لتعداد البُرد. بدون
+    // هذا الفحص نعرض «تفقّد بريدك» لشخص لن يصله شيء أبداً.
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      setError('هذا البريد مسجّل مسبقاً. جرّب تسجيل الدخول أو استعادة كلمة المرور.');
       return;
     }
 
