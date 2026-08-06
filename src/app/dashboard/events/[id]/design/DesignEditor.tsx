@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { ColorInput, Field, Input, Select, Slider, Switch } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
-import { InvitationPreview, type DragTarget } from '@/components/design/InvitationPreview';
+import { InvitationPreview, extraIdOf, type DragTarget } from '@/components/design/InvitationPreview';
 import { TemplatePicker } from '@/components/design/TemplatePicker';
 import { UploadDesign } from '@/components/design/UploadDesign';
 import { saveDesign } from '@/lib/actions/events';
@@ -21,6 +21,7 @@ import type {
   EventRow,
   TemplateCategory,
   TemplateRow,
+  TextLayer,
 } from '@/lib/types/database';
 import { cn } from '@/lib/utils/cn';
 
@@ -58,26 +59,77 @@ export function DesignEditor({
     setDesign((d) => updater(structuredClone(d)));
   }
 
-  function onMove(target: 'name' | 'qr', x: number, y: number) {
+  function onMove(target: Exclude<DragTarget, null>, x: number, y: number) {
     patch((d) => {
       if (target === 'name') {
         d.name.x = x;
         d.name.y = y;
-      } else {
+      } else if (target === 'qr') {
         d.qr.x = x;
         d.qr.y = y;
+      } else {
+        const extra = (d.extras ?? []).find((e) => e.id === extraIdOf(target));
+        if (extra) {
+          extra.x = x;
+          extra.y = y;
+        }
       }
       return d;
     });
   }
 
   /** التكبير بإصبعين — المعاينة ترسل الحجم النهائي مضبوطاً ضمن الحدود */
-  function onResize(target: 'name' | 'qr', size: number) {
+  function onResize(target: Exclude<DragTarget, null>, size: number) {
     patch((d) => {
       if (target === 'name') d.name.fontSize = size;
-      else d.qr.size = size;
+      else if (target === 'qr') d.qr.size = size;
+      else {
+        const extra = (d.extras ?? []).find((e) => e.id === extraIdOf(target));
+        if (extra) extra.fontSize = size;
+      }
       return d;
     });
+  }
+
+  /** نص إضافي جديد — يُوضع أعلى الدعوة حيث تكون الخلفية عادةً أهدأ */
+  function addExtra() {
+    const id = crypto.randomUUID().slice(0, 8);
+    patch((d) => {
+      const extras = d.extras ?? [];
+      extras.push({
+        id,
+        label: `نص ${extras.length + 1}`,
+        text: 'نتشرّف بدعوتكم',
+        x: 0.5,
+        y: 0.28 + extras.length * 0.06,
+        fontFamily: d.name.fontFamily,
+        fontSize: 0.045,
+        color: d.name.color,
+        weight: 600,
+        align: 'center',
+        letterSpacing: 0,
+        shadow: false,
+      });
+      d.extras = extras;
+      return d;
+    });
+    setSelected(`extra:${id}`);
+  }
+
+  function updateExtra(id: string, patchLayer: Partial<TextLayer>) {
+    patch((d) => {
+      const extra = (d.extras ?? []).find((e) => e.id === id);
+      if (extra) Object.assign(extra, patchLayer);
+      return d;
+    });
+  }
+
+  function removeExtra(id: string) {
+    patch((d) => {
+      d.extras = (d.extras ?? []).filter((e) => e.id !== id);
+      return d;
+    });
+    setSelected('name');
   }
 
   function applyTemplate(template: TemplateRow) {
@@ -349,6 +401,107 @@ export function DesignEditor({
               label="ظل خفيف خلف النص"
               description="يساعد على وضوح الاسم فوق الخلفيات المزخرفة."
             />
+          </CardBody>
+        </Card>
+
+        {/* نصوص إضافية */}
+        <Card>
+          <CardHeader
+            title="نصوص إضافية"
+            description="تهنئة أو اسم المضيف أو أي نص ثابت يظهر على كل الدعوات."
+            action={
+              <Button size="sm" variant="secondary" onClick={addExtra}>
+                <Icon name="plus" className="h-4 w-4" />
+                إضافة نص
+              </Button>
+            }
+          />
+          <CardBody className="space-y-5">
+            {(design.extras ?? []).length === 0 ? (
+              <p className="text-sm leading-7 text-ink-soft">
+                ما أضفت نصوصاً إضافية. النص الإضافي ثابت على كل الدعوات — بعكس اسم المدعو
+                الذي يتغيّر لكل واحد.
+              </p>
+            ) : (
+              (design.extras ?? []).map((extra) => {
+                const active = selected === `extra:${extra.id}`;
+                return (
+                  <div
+                    key={extra.id}
+                    className={cn(
+                      'space-y-4 rounded-2xl border-2 p-4 transition-colors',
+                      active ? 'border-mint-400 bg-mint-50/40' : 'border-sand-200',
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelected(`extra:${extra.id}`)}
+                        className={cn(
+                          'rounded-full px-3 py-1 text-xs font-bold transition-colors',
+                          active ? 'bg-mint-500 text-white' : 'bg-sand-100 text-ink-soft hover:bg-sand-200',
+                        )}
+                      >
+                        {active ? 'محدَّد' : 'تحديد'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeExtra(extra.id)}
+                        className="rounded-full px-3 py-1 text-xs font-bold text-coral-600 transition-colors hover:bg-coral-50"
+                      >
+                        حذف
+                      </button>
+                    </div>
+
+                    <Field label="النص" htmlFor={`t-${extra.id}`}>
+                      <Input
+                        id={`t-${extra.id}`}
+                        value={extra.text}
+                        onChange={(e) => updateExtra(extra.id, { text: e.target.value })}
+                        placeholder="مثال: نتشرّف بدعوتكم"
+                      />
+                    </Field>
+
+                    <Field label="الخط" htmlFor={`f-${extra.id}`}>
+                      <Select
+                        id={`f-${extra.id}`}
+                        value={extra.fontFamily}
+                        onChange={(e) => updateExtra(extra.id, { fontFamily: e.target.value })}
+                      >
+                        {FONTS.map((f) => (
+                          <option key={f.family} value={f.family}>
+                            {f.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+
+                    <Slider
+                      label="حجم الخط"
+                      min={1}
+                      max={20}
+                      step={0.1}
+                      value={extra.fontSize * 100}
+                      display={`${(extra.fontSize * 100).toFixed(1)}٪ من عرض التصميم`}
+                      onChange={(v) => updateExtra(extra.id, { fontSize: v / 100 })}
+                    />
+
+                    <ColorInput
+                      label="لون النص"
+                      value={extra.color}
+                      onChange={(v) => updateExtra(extra.id, { color: v })}
+                    />
+
+                    <Switch
+                      checked={Boolean(extra.shadow)}
+                      onChange={(v) => updateExtra(extra.id, { shadow: v })}
+                      label="ظل خفيف خلف النص"
+                      description="يساعد على وضوحه فوق الخلفيات المزخرفة."
+                    />
+                  </div>
+                );
+              })
+            )}
           </CardBody>
         </Card>
 

@@ -6,16 +6,26 @@ import { renderInvitation } from '@/lib/design/render';
 import type { DesignConfig } from '@/lib/types/database';
 import { cn } from '@/lib/utils/cn';
 
-export type DragTarget = 'name' | 'qr' | null;
+/** `extra:<id>` يستهدف طبقة نص إضافية بعينها */
+export type DragTarget = 'name' | 'qr' | `extra:${string}` | null;
+
+export function extraIdOf(target: DragTarget): string | null {
+  return typeof target === 'string' && target.startsWith('extra:') ? target.slice(6) : null;
+}
 
 /** حدود حجم كل طبقة كنسبة من عرض التصميم */
 const SIZE_LIMITS = {
   name: { min: 0.01, max: 0.3 },
   qr: { min: 0.05, max: 0.6 },
+  extra: { min: 0.01, max: 0.3 },
 } as const;
 
+function limitsFor(target: Exclude<DragTarget, null>) {
+  return target === 'qr' ? SIZE_LIMITS.qr : target === 'name' ? SIZE_LIMITS.name : SIZE_LIMITS.extra;
+}
+
 interface ActiveGesture {
-  target: 'name' | 'qr';
+  target: Exclude<DragTarget, null>;
   /** المسافة بين الإصبعين عند بداية القرص */
   startDistance: number;
   /** حجم الطبقة عند بداية القرص */
@@ -49,9 +59,9 @@ export function InvitationPreview({
 }: {
   design: DesignConfig;
   sampleCode: string;
-  onMove?: (target: 'name' | 'qr', x: number, y: number) => void;
+  onMove?: (target: Exclude<DragTarget, null>, x: number, y: number) => void;
   /** الحجم الجديد كنسبة مطلقة من عرض التصميم */
-  onResize?: (target: 'name' | 'qr', size: number) => void;
+  onResize?: (target: Exclude<DragTarget, null>, size: number) => void;
   selected?: DragTarget;
   onSelect?: (target: DragTarget) => void;
   className?: string;
@@ -101,17 +111,28 @@ export function InvitationPreview({
     };
   }, []);
 
-  const layerSize = (target: 'name' | 'qr') =>
-    target === 'name' ? designRef.current.name.fontSize : designRef.current.qr.size;
+  /** الطبقة المستهدفة أياً كان نوعها — الاسم أو الباركود أو نص إضافي */
+  const layerOf = (target: Exclude<DragTarget, null>) => {
+    if (target === 'name') return designRef.current.name;
+    if (target === 'qr') return designRef.current.qr;
+    const id = extraIdOf(target);
+    return designRef.current.extras?.find((x) => x.id === id) ?? null;
+  };
 
-  const layerPos = (target: 'name' | 'qr') => {
-    const layer = target === 'name' ? designRef.current.name : designRef.current.qr;
-    return { x: layer.x, y: layer.y };
+  const layerSize = (target: Exclude<DragTarget, null>) => {
+    const layer = layerOf(target);
+    if (!layer) return 0.05;
+    return 'size' in layer ? layer.size : layer.fontSize;
+  };
+
+  const layerPos = (target: Exclude<DragTarget, null>) => {
+    const layer = layerOf(target);
+    return layer ? { x: layer.x, y: layer.y } : { x: 0.5, y: 0.5 };
   };
 
   /** يبدأ قرصة عندما يصبح عدد الأصابع اثنين */
   const beginPinch = useCallback(
-    (target: 'name' | 'qr' | null) => {
+    (target: DragTarget) => {
       if (!target) return;
       const [a, b] = [...pointers.current.values()];
       if (!a || !b) return;
@@ -154,7 +175,7 @@ export function InvitationPreview({
         const g = gesture.current;
 
         if (onResize) {
-          const limits = SIZE_LIMITS[target];
+          const limits = limitsFor(target);
           const next = g.startSize * (distance / g.startDistance);
           onResize(target, Math.min(limits.max, Math.max(limits.min, next)));
         }
@@ -214,7 +235,7 @@ export function InvitationPreview({
     };
   }, [dragging, onMove, onResize, relativePos, beginPinch]);
 
-  function onHandlePointerDown(e: React.PointerEvent, target: 'name' | 'qr') {
+  function onHandlePointerDown(e: React.PointerEvent, target: Exclude<DragTarget, null>) {
     e.preventDefault();
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     setDragging(target);
@@ -224,20 +245,21 @@ export function InvitationPreview({
   }
 
   /** تحريك وتحجيم دقيق بلوحة المفاتيح */
-  function onHandleKeyDown(e: React.KeyboardEvent, target: 'name' | 'qr') {
+  function onHandleKeyDown(e: React.KeyboardEvent, target: Exclude<DragTarget, null>) {
     const step = e.shiftKey ? 0.02 : 0.005;
 
     // + و − لتغيير الحجم
     if ((e.key === '+' || e.key === '=' || e.key === '-') && onResize) {
       e.preventDefault();
-      const limits = SIZE_LIMITS[target];
+      const limits = limitsFor(target);
       const factor = e.key === '-' ? 0.94 : 1.06;
       onResize(target, Math.min(limits.max, Math.max(limits.min, layerSize(target) * factor)));
       return;
     }
 
     if (!onMove) return;
-    const layer = target === 'name' ? design.name : design.qr;
+    const layer = layerOf(target);
+    if (!layer) return;
     const moves: Record<string, [number, number]> = {
       ArrowUp: [0, -step],
       ArrowDown: [0, step],
@@ -302,6 +324,20 @@ export function InvitationPreview({
               onKeyDown={(e) => onHandleKeyDown(e, 'qr')}
             />
           )}
+
+          {(design.extras ?? []).map((extra) => (
+            <Handle
+              key={extra.id}
+              label={extra.label || 'نص إضافي'}
+              x={extra.x}
+              y={extra.y}
+              active={selected === `extra:${extra.id}`}
+              dragging={dragging === `extra:${extra.id}`}
+              tone="mint"
+              onPointerDown={(e) => onHandlePointerDown(e, `extra:${extra.id}`)}
+              onKeyDown={(e) => onHandleKeyDown(e, `extra:${extra.id}`)}
+            />
+          ))}
         </>
       )}
 
@@ -338,14 +374,19 @@ function Handle({
   y: number;
   active?: boolean;
   dragging?: boolean;
-  tone: 'grape' | 'coral';
+  tone: 'grape' | 'coral' | 'mint';
   boxSize?: number;
   onPointerDown: (e: React.PointerEvent) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
 }) {
   const colors =
-    tone === 'grape' ? 'border-grape-500 bg-grape-500/10' : 'border-coral-500 bg-coral-500/10';
-  const chip = tone === 'grape' ? 'bg-grape-500' : 'bg-coral-500';
+    tone === 'grape'
+      ? 'border-grape-500 bg-grape-500/10'
+      : tone === 'coral'
+        ? 'border-coral-500 bg-coral-500/10'
+        : 'border-mint-500 bg-mint-500/10';
+  const chip =
+    tone === 'grape' ? 'bg-grape-500' : tone === 'coral' ? 'bg-coral-500' : 'bg-mint-500';
 
   return (
     <button
