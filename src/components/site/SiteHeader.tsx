@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 
 import { Logo } from '@/components/ui/Logo';
 import { ButtonLink } from '@/components/ui/Button';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { cn } from '@/lib/utils/cn';
 
 const NAV = [
@@ -63,6 +64,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          <ThemeToggle />
           {signedIn ? (
             <ButtonLink href="/dashboard" size="sm">
               لوحتي
@@ -79,17 +81,20 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
           )}
         </div>
 
-        <button
+        <div className="flex items-center gap-1 md:hidden">
+          <ThemeToggle />
+          <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-label="القائمة"
           aria-expanded={open}
-          className="rounded-full p-2 text-ink transition-colors hover:bg-sand-100 md:hidden"
+          className="rounded-full p-2 text-ink transition-colors hover:bg-sand-100"
         >
           <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             {open ? <path d="M18 6 6 18M6 6l12 12" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
           </svg>
-        </button>
+          </button>
+        </div>
       </div>
 
       {open && (

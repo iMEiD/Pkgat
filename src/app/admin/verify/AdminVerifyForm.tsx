@@ -84,7 +84,7 @@ export function AdminVerifyForm({ alreadyEnabled }: { alreadyEnabled: boolean })
                   <img
                     src={qrDataUrl}
                     alt="رمز التحقق بخطوتين"
-                    className="rounded-2xl border border-sand-200 bg-white p-2"
+                    className="rounded-2xl border border-sand-200 bg-surface p-2"
                     width={240}
                     height={240}
                   />

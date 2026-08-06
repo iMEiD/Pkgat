@@ -3,7 +3,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '@/lib/utils/cn';
 
 const control =
-  'w-full rounded-2xl border border-sand-300 bg-white px-4 py-3 text-[15px] text-ink ' +
+  'w-full rounded-2xl border border-sand-300 bg-surface px-4 py-3 text-[15px] text-ink ' +
   'placeholder:text-ink-faint transition-colors duration-200 ' +
   'hover:border-sand-400 focus:border-grape-400 disabled:bg-sand-50 disabled:text-ink-faint';
 
@@ -52,7 +52,7 @@ export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
 
 export function Select({ className, children, ...props }: ComponentProps<'select'>) {
   return (
-    <select className={cn(control, 'cursor-pointer appearance-none bg-white pl-10', className)} {...props}>
+    <select className={cn(control, 'cursor-pointer appearance-none bg-surface pl-10', className)} {...props}>
       {children}
     </select>
   );
@@ -75,7 +75,7 @@ export function Switch({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between gap-4 rounded-2xl border border-sand-200 bg-white p-4 text-right transition-colors hover:border-sand-300"
+      className="flex w-full items-center justify-between gap-4 rounded-2xl border border-sand-200 bg-surface p-4 text-right transition-colors hover:border-sand-300"
     >
       <span className="min-w-0">
         <span className="block text-sm font-semibold text-ink">{label}</span>
@@ -89,7 +89,7 @@ export function Switch({
       >
         <span
           className={cn(
-            'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-200',
+            'absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow transition-all duration-200',
             checked ? 'right-0.5' : 'right-[22px]',
           )}
         />

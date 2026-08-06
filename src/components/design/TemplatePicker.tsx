@@ -61,7 +61,7 @@ export function TemplatePicker({
             type="button"
             onClick={() => onSelect(t)}
             className={cn(
-              'group overflow-hidden rounded-2xl border-2 bg-white text-right transition-all duration-200',
+              'group overflow-hidden rounded-2xl border-2 bg-surface text-right transition-all duration-200',
               selectedId === t.id
                 ? 'border-grape-500 shadow-pop'
                 : 'border-sand-200 hover:-translate-y-0.5 hover:border-sand-400 hover:shadow-soft',

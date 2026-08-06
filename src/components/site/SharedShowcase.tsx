@@ -53,7 +53,7 @@ export function SharedShowcase({ items }: { items: SharedDesign[] }) {
           key={item.id}
           style={{ transitionDelay: reduced ? undefined : `${Math.min(i * 80, 480)}ms` }}
           className={cn(
-            'group w-[62vw] shrink-0 overflow-hidden rounded-3xl border border-sand-200 bg-white shadow-soft sm:w-auto',
+            'group w-[62vw] shrink-0 overflow-hidden rounded-3xl border border-sand-200 bg-surface shadow-soft sm:w-auto',
             'transition-all duration-700 ease-[cubic-bezier(.22,1,.36,1)]',
             'hover:-translate-y-1.5 hover:shadow-lift',
             shown ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0',

@@ -17,6 +17,8 @@ const config: Config = {
          * محفوظ في قاعدة البيانات.
          */
         canvas: 'rgb(var(--pk-canvas) / <alpha-value>)',
+        // أسطح البطاقات والحقول — أبيض في الوضع الفاتح، رمادي داكن في الليلي
+        surface: 'rgb(var(--pk-surface) / <alpha-value>)',
         sand: {
           50: 'rgb(var(--pk-sand-50) / <alpha-value>)',
           100: 'rgb(var(--pk-sand-100) / <alpha-value>)',

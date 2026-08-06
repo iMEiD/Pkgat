@@ -48,7 +48,7 @@ export function NewEventForm() {
                   'flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 transition-all duration-200',
                   eventType === t.value
                     ? 'border-grape-400 bg-grape-50 shadow-soft'
-                    : 'border-sand-200 bg-white hover:border-sand-300',
+                    : 'border-sand-200 bg-surface hover:border-sand-300',
                 )}
               >
                 <span className="text-2xl">{t.emoji}</span>

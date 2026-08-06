@@ -81,7 +81,7 @@ export function TagManager({
           tags.map((tag) => (
             <div
               key={tag.id}
-              className="flex items-center gap-2 rounded-2xl border border-sand-200 bg-white p-3"
+              className="flex items-center gap-2 rounded-2xl border border-sand-200 bg-surface p-3"
             >
               <span
                 className="h-3 w-3 shrink-0 rounded-full"

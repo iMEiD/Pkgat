@@ -100,7 +100,7 @@ export function ActivationControl({
               disabled={pending}
               className={cn(
                 'rounded-2xl border-2 p-4 text-right transition-all duration-200 disabled:opacity-60',
-                active ? option.tone : 'border-sand-200 bg-white hover:border-sand-400',
+                active ? option.tone : 'border-sand-200 bg-surface hover:border-sand-400',
               )}
             >
               <span className="flex items-center gap-2">

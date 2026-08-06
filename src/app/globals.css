@@ -22,6 +22,8 @@
    * src/lib/design/theme.ts و/admin/theme.
    */
   --pk-canvas: 255 253 249;
+  /* سطح البطاقات والحقول — أبيض هنا، ويُقلب في الوضع الليلي */
+  --pk-surface: 255 255 255;
   --pk-ink: 42 37 33;
   --pk-ink-soft: 92 84 75;
   --pk-ink-faint: 140 131 119;
@@ -43,7 +45,49 @@
   --pk-sand-500: 194 172 136;
 }
 
+
+/*
+ * الوضع الليلي.
+ *
+ * نقلب المحايدات وحدها (الخلفية والنص ودرجات البيج والسطح) ونترك اللون
+ * الأساسي كما ضبطه الأدمن — الهوية اللونية للعلامة لا تتغيّر بتغيّر
+ * الإضاءة. ولهذا لا نلمس --pk-primary-* هنا إطلاقاً.
+ *
+ * المحدِّد :root[data-theme='dark'] أقوى تخصيصاً من :root الذي يحقنه
+ * الخادم بألوان الأدمن، فيتقدّم عليه بلا اعتماد على ترتيب الأنماط.
+ */
+:root[data-theme='dark'] {
+  --pk-canvas: 20 18 17;
+  --pk-surface: 32 29 27;
+
+  --pk-ink: 244 241 236;
+  --pk-ink-soft: 176 168 158;
+  --pk-ink-faint: 130 122 113;
+
+  /* «البيج» يصير سلّم أسطح داكنة: الأفتح للخلفيات الفرعية والأغمق للحدود */
+  --pk-sand-50: 28 26 24;
+  --pk-sand-100: 38 35 32;
+  --pk-sand-200: 52 47 43;
+  --pk-sand-300: 70 64 58;
+  --pk-sand-400: 96 88 80;
+  --pk-sand-500: 128 118 107;
+}
+
+/* التدرّجات الخلفية في الوضع الفاتح تُغرق الشاشة الداكنة، فنخفّفها */
+:root[data-theme='dark'] body {
+  background-image:
+    radial-gradient(1100px 520px at 100% -8%, rgb(var(--pk-primary-500) / 0.14), transparent 60%),
+    radial-gradient(900px 480px at -10% 4%, rgba(255, 107, 74, 0.06), transparent 60%);
+}
+
+/* الظلال المصمّمة لخلفية فاتحة تختفي على الداكنة — نستبدلها بحدّ خفيف */
+:root[data-theme='dark'] .shadow-soft,
+:root[data-theme='dark'] .shadow-lift {
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
 @layer base {
+
   html {
     scroll-behavior: smooth;
   }

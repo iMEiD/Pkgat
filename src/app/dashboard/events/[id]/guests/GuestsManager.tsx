@@ -275,7 +275,7 @@ export function GuestsManager({
                       key={guest.id}
                       className={cn(
                         'rounded-2xl border border-sand-200 p-3.5 transition-colors',
-                        selected.has(guest.id) ? 'border-grape-300 bg-grape-50/60' : 'bg-white',
+                        selected.has(guest.id) ? 'border-grape-300 bg-grape-50/60' : 'bg-surface',
                       )}
                     >
                       <div className="flex items-start gap-3">

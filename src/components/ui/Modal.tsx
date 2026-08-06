@@ -48,7 +48,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative z-10 max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-lift animate-pop-in sm:rounded-3xl sm:p-6 pk-scrollbar',
+          'relative z-10 max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-surface p-5 shadow-lift animate-pop-in sm:rounded-3xl sm:p-6 pk-scrollbar',
           size === 'sm' && 'sm:max-w-md',
           size === 'md' && 'sm:max-w-xl',
           size === 'lg' && 'sm:max-w-3xl',

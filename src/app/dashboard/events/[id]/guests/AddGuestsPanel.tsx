@@ -62,7 +62,7 @@ export function AddGuestsPanel({
             }}
             className={cn(
               'flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold transition-all duration-200',
-              method === tab.key ? 'bg-white text-grape-600 shadow-soft' : 'text-ink-soft hover:text-ink',
+              method === tab.key ? 'bg-surface text-grape-600 shadow-soft' : 'text-ink-soft hover:text-ink',
             )}
           >
             <Icon name={tab.icon} className="h-4 w-4" />
@@ -276,7 +276,7 @@ function FileForm({
       />
 
       <div className="rounded-3xl border-2 border-dashed border-sand-300 bg-sand-50/60 p-6 text-center">
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-white text-grape-500 shadow-soft">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-surface text-grape-500 shadow-soft">
           <Icon name="upload" className="h-6 w-6" />
         </div>
         <p className="mt-3 text-sm font-bold text-ink">استورد قائمة المدعوين</p>
@@ -295,7 +295,7 @@ function FileForm({
       {error && <Alert tone="danger">{error}</Alert>}
 
       {parsed && (
-        <div className="space-y-4 rounded-2xl border border-sand-200 bg-white p-4">
+        <div className="space-y-4 rounded-2xl border border-sand-200 bg-surface p-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="عمود الاسم" required>
               <Select value={nameCol} onChange={(e) => setNameCol(e.target.value)}>

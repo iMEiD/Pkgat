@@ -260,7 +260,7 @@ export function DesignEditor({
                   className={cn(
                     'flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-all duration-200',
                     mode === tab.key
-                      ? 'bg-white text-grape-600 shadow-soft'
+                      ? 'bg-surface text-grape-600 shadow-soft'
                       : 'text-ink-soft hover:text-ink',
                   )}
                 >

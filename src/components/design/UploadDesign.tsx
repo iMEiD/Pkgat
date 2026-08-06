@@ -82,7 +82,7 @@ export function UploadDesign({
           dragOver ? 'border-grape-400 bg-grape-50' : 'border-sand-300 bg-sand-50/60',
         )}
       >
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-white text-grape-500 shadow-soft">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-surface text-grape-500 shadow-soft">
           <Icon name="upload" className="h-6 w-6" />
         </div>
         <p className="mt-3 text-sm font-bold text-ink">اسحب تصميمك هنا أو اختر ملفاً</p>

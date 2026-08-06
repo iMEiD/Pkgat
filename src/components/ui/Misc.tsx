@@ -54,7 +54,7 @@ export function Stat({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-sand-200 bg-white p-4 shadow-soft',
+        'relative overflow-hidden rounded-2xl border border-sand-200 bg-surface p-4 shadow-soft',
         className,
       )}
     >

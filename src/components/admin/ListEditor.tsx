@@ -75,7 +75,7 @@ export function ListEditor({
         const expanded = open === index;
 
         return (
-          <div key={index} className="overflow-hidden rounded-2xl border border-sand-200 bg-white">
+          <div key={index} className="overflow-hidden rounded-2xl border border-sand-200 bg-surface">
             <div className="flex items-center gap-1 p-2">
               <button
                 type="button"

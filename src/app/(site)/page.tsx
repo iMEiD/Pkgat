@@ -207,7 +207,7 @@ export default async function HomePage() {
                 <ButtonLink
                   href="/signup"
                   size="lg"
-                  className="bg-white text-grape-600 shadow-none hover:bg-sand-50"
+                  className="bg-surface text-grape-600 shadow-none hover:bg-sand-50"
                 >
                   {text(c, 'home.cta.primary', 'أنشئ حسابك الآن')}
                 </ButtonLink>
@@ -247,7 +247,7 @@ function HeroArtwork() {
               <p className="mt-1 font-display text-xl font-bold text-grape-600">عبدالله الشمري</p>
             </div>
 
-            <div className="rounded-2xl bg-white p-3 shadow-soft">
+            <div className="rounded-2xl bg-surface p-3 shadow-soft">
               <FakeQr />
             </div>
           </div>
@@ -255,7 +255,7 @@ function HeroArtwork() {
       </Card>
 
       {/* بطاقة نتيجة المسح */}
-      <div className="absolute -bottom-5 -left-4 flex items-center gap-3 rounded-2xl border border-mint-100 bg-white px-4 py-3 shadow-lift animate-float sm:-left-10">
+      <div className="absolute -bottom-5 -left-4 flex items-center gap-3 rounded-2xl border border-mint-100 bg-surface px-4 py-3 shadow-lift animate-float sm:-left-10">
         <span className="grid h-9 w-9 place-items-center rounded-xl bg-mint-500 text-white">
           <Icon name="check" className="h-5 w-5" strokeWidth={2.5} />
         </span>

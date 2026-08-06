@@ -169,7 +169,7 @@ export function AdminUsersTable({
               {/* الجوال: بطاقات */}
               <ul className="space-y-2 lg:hidden">
                 {filtered.map((user) => (
-                  <li key={user.id} className="rounded-2xl border border-sand-200 bg-white p-4">
+                  <li key={user.id} className="rounded-2xl border border-sand-200 bg-surface p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate font-bold text-ink">{user.full_name || '—'}</p>

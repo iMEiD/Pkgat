@@ -218,7 +218,7 @@ function PlanCard({
         'flex flex-col rounded-3xl border-2 p-5 transition-all duration-200',
         plan.is_featured
           ? 'border-grape-300 bg-grape-50/40'
-          : 'border-sand-200 bg-white hover:border-sand-400',
+          : 'border-sand-200 bg-surface hover:border-sand-400',
       )}
     >
       <div className="flex items-start justify-between gap-3">

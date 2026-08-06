@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { Logo } from '@/components/ui/Logo';
 import { Icon } from '@/components/ui/Icon';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { cn } from '@/lib/utils/cn';
 
 export interface NavItem {
@@ -72,6 +73,7 @@ export function DashboardShell({
             <span className="max-w-[160px] truncate text-sm font-semibold text-ink-soft">
               {userName}
             </span>
+            <ThemeToggle className="h-9 w-9" />
             <form action="/api/auth/signout" method="post">
               <button
                 type="submit"

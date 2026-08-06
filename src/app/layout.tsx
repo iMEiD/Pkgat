@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 
 import { googleFontsHref } from '@/lib/design/fonts';
 import { themeToCssVars } from '@/lib/design/theme';
+import { colorModeScript } from '@/components/ui/ThemeToggle';
 import { getTheme } from '@/lib/cms';
 import './globals.css';
 
@@ -40,12 +41,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const theme = await getTheme();
 
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
         <style
           id="pk-theme"
           dangerouslySetInnerHTML={{ __html: themeToCssVars(theme) }}
         />
+
+        {/* يضبط الوضع قبل أول رسم — بدونه تومض الصفحة فاتحة ثم تسودّ */}
+        <script dangerouslySetInnerHTML={{ __html: colorModeScript }} />
         {/*
           الخطوط تُحمَّل هنا وليس عبر next/font لأن نفس العائلات تُستخدم
           في الرسم على الكانفس، ونحتاج أسماء عائلات ثابتة نمررها إلى
