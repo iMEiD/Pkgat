@@ -9,9 +9,11 @@ export const dynamic = 'force-dynamic';
 /**
  * تذكير ما قبل المناسبة بـ ٢٤ ساعة.
  *
- * يُشغَّل من Vercel Cron كل ساعة. النافذة ٢٤–٢٦ ساعة لا نقطة واحدة، لأن
- * التشغيل الساعي لا يضمن لحظة بعينها؛ وreminder_sent_at يمنع التكرار
- * داخل النافذة الواسعة.
+ * يُشغَّل من Vercel Cron مرة واحدة يومياً (٨ مساءً بتوقيت الرياض) — لأن
+ * باقة Hobby تسمح بتشغيل يومي واحد لا أكثر. ولأن الفحص يومي، النافذة
+ * ٢٠–٤٤ ساعة لا ٢٤ بالضبط: بها يقع كل موعد ضمن تشغيل واحد على الأقل
+ * مهما كانت ساعته، فلا يفوت أحد. وreminder_sent_at يمنع التكرار حين
+ * يقع الموعد داخل تشغيلين متتاليين.
  *
  * الرسالة تركّز على شيء واحد: هل جرّبت المسح؟ لأن أكثر ما يفشل ليلة
  * المناسبة هو اكتشاف مشكلة لم تُختبر قبلها.
@@ -27,8 +29,8 @@ export async function GET(request: Request) {
 
   const supabase = createServiceClient();
   const now = Date.now();
-  const from = new Date(now + 24 * 3_600_000).toISOString();
-  const to = new Date(now + 26 * 3_600_000).toISOString();
+  const from = new Date(now + 20 * 3_600_000).toISOString();
+  const to = new Date(now + 44 * 3_600_000).toISOString();
 
   const { data: events, error } = await supabase
     .from('events')
@@ -100,7 +102,7 @@ export async function GET(request: Request) {
 
     if (result === 'sent') sent += 1;
 
-    // نعلّم المرسَل فقط؛ الفاشل يُعاد في التشغيل التالي داخل النافذة.
+    // نعلّم المرسَل فقط؛ الفاشل يُعاد في تشغيل الغد ما دام ضمن النافذة.
     // والمتخطّى (بلا مزوّد بريد) يبقى بلا علامة حتى يصل التذكير فعلاً
     // بعد ضبط المزوّد — لا نحرقه بصمت.
     if (result === 'sent') {
