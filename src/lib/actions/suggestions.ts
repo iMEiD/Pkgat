@@ -7,15 +7,8 @@ import { requireAdmin, requireUser } from '@/lib/auth/session';
 import { emailShell, sendEmail } from '@/lib/email';
 import { getSettings } from '@/lib/cms';
 import type { ActionResult } from '@/lib/actions/events';
+import { SUGGESTION_CATEGORIES, SUGGESTION_CATEGORY_VALUES } from '@/lib/suggestions-meta';
 
-export const SUGGESTION_CATEGORIES = [
-  { value: 'feature', label: 'ميزة جديدة' },
-  { value: 'bug', label: 'خلل أو مشكلة' },
-  { value: 'design', label: 'ملاحظة على التصميم' },
-  { value: 'other', label: 'شيء آخر' },
-] as const;
-
-const VALID = new Set(SUGGESTION_CATEGORIES.map((c) => c.value));
 
 /**
  * إرسال اقتراح.
@@ -33,7 +26,7 @@ export async function submitSuggestion(
   const category = String(formData.get('category') ?? 'other');
   const message = String(formData.get('message') ?? '').trim();
 
-  if (!VALID.has(category as never)) return { ok: false, error: 'التصنيف غير صالح.' };
+  if (!SUGGESTION_CATEGORY_VALUES.has(category)) return { ok: false, error: 'التصنيف غير صالح.' };
   if (message.length < 10) {
     return { ok: false, error: 'اكتب اقتراحك بتفصيل أكثر — ١٠ أحرف على الأقل.' };
   }

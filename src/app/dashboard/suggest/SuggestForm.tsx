@@ -6,7 +6,8 @@ import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Field, Select, Textarea } from '@/components/ui/Field';
-import { SUGGESTION_CATEGORIES, submitSuggestion } from '@/lib/actions/suggestions';
+import { submitSuggestion } from '@/lib/actions/suggestions';
+import { SUGGESTION_CATEGORIES } from '@/lib/suggestions-meta';
 import type { ActionResult } from '@/lib/actions/events';
 
 export function SuggestForm() {

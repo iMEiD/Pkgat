@@ -86,7 +86,52 @@
   box-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 8px 24px rgb(0 0 0 / 0.45);
 }
 
+
+/*
+ * التلوينات الدلالية في الوضع الليلي.
+ *
+ * ألوان التنبيهات والوسوم (mint/coral/sunny/sky/rose والأساسي) مثبّتة
+ * كقيم ثابتة لا متغيرات، لأنها ليست جزءاً من هوية الموقع القابلة
+ * للتغيير — فما كانت تنقلب مع بقية الألوان وظلّت خلفيات فاتحة ساطعة
+ * فوق واجهة داكنة.
+ *
+ * الحل: نستبدل الدرجة ٥٠ (خلفية) و١٠٠ (حدّ) بنفس اللون عند شفافية
+ * منخفضة فوق الخلفية الداكنة، ونرفع درجة النص من ٦٠٠ إلى درجة فاتحة
+ * تُقرأ على الداكن. اللون نفسه يبقى — تتغيّر شدّته فقط.
+ */
+:root[data-theme='dark'] {
+  --pk-tint-alpha: 0.16;
+  --pk-tint-border: 0.3;
+}
+
+:root[data-theme='dark'] .bg-mint-50   { background-color: rgb(23 190 148 / var(--pk-tint-alpha)); }
+:root[data-theme='dark'] .bg-coral-50  { background-color: rgb(255 107 74 / var(--pk-tint-alpha)); }
+:root[data-theme='dark'] .bg-sunny-50  { background-color: rgb(245 176 27 / var(--pk-tint-alpha)); }
+:root[data-theme='dark'] .bg-sky-50    { background-color: rgb(46 144 250 / var(--pk-tint-alpha)); }
+:root[data-theme='dark'] .bg-rose-50   { background-color: rgb(240 81 139 / var(--pk-tint-alpha)); }
+:root[data-theme='dark'] .bg-grape-50  { background-color: rgb(var(--pk-primary-500) / var(--pk-tint-alpha)); }
+
+:root[data-theme='dark'] .border-mint-100  { border-color: rgb(23 190 148 / var(--pk-tint-border)); }
+:root[data-theme='dark'] .border-coral-100 { border-color: rgb(255 107 74 / var(--pk-tint-border)); }
+:root[data-theme='dark'] .border-sunny-100 { border-color: rgb(245 176 27 / var(--pk-tint-border)); }
+:root[data-theme='dark'] .border-sky-100   { border-color: rgb(46 144 250 / var(--pk-tint-border)); }
+:root[data-theme='dark'] .border-rose-100  { border-color: rgb(240 81 139 / var(--pk-tint-border)); }
+:root[data-theme='dark'] .border-grape-200 { border-color: rgb(var(--pk-primary-500) / var(--pk-tint-border)); }
+
+/* النص: الدرجة ٦٠٠ مصمّمة لخلفية بيضاء ولا تُقرأ على الداكن */
+:root[data-theme='dark'] .text-mint-600  { color: #7FE0C6; }
+:root[data-theme='dark'] .text-coral-600 { color: #FFA893; }
+:root[data-theme='dark'] .text-sunny-600 { color: #FFD467; }
+:root[data-theme='dark'] .text-sky-600   { color: #84BFFF; }
+:root[data-theme='dark'] .text-rose-600  { color: #FF9BC1; }
+:root[data-theme='dark'] .text-grape-600,
+:root[data-theme='dark'] .text-grape-700 { color: rgb(var(--pk-primary-300)); }
+
+/* حدود التنبيهات الملوّنة تستخدم الدرجة ٥٠ أحياناً */
+:root[data-theme='dark'] .border-grape-100 { border-color: rgb(var(--pk-primary-500) / var(--pk-tint-border)); }
+
 @layer base {
+
 
   html {
     scroll-behavior: smooth;
