@@ -10,6 +10,8 @@ export const ADMIN_2FA_COOKIE = 'pkgat_admin_2fa';
 export interface SessionUser {
   id: string;
   email: string;
+  /** أكّد المستخدم ملكيته لهذا البريد فعلاً */
+  emailConfirmed: boolean;
   profile: Profile;
 }
 
@@ -28,7 +30,12 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     .single();
 
   if (!profile) return null;
-  return { id: user.id, email: user.email ?? '', profile: profile as Profile };
+  return {
+    id: user.id,
+    email: user.email ?? '',
+    emailConfirmed: Boolean(user.email_confirmed_at),
+    profile: profile as Profile,
+  };
 }
 
 /** يفرض تسجيل الدخول، ويمنع الحسابات الموقوفة */
@@ -39,6 +46,11 @@ export async function requireUser(nextPath?: string): Promise<SessionUser> {
   }
   if (session.profile.is_suspended) {
     redirect('/suspended');
+  }
+  // نفرضه في التطبيق لا في إعداد Supabase وحده: لو أُطفئ التأكيد هناك —
+  // سهواً أو عمداً — يظل الحساب غير المؤكَّد ممنوعاً من استخدام المنصة.
+  if (!session.emailConfirmed) {
+    redirect('/confirm-email');
   }
   return session;
 }
