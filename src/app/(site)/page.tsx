@@ -5,6 +5,7 @@ import { Reveal } from '@/components/ui/Reveal';
 import { SectionTitle } from '@/components/ui/Misc';
 import { getPageContent, getSettings, list, text } from '@/lib/cms';
 import { SocialProof } from '@/components/site/SocialProof';
+import { Faq, type FaqItem } from '@/components/site/Faq';
 import { readSocialProof } from '@/lib/site-settings';
 import { SharedShowcase } from '@/components/site/SharedShowcase';
 import { createClient } from '@/lib/supabase/server';
@@ -26,6 +27,29 @@ const FALLBACK_FEATURES: FeatureItem[] = [
   { icon: 'scan', color: 'sky', title: 'مسح من الجوال مباشرة', body: 'بدون تحميل أي تطبيق.' },
   { icon: 'shield', color: 'rose', title: 'منع دخول مكرر', body: 'الباركود يُستهلك بعد أول مسح.' },
   { icon: 'chart', color: 'sunny', title: 'تقرير بعد المناسبة', body: 'نسبة الحضور وتفصيل حسب الفئة.' },
+];
+
+/**
+ * أربعة أسئلة مختارة من أسئلة صفحة الأسعار — نصّها هو نصّها هناك حرفياً
+ * حتى لا يتناقض الجوابان. وبقيتها خلف رابط في آخر القسم.
+ */
+const HOME_FAQ: FaqItem[] = [
+  {
+    q: 'هل الباركود يشتغل بدون إنترنت؟',
+    a: 'لوحة المسح تحتاج اتصال إنترنت خفيف للتحقق الفوري ومنع التكرار، وهي مصممة لتعمل بسلاسة حتى مع شبكة ضعيفة.',
+  },
+  {
+    q: 'وش معنى الدعوات المجانية؟',
+    a: 'كل مناسبة جديدة تقدر تضيف فيها أول ١٠ مدعوين وتولّد دعواتهم فعلياً بدون دفع. الدفع يُطلب لما تحتاج تتجاوز هذا العدد.',
+  },
+  {
+    q: 'أقدر أضيف أكثر من مسؤول استقبال؟',
+    a: 'نعم، تقدر تنشئ حساب مسح مستقل لكل مدخل، وكل عملية مسح تُسجَّل باسم المسؤول اللي نفّذها.',
+  },
+  {
+    q: 'هل المدعو يحتاج يحمّل تطبيق؟',
+    a: 'لا. المدعو يستلم دعوته كصورة، ومسؤول الاستقبال يمسح الباركود من متصفح جواله مباشرة — بدون أي تطبيق على الطرفين.',
+  },
 ];
 
 const ACCENT: Record<string, string> = {
@@ -71,6 +95,9 @@ export default async function HomePage() {
             label: text(c, 'home.stats.free_label', 'مجاناً في كل مناسبة'),
           },
         ];
+  // مختارات من أسئلة صفحة الأسعار — أكثر ما يسأل عنه الزائر يسبق وصوله لها
+  const faq = list<FaqItem>(c, 'home.faq', HOME_FAQ);
+
   const features = list<FeatureItem>(c, 'home.features.items', FALLBACK_FEATURES);
   const steps = list<StepItem>(c, 'home.steps.items', [
     { title: 'أنشئ مناسبتك', body: 'اسم المناسبة، نوعها، التاريخ والموقع.' },
@@ -211,6 +238,20 @@ export default async function HomePage() {
               <SharedShowcase items={showcase} qrDataUrl={qrDataUrl} />
             </div>
           </div>
+        </section>
+      )}
+
+      {/* ===== أسئلة شائعة مختصرة ===== */}
+      {faq.length > 0 && (
+        <section className="pk-container py-16 lg:py-24">
+          <Reveal>
+            <SectionTitle
+              center
+              eyebrow={text(c, 'home.faq.eyebrow', 'أسئلة شائعة')}
+              title={text(c, 'home.faq.title', 'أكثر ما يُسأل عنه')}
+            />
+          </Reveal>
+          <Faq items={faq} className="mx-auto mt-10 max-w-3xl" moreHref="/pricing" />
         </section>
       )}
 
