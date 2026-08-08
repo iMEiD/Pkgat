@@ -3,7 +3,9 @@ import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Reveal } from '@/components/ui/Reveal';
 import { SectionTitle } from '@/components/ui/Misc';
-import { getPageContent, list, text } from '@/lib/cms';
+import { getPageContent, getSettings, list, text } from '@/lib/cms';
+import { SocialProof } from '@/components/site/SocialProof';
+import { readSocialProof } from '@/lib/site-settings';
 import { SharedShowcase } from '@/components/site/SharedShowcase';
 import { createClient } from '@/lib/supabase/server';
 import { buildShowcase, showcaseIsReady } from '@/lib/showcase';
@@ -36,11 +38,14 @@ const ACCENT: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [c, sharedDesigns, qrDataUrl] = await Promise.all([
+  const [c, sharedDesigns, qrDataUrl, settings] = await Promise.all([
     getPageContent('home'),
     getSharedDesigns(),
     siteQrDataUrl(),
+    getSettings(),
   ]);
+
+  const proof = readSocialProof(settings);
 
   // القسم يَعِد بتصاميم عملاء — فإما ثلاثة فأكثر، أو يختفي بالكامل
   const showcase = buildShowcase(sharedDesigns);
@@ -193,6 +198,9 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* ===== إثبات اجتماعي — يختفي ما لم تُضبط أرقامه ===== */}
+      <SocialProof proof={proof} className="pt-4" />
 
       {/* ===== دعوة نهائية ===== */}
       <section className="pk-container py-16 lg:py-24">
