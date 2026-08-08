@@ -176,7 +176,7 @@ export function themeToCssVars(theme: Theme): string {
     `--pk-canvas: ${triplet(canvasRgb)};`,
     `--pk-ink: ${triplet(inkRgb)};`,
     `--pk-ink-soft: ${triplet(mix(inkRgb, canvasRgb, 0.32))};`,
-    `--pk-ink-faint: ${triplet(mix(inkRgb, canvasRgb, 0.55))};`,
+    `--pk-ink-faint: ${triplet(mix(inkRgb, canvasRgb, 0.35))};`,
     ...Object.entries(primary).map(([k, v]) => `--pk-primary-${k}: ${v};`),
     ...Object.entries(sand).map(([k, v]) => `--pk-sand-${k}: ${v};`),
   ];

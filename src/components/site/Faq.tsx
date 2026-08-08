@@ -36,7 +36,7 @@ export function Faq({
     <div className={cn('space-y-3', className)}>
       {items.map((item, i) => (
         <Reveal key={item.q} delay={i * 70}>
-          <details className="group rounded-2xl border border-sand-200 bg-white/85 p-5 shadow-soft transition-colors open:border-grape-200">
+          <details className="group rounded-2xl border border-sand-200 bg-surface/85 p-5 shadow-soft transition-colors open:border-grape-200">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold text-ink">
               {item.q}
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-sand-100 text-ink-soft transition-transform duration-300 group-open:rotate-45">

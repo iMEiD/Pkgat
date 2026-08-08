@@ -114,7 +114,7 @@ export default async function HomePage() {
         <div className="pk-dots absolute inset-0 -z-10 opacity-60" aria-hidden="true" />
         <div className="pk-container grid items-center gap-12 py-16 lg:grid-cols-[1.05fr_.95fr] lg:py-24">
           <div className="animate-fade-up">
-            <span className="inline-flex items-center gap-2 rounded-full border border-sand-300 bg-white/80 px-4 py-1.5 text-xs font-bold text-grape-600 shadow-soft">
+            <span className="inline-flex items-center gap-2 rounded-full border border-sand-300 bg-surface/80 px-4 py-1.5 text-xs font-bold text-grape-600 shadow-soft">
               <Icon name="sparkle" className="h-3.5 w-3.5" />
               {text(c, 'home.hero.eyebrow', 'دعوات إلكترونية بباركود دخول')}
             </span>
@@ -275,7 +275,7 @@ export default async function HomePage() {
               <h2 className="font-display text-3xl/snug font-bold pk-balance sm:text-4xl/snug">
                 {text(c, 'home.cta.title', 'جرّب بكجات على أول ١٠ دعوات مجاناً')}
               </h2>
-              <p className="mx-auto mt-4 max-w-lg text-base leading-8 text-white/85">
+              <p className="mx-auto mt-4 max-w-lg text-base leading-8 text-white/95">
                 {text(c, 'home.cta.body', 'سجّل، صمّم، وولّد دعواتك فعلياً قبل ما تدفع أي ريال.')}
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
