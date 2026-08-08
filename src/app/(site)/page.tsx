@@ -6,6 +6,8 @@ import { SectionTitle } from '@/components/ui/Misc';
 import { getPageContent, list, text } from '@/lib/cms';
 import { SharedShowcase } from '@/components/site/SharedShowcase';
 import { createClient } from '@/lib/supabase/server';
+import { buildShowcase, showcaseIsReady } from '@/lib/showcase';
+import { siteQrDataUrl } from '@/lib/site-qr';
 import type { SharedDesign } from '@/lib/types/database';
 import { cn } from '@/lib/utils/cn';
 
@@ -34,7 +36,15 @@ const ACCENT: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [c, sharedDesigns] = await Promise.all([getPageContent('home'), getSharedDesigns()]);
+  const [c, sharedDesigns, qrDataUrl] = await Promise.all([
+    getPageContent('home'),
+    getSharedDesigns(),
+    siteQrDataUrl(),
+  ]);
+
+  // القسم يَعِد بتصاميم عملاء — فإما ثلاثة فأكثر، أو يختفي بالكامل
+  const showcase = buildShowcase(sharedDesigns);
+  const showShowcase = showcaseIsReady(showcase);
 
   const stats = list<StatItem>(c, 'home.stats', [
     { value: '٣ دقائق', label: 'من التسجيل لأول دعوة' },
@@ -161,7 +171,7 @@ export default async function HomePage() {
       </section>
 
       {/* ===== تصاميم شاركها أصحابها ===== */}
-      {sharedDesigns.length > 0 && (
+      {showShowcase && (
         <section className="py-16 lg:py-24">
           <div className="pk-container">
             <Reveal>
@@ -178,7 +188,7 @@ export default async function HomePage() {
             </Reveal>
 
             <div className="mt-12">
-              <SharedShowcase items={sharedDesigns} />
+              <SharedShowcase items={showcase} qrDataUrl={qrDataUrl} />
             </div>
           </div>
         </section>
