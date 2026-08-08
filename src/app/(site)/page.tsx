@@ -6,6 +6,7 @@ import { SectionTitle } from '@/components/ui/Misc';
 import { getPageContent, getSettings, list, text } from '@/lib/cms';
 import { SocialProof } from '@/components/site/SocialProof';
 import { Faq, type FaqItem } from '@/components/site/Faq';
+import { StickyCta } from '@/components/site/StickyCta';
 import { readSocialProof } from '@/lib/site-settings';
 import { SharedShowcase } from '@/components/site/SharedShowcase';
 import { createClient } from '@/lib/supabase/server';
@@ -109,7 +110,7 @@ export default async function HomePage() {
   return (
     <>
       {/* ===== البطل ===== */}
-      <section className="relative overflow-hidden">
+      <section id="pk-hero" className="relative overflow-hidden">
         <div className="pk-dots absolute inset-0 -z-10 opacity-60" aria-hidden="true" />
         <div className="pk-container grid items-center gap-12 py-16 lg:grid-cols-[1.05fr_.95fr] lg:py-24">
           <div className="animate-fade-up">
@@ -259,7 +260,7 @@ export default async function HomePage() {
       <SocialProof proof={proof} className="pt-4" />
 
       {/* ===== دعوة نهائية ===== */}
-      <section className="pk-container py-16 lg:py-24">
+      <section id="pk-final-cta" className="pk-container py-16 lg:py-24">
         <Reveal>
           <div className="relative overflow-hidden rounded-4xl bg-grape-500 px-6 py-14 text-center text-white sm:px-12">
             <div
@@ -297,6 +298,9 @@ export default async function HomePage() {
           </div>
         </Reveal>
       </section>
+
+      {/* يظهر بعد قسم البطل ويختفي عند الدعوة النهائية — فيها دعوة أوضح منه */}
+      <StickyCta heroId="pk-hero" hideAtId="pk-final-cta" />
     </>
   );
 }
