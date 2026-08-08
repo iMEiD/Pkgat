@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Logo } from '@/components/ui/Logo';
 import { ButtonLink } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { Icon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils/cn';
 
 const NAV = [
@@ -16,7 +17,14 @@ const NAV = [
   { href: '/about', label: 'من نحن' },
 ];
 
-export function SiteHeader({ signedIn }: { signedIn: boolean }) {
+export function SiteHeader({
+  signedIn,
+  instagram,
+}: {
+  signedIn: boolean;
+  /** رابط انستقرام — يُخفى إن لم يُضبط في لوحة الأدمن */
+  instagram?: string | null;
+}) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -64,6 +72,18 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          {instagram && (
+            <a
+              href={instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="انستقرام"
+              title="انستقرام"
+              className="grid h-10 w-10 place-items-center rounded-full text-ink-soft transition-colors hover:bg-sand-100 hover:text-grape-600"
+            >
+              <Icon name="instagram" className="h-5 w-5" />
+            </a>
+          )}
           <ThemeToggle />
           {signedIn ? (
             <ButtonLink href="/dashboard" size="sm">

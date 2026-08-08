@@ -7,6 +7,21 @@ import { whatsappHref, type ContactLinks } from '@/lib/site-settings';
 const linkClass =
   'inline-flex min-h-11 items-center gap-2 transition-colors hover:text-grape-600';
 
+function SocialIcon({ href, label, icon }: { href: string; label: string; icon: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={label}
+      title={label}
+      className="grid h-11 w-11 place-items-center rounded-full text-ink-soft transition-colors hover:bg-sand-100 hover:text-grape-600"
+    >
+      <Icon name={icon} className="h-5 w-5" />
+    </a>
+  );
+}
+
 export function SiteFooter({
   tagline,
   note,
@@ -50,6 +65,16 @@ export function SiteFooter({
                 </li>
               )}
             </ul>
+          )}
+
+          {/* حسابات التواصل — كل حساب يظهر متى ضُبط رابطه */}
+          {(contact.instagram || contact.x) && (
+            <div className="mt-4 flex items-center gap-2">
+              {contact.instagram && (
+                <SocialIcon href={contact.instagram} label="انستقرام" icon="instagram" />
+              )}
+              {contact.x && <SocialIcon href={contact.x} label="حساب X" icon="x" />}
+            </div>
           )}
         </div>
 

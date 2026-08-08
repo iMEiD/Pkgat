@@ -16,7 +16,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader signedIn={Boolean(session)} />
+      <SiteHeader signedIn={Boolean(session)} instagram={contact.instagram} />
       <main className="flex-1">{children}</main>
       <SiteFooter
         tagline={text(
