@@ -56,6 +56,21 @@ export default async function HomePage() {
     { value: 'بدون تطبيق', label: 'المسح من متصفح الجوال' },
     { value: 'باركود فريد', label: 'لكل مدعو على حدة' },
   ]);
+
+  // السعر كان غائباً عن الصفحة الرئيسية كلها — والزائر يسأل عنه أولاً.
+  // نُلحقه ببطاقات البطل بدل إضافته داخل home.stats، حتى يظهر ولو كانت
+  // القائمة في لوحة الأدمن ما زالت ثلاث بطاقات.
+  const heroStats =
+    stats.length >= 4
+      ? stats
+      : [
+          ...stats,
+          {
+            // تُصاغ بإيجاز أشقائها («٣ دقائق»، «بدون تطبيق») فلا تنكسر سطرين
+            value: text(c, 'home.stats.free_value', '١٠ دعوات'),
+            label: text(c, 'home.stats.free_label', 'مجاناً في كل مناسبة'),
+          },
+        ];
   const features = list<FeatureItem>(c, 'home.features.items', FALLBACK_FEATURES);
   const steps = list<StepItem>(c, 'home.steps.items', [
     { title: 'أنشئ مناسبتك', body: 'اسم المناسبة، نوعها، التاريخ والموقع.' },
@@ -98,8 +113,8 @@ export default async function HomePage() {
               </ButtonLink>
             </div>
 
-            <dl className="mt-12 grid max-w-lg grid-cols-3 gap-4">
-              {stats.map((s, i) => (
+            <dl className="mt-12 grid max-w-xl grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4">
+              {heroStats.map((s, i) => (
                 <Reveal key={s.label} delay={i * 90}>
                   <dt className="font-display text-xl font-bold text-grape-600">{s.value}</dt>
                   <dd className="mt-1 text-xs leading-5 text-ink-soft">{s.label}</dd>
