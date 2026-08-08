@@ -95,6 +95,23 @@ const PATHS: Record<string, React.ReactNode> = {
     </>
   ),
   arrow: <path d="M19 12H5m0 0 6 6m-6-6 6-6" />,
+  refresh: (
+    <>
+      <path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-7.6-4.2M3 12a9 9 0 0 1 9-9 9 9 0 0 1 7.6 4.2" />
+      <path d="M20 3v4.5h-4.5M4 21v-4.5h4.5" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="9" y="9" width="12" height="12" rx="2" />
+      <path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" />
+    </>
+  ),
+  pulse: (
+    <>
+      <path d="M3 12h3.5l2-5.5 3.5 11 2.5-7 1.5 1.5H21" />
+    </>
+  ),
 };
 
 export function Icon({

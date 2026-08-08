@@ -23,6 +23,17 @@ const timeFmt = new Intl.DateTimeFormat(AR_LOCALE, {
   timeZone: EVENT_TIME_ZONE,
 });
 
+const AR_DIGITS = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+
+/**
+ * أرقام عربية-هندية للنصوص المكتوبة بالعربية.
+ * التواريخ تبقى بأرقام لاتينية (numberingSystem: 'latn') لأنها تُقرأ
+ * كبيانات، أما العدد داخل جملة عربية فيُكتب بأرقامها.
+ */
+export function arabicDigits(value: number | string): string {
+  return String(value).replace(/\d/g, (d) => AR_DIGITS[Number(d)]);
+}
+
 export function formatDateTime(value: string | Date | null | undefined): string {
   if (!value) return '—';
   return dateTimeFmt.format(new Date(value));

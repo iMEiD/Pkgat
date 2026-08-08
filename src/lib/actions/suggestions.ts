@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { describeDbError } from '@/lib/db-errors';
 import { getSessionUser, requireAdmin } from '@/lib/auth/session';
 import { emailShell, sendEmail } from '@/lib/email';
 import { getSettings } from '@/lib/cms';
@@ -79,8 +80,9 @@ export async function submitSuggestion(
   });
 
   if (error) {
-    // نُظهر السبب الفعلي: الرسالة العامة أخفت الخلل الحقيقي مرة وأضاعت وقتاً
-    return { ok: false, error: `تعذّر إرسال الاقتراح: ${error.message}` };
+    // نُظهر السبب الفعلي مترجماً: الرسالة العامة أخفت الخلل مرة وأضاعت
+    // جلسة كاملة، ونصّ Postgres الخام لا يفيد من يقرأه
+    return { ok: false, error: describeDbError(error, 'تعذّر إرسال الاقتراح.') };
   }
 
   // إشعار الدعم — لا نُفشل الإرسال لو تعذّر البريد، فالاقتراح محفوظ أصلاً

@@ -5,6 +5,8 @@
   "description": "بكجات — منصة الدعوات الإلكترونية بباركود دخول",
   "scripts": {
     "dev": "next dev",
+    "gen:migrations": "node scripts/generate-migration-sql.mjs",
+    "prebuild": "node scripts/generate-migration-sql.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

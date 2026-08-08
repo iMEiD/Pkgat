@@ -5,6 +5,7 @@ import * as OTPAuth from 'otpauth';
 
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { markAdmin2faPassed, requireAdmin, requireUser } from '@/lib/auth/session';
+import { describeDbError } from '@/lib/db-errors';
 import type { ActionResult } from '@/lib/actions/events';
 import type { DesignConfig } from '@/lib/types/database';
 import type { Profile } from '@/lib/types/database';
@@ -713,9 +714,9 @@ export async function saveCustomFont(input: {
   if (error) {
     return {
       ok: false,
-      error: error.message.includes('duplicate') || error.message.includes('unique')
+      error: error.code === '23505'
         ? 'يوجد خط بنفس الاسم. اختر اسماً غيره.'
-        : `تعذّر حفظ الخط: ${error.message}`,
+        : describeDbError(error, 'تعذّر حفظ الخط.'),
     };
   }
 
