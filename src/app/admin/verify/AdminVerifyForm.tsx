@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { FloatingThemeToggle } from '@/components/ui/ThemeToggle';
 import { useEffect, useState, useTransition } from 'react';
 import QRCode from 'qrcode';
 
@@ -53,6 +54,8 @@ export function AdminVerifyForm({ alreadyEnabled }: { alreadyEnabled: boolean })
   }
 
   return (
+    <>
+      <FloatingThemeToggle />
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-md animate-fade-up">
         <div className="mb-6 flex flex-col items-center text-center">
@@ -162,5 +165,6 @@ export function AdminVerifyForm({ alreadyEnabled }: { alreadyEnabled: boolean })
         </p>
       </div>
     </div>
+    </>
   );
 }

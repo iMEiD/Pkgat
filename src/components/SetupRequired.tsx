@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { Card } from '@/components/ui/Card';
 import { LogoMark } from '@/components/ui/Logo';
+import { FloatingThemeToggle } from '@/components/ui/ThemeToggle';
 import { describeMissing, type MissingEnv } from '@/lib/config';
 
 /**
@@ -21,6 +22,7 @@ export function SetupRequired({
 }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
+      <FloatingThemeToggle />
       <LogoMark className="h-12 w-12 rounded-2xl" />
 
       <Card className="mt-6 w-full max-w-lg p-7">

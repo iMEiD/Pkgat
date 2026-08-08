@@ -35,6 +35,10 @@ export interface TextLayer {
   color: string;
   weight: number;
   align: 'center' | 'right' | 'left';
+  /** اتجاه النص — يهم عند خلط العربية بالأرقام أو اللاتينية */
+  direction?: 'rtl' | 'ltr';
+  /** مضاعف ارتفاع السطر عند تعدد الأسطر */
+  lineHeight?: number;
   letterSpacing?: number;
   shadow?: boolean;
 }

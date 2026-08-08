@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { Card } from '@/components/ui/Card';
 import { Logo } from '@/components/ui/Logo';
+import { FloatingThemeToggle } from '@/components/ui/ThemeToggle';
 import { getSettings } from '@/lib/cms';
 
 export const metadata: Metadata = { title: 'الحساب موقوف' };
@@ -12,6 +13,7 @@ export default async function SuspendedPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
+      <FloatingThemeToggle />
       <Logo />
       <Card className="mt-8 max-w-md p-8 text-center">
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-coral-50 text-3xl">

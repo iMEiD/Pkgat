@@ -91,3 +91,14 @@ export const colorModeScript = `
   }
 })();
 `.trim();
+
+/**
+ * نسخة عائمة للصفحات المستقلة التي لا هيكل لها (الحساب الموقوف، تفعيل
+ * البريد، تحقق الأدمن، ورسائل الإعداد الناقص) — فالوضع الليلي متاح في
+ * كل صفحة لا في ذات الهيكل وحدها.
+ */
+export function FloatingThemeToggle() {
+  return (
+    <ThemeToggle className="fixed left-4 top-4 z-50 bg-surface/80 backdrop-blur-sm" />
+  );
+}

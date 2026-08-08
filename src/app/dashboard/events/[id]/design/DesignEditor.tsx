@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
-import { ColorInput, Field, Input, Select, Slider, Switch } from '@/components/ui/Field';
+import { ColorInput, Field, Input, Select, Slider, Switch, Textarea } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 import { InvitationPreview, extraIdOf, type DragTarget } from '@/components/design/InvitationPreview';
 import { TemplatePicker } from '@/components/design/TemplatePicker';
@@ -47,6 +47,8 @@ export function DesignEditor({
   const [selected, setSelected] = useState<DragTarget>('name');
   const [saved, setSaved] = useState(false);
   const [shared, setShared] = useState(event.shared_design);
+  // وضع الإضافة الحرّة: الضغطة التالية على التصميم تضع نصاً في موضعها
+  const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -92,8 +94,11 @@ export function DesignEditor({
     });
   }
 
-  /** نص إضافي جديد — يُوضع أعلى الدعوة حيث تكون الخلفية عادةً أهدأ */
-  function addExtra() {
+  /**
+   * نص إضافي جديد. بلا إحداثيات يُوضع أعلى الدعوة حيث تكون الخلفية عادةً
+   * أهدأ؛ ومع إحداثيات يُوضع حيث ضغط المستخدم بالضبط.
+   */
+  function addExtra(at?: { x: number; y: number }) {
     const id = crypto.randomUUID().slice(0, 8);
     patch((d) => {
       const extras = d.extras ?? [];
@@ -101,13 +106,15 @@ export function DesignEditor({
         id,
         label: `نص ${extras.length + 1}`,
         text: 'نتشرّف بدعوتكم',
-        x: 0.5,
-        y: 0.28 + extras.length * 0.06,
+        x: at ? at.x : 0.5,
+        y: at ? at.y : 0.28 + extras.length * 0.06,
         fontFamily: d.name.fontFamily,
         fontSize: 0.045,
         color: d.name.color,
         weight: 600,
         align: 'center',
+        direction: 'rtl',
+        lineHeight: 1.35,
         letterSpacing: 0,
         shadow: false,
       });
@@ -115,6 +122,7 @@ export function DesignEditor({
       return d;
     });
     setSelected(`extra:${id}`);
+    setPlacing(false);
   }
 
   function updateExtra(id: string, patchLayer: Partial<TextLayer>) {
@@ -188,6 +196,8 @@ export function DesignEditor({
             onResize={onResize}
             selected={selected}
             onSelect={setSelected}
+            placing={placing}
+            onPlace={(x, y) => addExtra({ x, y })}
           />
           <p className="mt-3 text-center text-xs leading-6 text-ink-faint">
             اسحب الإطار بإصبع لتحريكه، وباستخدام إصبعين للتكبير والتصغير.
@@ -408,6 +418,69 @@ export function DesignEditor({
               }
             />
 
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="محاذاة الاسم">
+                <div className="grid grid-cols-3 gap-1.5 rounded-2xl bg-sand-100 p-1.5">
+                  {(
+                    [
+                      { value: 'right', label: 'يمين' },
+                      { value: 'center', label: 'توسيط' },
+                      { value: 'left', label: 'يسار' },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() =>
+                        patch((d) => {
+                          d.name.align = opt.value;
+                          return d;
+                        })
+                      }
+                      className={cn(
+                        'rounded-xl py-2 text-xs font-bold transition-all',
+                        design.name.align === opt.value
+                          ? 'bg-surface text-grape-600 shadow-soft'
+                          : 'text-ink-soft hover:text-ink',
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              <Field label="اتجاه الكتابة" hint="للأسماء الإنجليزية">
+                <div className="grid grid-cols-2 gap-1.5 rounded-2xl bg-sand-100 p-1.5">
+                  {(
+                    [
+                      { value: 'rtl', label: 'عربي ←' },
+                      { value: 'ltr', label: '→ English' },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() =>
+                        patch((d) => {
+                          d.name.direction = opt.value;
+                          return d;
+                        })
+                      }
+                      className={cn(
+                        'rounded-xl py-2 text-xs font-bold transition-all',
+                        (design.name.direction ?? 'rtl') === opt.value
+                          ? 'bg-surface text-grape-600 shadow-soft'
+                          : 'text-ink-soft hover:text-ink',
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            </div>
+
             <Switch
               checked={Boolean(design.name.shadow)}
               onChange={(v) =>
@@ -428,10 +501,19 @@ export function DesignEditor({
             title="نصوص إضافية"
             description="تهنئة أو اسم المضيف أو أي نص ثابت يظهر على كل الدعوات."
             action={
-              <Button size="sm" variant="secondary" onClick={addExtra}>
-                <Icon name="plus" className="h-4 w-4" />
-                إضافة نص
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={placing ? 'primary' : 'secondary'}
+                  onClick={() => setPlacing((v) => !v)}
+                >
+                  {placing ? 'ألغِ التحديد' : 'ضع نصاً بالضغط'}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => addExtra()}>
+                  <Icon name="plus" className="h-4 w-4" />
+                  إضافة
+                </Button>
+              </div>
             }
           />
           <CardBody className="space-y-5">
@@ -471,14 +553,82 @@ export function DesignEditor({
                       </button>
                     </div>
 
-                    <Field label="النص" htmlFor={`t-${extra.id}`}>
-                      <Input
+                    <Field
+                      label="النص"
+                      htmlFor={`t-${extra.id}`}
+                      hint="اضغط Enter لسطر جديد"
+                    >
+                      <Textarea
                         id={`t-${extra.id}`}
+                        rows={2}
                         value={extra.text}
                         onChange={(e) => updateExtra(extra.id, { text: e.target.value })}
-                        placeholder="مثال: نتشرّف بدعوتكم"
+                        placeholder={'مثال: نتشرّف بدعوتكم\nلحضور حفل الزفاف'}
                       />
                     </Field>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field label="محاذاة النص">
+                        <div className="grid grid-cols-3 gap-1.5 rounded-2xl bg-sand-100 p-1.5">
+                          {(
+                            [
+                              { value: 'right', label: 'يمين' },
+                              { value: 'center', label: 'توسيط' },
+                              { value: 'left', label: 'يسار' },
+                            ] as const
+                          ).map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => updateExtra(extra.id, { align: opt.value })}
+                              className={cn(
+                                'rounded-xl py-2 text-xs font-bold transition-all',
+                                extra.align === opt.value
+                                  ? 'bg-surface text-grape-600 shadow-soft'
+                                  : 'text-ink-soft hover:text-ink',
+                              )}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </Field>
+
+                      <Field label="اتجاه الكتابة" hint="يهم عند خلط الأرقام أو الإنجليزية">
+                        <div className="grid grid-cols-2 gap-1.5 rounded-2xl bg-sand-100 p-1.5">
+                          {(
+                            [
+                              { value: 'rtl', label: 'عربي ←' },
+                              { value: 'ltr', label: '→ English' },
+                            ] as const
+                          ).map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => updateExtra(extra.id, { direction: opt.value })}
+                              className={cn(
+                                'rounded-xl py-2 text-xs font-bold transition-all',
+                                (extra.direction ?? 'rtl') === opt.value
+                                  ? 'bg-surface text-grape-600 shadow-soft'
+                                  : 'text-ink-soft hover:text-ink',
+                              )}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </Field>
+                    </div>
+
+                    <Slider
+                      label="تباعد الأسطر"
+                      min={90}
+                      max={220}
+                      step={5}
+                      value={(extra.lineHeight ?? 1.35) * 100}
+                      display={`${Math.round((extra.lineHeight ?? 1.35) * 100)}٪`}
+                      onChange={(v) => updateExtra(extra.id, { lineHeight: v / 100 })}
+                    />
 
                     <Field label="الخط" htmlFor={`f-${extra.id}`}>
                       <Select

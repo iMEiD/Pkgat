@@ -56,7 +56,8 @@ function drawTextLayer(
   ctx.fillStyle = layer.color;
   ctx.textAlign = layer.align;
   ctx.textBaseline = 'middle';
-  ctx.direction = 'rtl';
+  // الاتجاه لكل طبقة: كان مثبّتاً rtl فتنقلب الأرقام والنص اللاتيني
+  ctx.direction = layer.direction ?? 'rtl';
 
   if (layer.letterSpacing && 'letterSpacing' in ctx) {
     (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing =
@@ -69,7 +70,19 @@ function drawTextLayer(
     ctx.shadowOffsetY = px * 0.05;
   }
 
-  ctx.fillText(text, layer.x * W, layer.y * H);
+  /*
+   * أسطر متعددة: كان fillText سطراً واحداً فقط، فأي سطر جديد يكتبه
+   * المستخدم يختفي من الدعوة النهائية. نوزّع الأسطر حول y بحيث يبقى
+   * المقبض في مركز الكتلة لا في سطرها الأول.
+   */
+  const lines = text.split('\n');
+  const lineStep = px * (layer.lineHeight ?? 1.35);
+  const startY = layer.y * H - ((lines.length - 1) * lineStep) / 2;
+
+  lines.forEach((line, i) => {
+    ctx.fillText(line, layer.x * W, startY + i * lineStep);
+  });
+
   ctx.restore();
 }
 

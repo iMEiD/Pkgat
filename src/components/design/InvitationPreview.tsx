@@ -55,6 +55,8 @@ export function InvitationPreview({
   onResize,
   selected,
   onSelect,
+  placing,
+  onPlace,
   className,
 }: {
   design: DesignConfig;
@@ -64,6 +66,9 @@ export function InvitationPreview({
   onResize?: (target: Exclude<DragTarget, null>, size: number) => void;
   selected?: DragTarget;
   onSelect?: (target: DragTarget) => void;
+  /** وضع الإضافة الحرّة: الضغط على أي موضع في التصميم يضع نصاً هناك */
+  placing?: boolean;
+  onPlace?: (x: number, y: number) => void;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -290,6 +295,26 @@ export function InvitationPreview({
       style={{ aspectRatio: `${design.width} / ${design.height}` }}
     >
       <canvas ref={canvasRef} className="block h-full w-full" />
+
+      {/* طبقة الإضافة الحرّة — تلتقط الضغطة قبل المقابض فتضع النص حيث ضُغط */}
+      {placing && (
+        <button
+          type="button"
+          aria-label="اضغط لوضع النص هنا"
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            onPlace?.(
+              Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)),
+              Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)),
+            );
+          }}
+          className="absolute inset-0 z-30 cursor-crosshair bg-grape-500/10"
+        >
+          <span className="pointer-events-none absolute inset-x-0 top-4 mx-auto w-fit rounded-full bg-ink/80 px-3 py-1.5 text-xs font-bold text-canvas">
+            اضغط على المكان الذي تبي النص فيه
+          </span>
+        </button>
+      )}
 
       {!design.backgroundUrl && (
         <div className="absolute inset-0 grid place-items-center bg-sand-50/80 p-6 text-center">

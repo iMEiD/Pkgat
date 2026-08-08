@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { Logo } from '@/components/ui/Logo';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,9 +10,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       <header className="pk-container flex h-[72px] items-center justify-between">
         <Logo />
-        <Link href="/" className="pk-tap text-sm font-semibold text-ink-soft transition-colors hover:text-grape-600">
-          ← العودة للموقع
-        </Link>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Link href="/" className="pk-tap text-sm font-semibold text-ink-soft transition-colors hover:text-grape-600">
+            ← العودة للموقع
+          </Link>
+        </div>
       </header>
 
       <main className="flex flex-1 items-center justify-center px-4 py-10">

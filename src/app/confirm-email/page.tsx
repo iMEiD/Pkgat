@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { Card } from '@/components/ui/Card';
 import { Logo } from '@/components/ui/Logo';
+import { FloatingThemeToggle } from '@/components/ui/ThemeToggle';
 import { ResendConfirmation } from './ResendConfirmation';
 import { getSessionUser } from '@/lib/auth/session';
 
@@ -24,6 +25,7 @@ export default async function ConfirmEmailPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
+      <FloatingThemeToggle />
       <Logo />
       <Card className="mt-8 w-full max-w-md p-8 text-center">
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-sunny-50 text-3xl">
