@@ -34,7 +34,7 @@ export function SiteFooter({ tagline, note }: { tagline: string; note: string })
           <ul className="mt-1 text-sm text-ink-soft">
             <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/terms">الشروط والأحكام</Link></li>
             <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/privacy">سياسة الخصوصية</Link></li>
-            <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/dashboard/suggest">اقترح تحسيناً</Link></li>
+            <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/suggest">اقترح تحسيناً</Link></li>
           </ul>
         </div>
       </div>

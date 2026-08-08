@@ -65,7 +65,8 @@ export function DashboardShell({
             {isAdmin && (
               <Link
                 href="/admin"
-                className="rounded-full bg-ink px-3.5 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-85"
+                // text-canvas ينقلب مع الخلفية: داكن على فاتح، وفاتح على داكن
+                className="rounded-full bg-ink px-3.5 py-1.5 text-xs font-bold text-canvas transition-opacity hover:opacity-85"
               >
                 لوحة الأدمن
               </Link>

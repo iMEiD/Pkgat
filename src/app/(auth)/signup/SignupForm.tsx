@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Field, Input, Select } from '@/components/ui/Field';
 import { createClient } from '@/lib/supabase/client';
 import { COUNTRIES, DEFAULT_COUNTRY, buildPhone, findCountry } from '@/lib/countries';
+import { isPhoneTaken } from '@/lib/actions/phone';
 
 /**
  * ترجمة أخطاء التسجيل لرسائل تدلّ على السبب الحقيقي.
@@ -29,6 +30,9 @@ function signupErrorMessage(raw: string): string {
   }
   if (message.includes('rate limit') || message.includes('too many')) {
     return 'محاولات كثيرة في وقت قصير. انتظر دقيقة وحاول مرة أخرى.';
+  }
+  if (message.includes('duplicate') || message.includes('unique') || message.includes('saving new user')) {
+    return 'رقم الجوال أو البريد مسجّل في حساب آخر. جرّب غيره أو سجّل دخولك.';
   }
   if (message.includes('password')) {
     return 'كلمة المرور ضعيفة أو غير مقبولة. جرّب كلمة أطول.';
@@ -65,6 +69,15 @@ export function SignupForm() {
       setError(phoneResult.error);
       return;
     }
+
+    // فحص مسبق ليرى المستخدم سبباً مفهوماً بدل خطأ قاعدة البيانات
+    setLoading(true);
+    if (await isPhoneTaken(phoneResult.phone)) {
+      setLoading(false);
+      setError('رقم الجوال هذا مسجّل في حساب آخر. استخدم رقماً غيره أو سجّل دخولك.');
+      return;
+    }
+    setLoading(false);
 
     if (password.length < 8) {
       setError('كلمة المرور يجب أن تكون ٨ أحرف على الأقل.');
