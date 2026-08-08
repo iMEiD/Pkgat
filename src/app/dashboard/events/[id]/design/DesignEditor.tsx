@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { Alert } from '@/components/ui/Alert';
@@ -13,7 +13,12 @@ import { TemplatePicker } from '@/components/design/TemplatePicker';
 import { UploadDesign } from '@/components/design/UploadDesign';
 import { saveDesign, setDesignShared } from '@/lib/actions/events';
 import { mergeDesign } from '@/lib/design/defaults';
-import { FONTS } from '@/lib/design/fonts';
+import {
+  allFontOptions,
+  registerAllCustomFonts,
+  setCustomFonts,
+  type CustomFont,
+} from '@/lib/design/fonts';
 import { checkQrContrast } from '@/lib/design/contrast';
 import { clearImageCache } from '@/lib/design/render';
 import type {
@@ -34,12 +39,26 @@ export function DesignEditor({
   userId,
   templates,
   categories,
+  customFonts,
 }: {
   event: EventRow;
   userId: string;
   templates: TemplateRow[];
   categories: TemplateCategory[];
+  customFonts: CustomFont[];
 }) {
+  /*
+   * الخطوط المرفوعة تُسجَّل قبل أول رسم على الكانفس.
+   * setCustomFonts أثناء العرض لا في تأثير جانبي، لأن قائمة الاختيار
+   * وresolveWeight يقرآنها فوراً في نفس دورة الرسم.
+   */
+  setCustomFonts(customFonts);
+
+  useEffect(() => {
+    void registerAllCustomFonts();
+  }, []);
+
+  const fontOptions = allFontOptions();
   const router = useRouter();
   const [design, setDesign] = useState<DesignConfig>(() => mergeDesign(event.design));
   const [templateId, setTemplateId] = useState<string | null>(event.template_id);
@@ -337,7 +356,7 @@ export function DesignEditor({
                 onChange={(e) =>
                   patch((d) => {
                     d.name.fontFamily = e.target.value;
-                    const font = FONTS.find((f) => f.family === e.target.value);
+                    const font = fontOptions.find((f) => f.family === e.target.value);
                     // نضبط الوزن على أقرب وزن متاح في الخط الجديد
                     if (font && !font.weights.includes(d.name.weight)) {
                       d.name.weight = font.weights.includes(700) ? 700 : font.weights[0];
@@ -346,7 +365,7 @@ export function DesignEditor({
                   })
                 }
               >
-                {FONTS.map((f) => (
+                {fontOptions.map((f) => (
                   <option key={f.family} value={f.family}>
                     {f.label}
                   </option>
@@ -365,7 +384,7 @@ export function DesignEditor({
                     })
                   }
                 >
-                  {(FONTS.find((f) => f.family === design.name.fontFamily)?.weights ?? [400, 700]).map(
+                  {(fontOptions.find((f) => f.family === design.name.fontFamily)?.weights ?? [400, 700]).map(
                     (w) => (
                       <option key={w} value={w}>
                         {w}
@@ -636,7 +655,7 @@ export function DesignEditor({
                         value={extra.fontFamily}
                         onChange={(e) => updateExtra(extra.id, { fontFamily: e.target.value })}
                       >
-                        {FONTS.map((f) => (
+                        {fontOptions.map((f) => (
                           <option key={f.family} value={f.family}>
                             {f.label}
                           </option>

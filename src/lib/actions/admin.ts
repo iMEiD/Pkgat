@@ -661,3 +661,79 @@ export async function adminDeleteEvent(eventId: string): Promise<ActionResult> {
   revalidatePath('/admin/events');
   return { ok: true };
 }
+
+// ===================== الخطوط المرفوعة =====================
+
+/**
+ * حفظ خط مرفوع.
+ *
+ * اسم العائلة فريد في قاعدة البيانات: خطّان بنفس الاسم في صفحة واحدة
+ * يتعارضان ويظهر أحدهما مكان الآخر بلا خطأ ظاهر.
+ */
+export async function saveCustomFont(input: {
+  id?: string;
+  family: string;
+  label: string;
+  fileUrl: string;
+  format: string;
+  weight: number;
+  isActive: boolean;
+  sortOrder: number;
+}): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const family = input.family.trim();
+  const label = input.label.trim();
+
+  if (!family) return { ok: false, error: 'اسم الخط مطلوب.' };
+  if (!label) return { ok: false, error: 'الاسم المعروض مطلوب.' };
+  if (!input.fileUrl) return { ok: false, error: 'ارفع ملف الخط أولاً.' };
+
+  // الاسم يدخل في font-family داخل CSS ووسم الكانفس — نمنع المحارف
+  // التي تكسر الصيغة أو تسمح بالحقن
+  if (!/^[\w؀-ۿ][\w؀-ۿ\s-]{0,48}$/.test(family)) {
+    return { ok: false, error: 'اسم الخط يقبل حروفاً وأرقاماً ومسافات وشرطات فقط.' };
+  }
+
+  const payload = {
+    family,
+    label,
+    file_url: input.fileUrl,
+    format: input.format,
+    weight: Math.max(100, Math.min(900, input.weight)),
+    is_active: input.isActive,
+    sort_order: input.sortOrder,
+  };
+
+  const { error } = input.id
+    ? await supabase.from('custom_fonts').update(payload).eq('id', input.id)
+    : await supabase.from('custom_fonts').insert(payload);
+
+  if (error) {
+    return {
+      ok: false,
+      error: error.message.includes('duplicate') || error.message.includes('unique')
+        ? 'يوجد خط بنفس الاسم. اختر اسماً غيره.'
+        : `تعذّر حفظ الخط: ${error.message}`,
+    };
+  }
+
+  await logAdminAction(input.id ? 'font.updated' : 'font.created', 'custom_fonts', input.id ?? null);
+  revalidatePath('/admin/fonts');
+  revalidatePath('/dashboard/events', 'layout');
+  return { ok: true };
+}
+
+export async function deleteCustomFont(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { error } = await supabase.from('custom_fonts').delete().eq('id', id);
+  if (error) return { ok: false, error: 'تعذّر حذف الخط.' };
+
+  await logAdminAction('font.deleted', 'custom_fonts', id);
+  revalidatePath('/admin/fonts');
+  revalidatePath('/dashboard/events', 'layout');
+  return { ok: true };
+}

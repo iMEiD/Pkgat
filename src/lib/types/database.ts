@@ -140,6 +140,19 @@ export type SharedDesign = {
   shared_at: string | null;
 }
 
+/** خط رفعه الأدمن — يظهر في محرّر التصميم مع الخطوط الجاهزة */
+export type CustomFontRow = {
+  id: string;
+  family: string;
+  label: string;
+  file_url: string;
+  format: string;
+  weight: number;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
 export type EventTag = {
   id: string;
   event_id: string;
@@ -380,6 +393,7 @@ export interface Database {
       error_logs: Table<ErrorLog>;
       audit_logs: Table<AuditLog>;
       suggestions: Table<Suggestion>;
+      custom_fonts: Table<CustomFontRow>;
     };
     Views: {
       guest_states: View<GuestState>;

@@ -88,6 +88,10 @@ export function googleFontsHref(): string {
  * تثبيت الوزن على وجه متاح يجعل المعاينة والتوليد متطابقين ومتوقّعين.
  */
 export function resolveWeight(family: string, weight: number): number {
+  // الخط المرفوع له وجه واحد فقط — نلزمه به وإلا زوّر المتصفح السُمك
+  const custom = customFonts.find((f) => f.family === family);
+  if (custom) return custom.weight;
+
   const font = FONTS.find((f) => f.family === family);
   if (!font || font.weights.includes(weight)) return weight;
 
@@ -102,6 +106,10 @@ export async function ensureFontLoaded(family: string, weight: number = 400): Pr
   // عينة عربية وإنجليزية وأرقام لضمان تحميل كل المحارف المطلوبة
   const SAMPLE = 'الدعوة Invitation ٠١٢٣';
 
+  // الخط المرفوع لا وسم <link> له — نسجّله قبل انتظار تحميله
+  const custom = customFonts.find((f) => f.family === family);
+  if (custom) await registerCustomFont(custom);
+
   try {
     await document.fonts.load(`${resolveWeight(family, weight)} 64px "${family}"`, SAMPLE);
     await document.fonts.ready;
@@ -113,4 +121,73 @@ export async function ensureFontLoaded(family: string, weight: number = 400): Pr
 /** ينتظر كل الخطوط المستخدمة في تصميم واحد */
 export async function ensureFontsLoaded(specs: { family: string; weight?: number }[]) {
   await Promise.all(specs.map((s) => ensureFontLoaded(s.family, s.weight ?? 400)));
+}
+
+// ===================== الخطوط المرفوعة =====================
+
+export interface CustomFont {
+  family: string;
+  label: string;
+  file_url: string;
+  format: string;
+  weight: number;
+}
+
+/**
+ * الخطوط المرفوعة من لوحة الأدمن.
+ *
+ * تُملأ مرة واحدة عند تحميل محرّر التصميم، ثم تُقرأ من هنا في كل مكان
+ * يحتاج قائمة الخطوط — بدل تمريرها عبر خمس طبقات من الخصائص.
+ */
+let customFonts: CustomFont[] = [];
+const registered = new Set<string>();
+
+export function setCustomFonts(fonts: CustomFont[]) {
+  customFonts = fonts;
+}
+
+export function getCustomFonts(): CustomFont[] {
+  return customFonts;
+}
+
+/** الخطوط الجاهزة والمرفوعة معاً — هذي التي تظهر في قائمة الاختيار */
+export function allFontOptions(): FontOption[] {
+  return [
+    ...FONTS,
+    ...customFonts.map((f) => ({
+      family: f.family,
+      label: `${f.label} — مرفوع`,
+      weights: [f.weight],
+    })),
+  ];
+}
+
+/**
+ * يسجّل خطاً مرفوعاً في المستند عبر FontFace.
+ *
+ * الخطوط الجاهزة تصل عبر وسم <link> في التخطيط، أما المرفوعة فلا رابط
+ * لها — فنبنيها يدوياً ونضيفها لـ document.fonts، وإلا رسم الكانفس بخط
+ * بديل بلا أي خطأ ظاهر.
+ */
+async function registerCustomFont(font: CustomFont): Promise<void> {
+  if (typeof document === 'undefined' || registered.has(font.family)) return;
+  registered.add(font.family);
+
+  try {
+    const face = new FontFace(
+      font.family,
+      `url("${font.file_url}") format("${font.format}")`,
+      { weight: String(font.weight) },
+    );
+    await face.load();
+    document.fonts.add(face);
+  } catch {
+    // خط تالف أو رابط معطّل لا يجوز أن يُعطّل توليد الدعوات كلها
+    registered.delete(font.family);
+  }
+}
+
+/** يسجّل كل الخطوط المرفوعة — يُستدعى مرة عند فتح المحرّر */
+export async function registerAllCustomFonts(): Promise<void> {
+  await Promise.all(customFonts.map(registerCustomFont));
 }
