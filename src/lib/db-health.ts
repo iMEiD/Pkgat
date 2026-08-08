@@ -57,7 +57,13 @@ type LooseResult = { data: unknown; error: DbErrorLike | null };
  */
 interface ProbeClient {
   from(table: string): {
-    select(columns: string): { limit(n: number): PromiseLike<LooseResult> };
+    select(columns: string): {
+      limit(n: number): PromiseLike<LooseResult>;
+      eq(
+        column: string,
+        value: string,
+      ): { maybeSingle(): PromiseLike<{ data: unknown; error: DbErrorLike | null }> };
+    };
     insert(values: Record<string, unknown>): {
       select(columns: string): {
         maybeSingle(): PromiseLike<{ data: { id: string } | null; error: DbErrorLike | null }>;
@@ -180,6 +186,31 @@ async function probeGuestSuggestion(sb: ProbeClient): Promise<CheckResult> {
   return { label, state: 'ok' };
 }
 
+/**
+ * وجود صفّ بمفتاح بعينه في جدول مفاتيح/قيم.
+ * تُستعمل لإعدادات ونصوص يضيفها الترحيل صفوفاً لا أعمدة.
+ */
+async function probeKeyRow(
+  sb: ProbeClient,
+  table: string,
+  key: string,
+  label: string,
+): Promise<CheckResult> {
+  const { data, error } = await sb.from(table).select('key').eq('key', key).maybeSingle();
+
+  if (error) {
+    const code = error.code ?? '';
+    if (MISSING_TABLE.has(code) || MISSING_COLUMN.has(code)) {
+      return { label, state: 'missing', detail: `الجدول ${table} غير مكتمل` };
+    }
+    return { label, state: 'unknown', detail: error.message ?? 'خطأ غير متوقّع' };
+  }
+
+  return data
+    ? { label, state: 'ok' }
+    : { label, state: 'missing', detail: `المفتاح «${key}» غير موجود في ${table}` };
+}
+
 /** وجود مخزن ملفات في Supabase Storage */
 async function probeBucket(sb: ProbeClient, bucket: string, label: string): Promise<CheckResult> {
   const { data, error } = await sb.storage.getBucket(bucket);
@@ -199,7 +230,7 @@ function rollUp(checks: CheckResult[]): CheckState {
 /* ------------------------------------------------------------------ */
 
 /**
- * يفحص الترحيلات ٠٠٠٦–٠٠١٢، وهي التي تُنفَّذ يدوياً بعد الإطلاق.
+ * يفحص الترحيلات ٠٠٠٦ فما فوق، وهي التي تُنفَّذ يدوياً بعد الإطلاق.
  * الترحيلات ٠٠٠١–٠٠٠٥ أساسية: لو نقصت لما عمل الموقع أصلاً، فوجوده
  * يعمل هو إثباتها.
  */
@@ -290,6 +321,42 @@ export async function runHealthCheck(): Promise<HealthReport> {
     checks: await Promise.all([
       probeColumn(sb, 'custom_fonts', 'id', 'جدول الخطوط المرفوعة'),
       probeBucket(sb, 'fonts', 'مخزن ملفات الخطوط'),
+    ]),
+    state: 'ok',
+  });
+
+  // ---- 0014 ----
+  migrations.push({
+    file: '0014_social_proof_and_links.sql',
+    title: 'أرقام الإثبات الاجتماعي وروابط التواصل',
+    breaks: 'لا تستطيع ضبط رابط انستقرام أو X، ولا أرقام المناسبات والتقييم — فلا تظهر في الموقع.',
+    checks: await Promise.all([
+      probeKeyRow(sb, 'site_settings', 'instagram_url', 'حقل رابط انستقرام في لوحة الأدمن'),
+      probeKeyRow(sb, 'site_settings', 'social_proof_events', 'حقل عدد المناسبات'),
+      probeKeyRow(sb, 'site_settings', 'social_proof_rating', 'حقل متوسط التقييم'),
+    ]),
+    state: 'ok',
+  });
+
+  // ---- 0015 ----
+  migrations.push({
+    file: '0015_home_faq_and_free_stat.sql',
+    title: 'نصوص الأسئلة وبطاقة «١٠ دعوات» في الرئيسية',
+    breaks: 'النصوص تعمل بقيم جاهزة، لكنك لا تستطيع تعديلها من لوحة الأدمن.',
+    checks: await Promise.all([
+      probeKeyRow(sb, 'site_content', 'home.faq', 'أسئلة الرئيسية قابلة للتعديل'),
+      probeKeyRow(sb, 'site_content', 'home.stats.free_value', 'بطاقة «١٠ دعوات» قابلة للتعديل'),
+    ]),
+    state: 'ok',
+  });
+
+  // ---- 0016 (يشمل 0013) ----
+  migrations.push({
+    file: '0016_showcase_full_design.sql',
+    title: 'المعرض يعرض الدعوة كاملة بنصوصها',
+    breaks: 'المعرض يعرض صورة الخلفية وحدها بلا اسم المناسبة ولا تاريخها ولا أي نص كتبه صاحبها.',
+    checks: await Promise.all([
+      probeColumn(sb, 'shared_designs', 'design', 'كشف التصميم كاملاً للمعرض'),
     ]),
     state: 'ok',
   });

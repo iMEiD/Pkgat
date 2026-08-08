@@ -11,7 +11,6 @@ import { readSocialProof } from '@/lib/site-settings';
 import { SharedShowcase } from '@/components/site/SharedShowcase';
 import { createClient } from '@/lib/supabase/server';
 import { buildShowcase, showcaseIsReady } from '@/lib/showcase';
-import { siteQrDataUrl } from '@/lib/site-qr';
 import type { SharedDesign } from '@/lib/types/database';
 import { cn } from '@/lib/utils/cn';
 
@@ -63,10 +62,9 @@ const ACCENT: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [c, sharedDesigns, qrDataUrl, settings] = await Promise.all([
+  const [c, sharedDesigns, settings] = await Promise.all([
     getPageContent('home'),
     getSharedDesigns(),
-    siteQrDataUrl(),
     getSettings(),
   ]);
 
@@ -236,7 +234,7 @@ export default async function HomePage() {
             </Reveal>
 
             <div className="mt-12">
-              <SharedShowcase items={showcase} qrDataUrl={qrDataUrl} />
+              <SharedShowcase items={showcase} />
             </div>
           </div>
         </section>

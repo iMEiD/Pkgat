@@ -14,7 +14,7 @@
  * العملاء، وقالب المنصة ليس عمل عميل.
  */
 
-import type { EventType, SharedDesign } from '@/lib/types/database';
+import type { DesignConfig, EventType, SharedDesign } from '@/lib/types/database';
 
 export interface ShowcaseItem {
   id: string;
@@ -24,6 +24,11 @@ export interface ShowcaseItem {
   backgroundUrl: string;
   /** الاسم المطبوع على الدعوة — للعرض فقط، لا يخصّ مدعوّاً حقيقياً */
   guestName?: string;
+  /**
+   * التصميم كاملاً. حين يوجد تُرسم الدعوة بكل نصوصها كما صنعها صاحبها؛
+   * وحين يغيب (تصميم مُضاف يدوياً بصورة جاهزة) تُعرض الصورة كما هي.
+   */
+  design?: DesignConfig;
 }
 
 /** أقل عدد يُعرض به القسم. دونه يختفي بالكامل. */
@@ -57,7 +62,8 @@ function fromShared(item: SharedDesign, index: number): ShowcaseItem {
     title: item.title,
     eventType: item.event_type,
     backgroundUrl: item.background_url,
-    guestName: SAMPLE_NAMES[index % SAMPLE_NAMES.length],
+    guestName: item.design?.name?.sample || SAMPLE_NAMES[index % SAMPLE_NAMES.length],
+    design: item.design ?? undefined,
   };
 }
 

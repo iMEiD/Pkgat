@@ -137,6 +137,8 @@ export type SharedDesign = {
   title: string;
   event_type: EventType;
   background_url: string;
+  /** كائن التصميم كاملاً — يُرسم في المعرض بنفس دالة توليد الدعوات */
+  design: DesignConfig;
   shared_at: string | null;
 }
 
