@@ -1,0 +1,84 @@
+<!--
+  قالب تأكيد التسجيل — يُلصق في:
+  Supabase → Authentication → Emails → Confirm signup
+
+  قيود بريد إلكتروني راعيناها:
+  · أنماط مضمّنة فقط (inline) — عملاء البريد يتجاهلون <style> غالباً
+  · بلا خطوط خارجية — Gmail وOutlook لا يحمّلانها، فنستخدم خطوط النظام
+  · تخطيط بجداول — أوثق ما يعمل في Outlook تحديداً
+  · dir=rtl على كل مستوى، والزر نص لا صورة حتى يظهر مع حجب الصور
+-->
+<div dir="rtl" style="margin:0;padding:0;background:#F5F1EA;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background:#F5F1EA;padding:28px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="max-width:520px;background:#FFFFFF;border-radius:20px;overflow:hidden;
+                      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Tahoma,Arial,sans-serif;">
+
+          <!-- الترويسة -->
+          <tr>
+            <td align="center" style="background:#6D4AFF;padding:26px 24px;">
+              <div style="font-size:24px;font-weight:bold;color:#FFFFFF;letter-spacing:3px;">PKGAT</div>
+              <div style="font-size:14px;color:#E3DBFF;margin-top:2px;">بكجات</div>
+            </td>
+          </tr>
+
+          <!-- المتن -->
+          <tr>
+            <td style="padding:32px 28px;" dir="rtl">
+              <h1 style="margin:0 0 14px;font-size:21px;color:#2A2521;text-align:right;">
+                فعّل بريدك وابدأ
+              </h1>
+
+              <p style="margin:0 0 20px;font-size:15px;line-height:1.9;color:#5C544B;text-align:right;">
+                أهلاً بك في بكجات. اضغط الزر لتفعيل حسابك، وبعدها تقدر تصمّم دعوتك
+                وتولّد باركود دخول لكل مدعو.
+              </p>
+
+              <!-- الزر -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="right">
+                <tr>
+                  <td style="background:#6D4AFF;border-radius:999px;">
+                    <a href="{{ .ConfirmationURL }}"
+                       style="display:inline-block;padding:14px 34px;font-size:15px;font-weight:bold;
+                              color:#FFFFFF;text-decoration:none;border-radius:999px;">
+                      فعّل حسابي
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <div style="clear:both;height:26px;"></div>
+
+              <p style="margin:0 0 8px;font-size:12px;line-height:1.8;color:#8C8377;text-align:right;">
+                لو ما اشتغل الزر، انسخ هذا الرابط والصقه في المتصفح:
+              </p>
+              <p dir="ltr" style="margin:0;font-size:11px;line-height:1.7;color:#6D4AFF;
+                                  word-break:break-all;text-align:left;">
+                {{ .ConfirmationURL }}
+              </p>
+
+              <div style="margin-top:24px;padding:14px 16px;background:#F9F3E9;border-radius:12px;">
+                <p style="margin:0;font-size:12px;line-height:1.8;color:#5C544B;text-align:right;">
+                  ما أنشأت حساباً في بكجات؟ تجاهل هذه الرسالة ولن يُفعّل شيء.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- التذييل -->
+          <tr>
+            <td style="padding:18px 28px;background:#FDFAF4;border-top:1px solid #F2E9D9;">
+              <p style="margin:0;font-size:11px;line-height:1.8;color:#8C8377;text-align:center;">
+                بكجات — دعوات إلكترونية بباركود دخول
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
