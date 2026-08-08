@@ -1,14 +1,56 @@
 import Link from 'next/link';
 
 import { Logo } from '@/components/ui/Logo';
+import { Icon } from '@/components/ui/Icon';
+import { whatsappHref, type ContactLinks } from '@/lib/site-settings';
 
-export function SiteFooter({ tagline, note }: { tagline: string; note: string }) {
+const linkClass =
+  'inline-flex min-h-11 items-center gap-2 transition-colors hover:text-grape-600';
+
+export function SiteFooter({
+  tagline,
+  note,
+  contact,
+}: {
+  tagline: string;
+  note: string;
+  contact: ContactLinks;
+}) {
+  const hasContact = Boolean(contact.whatsapp || contact.email);
+
   return (
     <footer className="mt-24 border-t border-sand-200 bg-sand-50/70">
       <div className="pk-container grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-5">
         <div className="sm:col-span-2 lg:col-span-2">
           <Logo />
           <p className="mt-4 max-w-sm text-sm leading-7 text-ink-soft">{tagline}</p>
+
+          {/* قناة تواصل مباشرة — تُخفى كل قناة لم يُضبط عنوانها */}
+          {hasContact && (
+            <ul className="mt-4 text-sm text-ink-soft">
+              {contact.whatsapp && (
+                <li>
+                  <a
+                    className={linkClass}
+                    href={whatsappHref(contact.whatsapp, 'السلام عليكم، عندي سؤال عن بكجات')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Icon name="whatsapp" className="h-4 w-4 text-grape-500" />
+                    تواصل معنا واتساب
+                  </a>
+                </li>
+              )}
+              {contact.email && (
+                <li>
+                  <a className={linkClass} href={`mailto:${contact.email}`}>
+                    <Icon name="mail" className="h-4 w-4 text-grape-500" />
+                    <span dir="ltr">{contact.email}</span>
+                  </a>
+                </li>
+              )}
+            </ul>
+          )}
         </div>
 
         <div>
