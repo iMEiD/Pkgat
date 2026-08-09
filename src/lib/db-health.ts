@@ -211,6 +211,29 @@ async function probeKeyRow(
     : { label, state: 'missing', detail: `المفتاح «${key}» غير موجود في ${table}` };
 }
 
+/**
+ * قيمة إعداد مضبوطة فعلاً لا مجرّد وجود صفّها.
+ * حقل فارغ يعني عنصراً مخفياً في الموقع — وهو سؤال يتكرر: «وين الزر؟».
+ */
+async function probeSettingValue(
+  sb: ProbeClient,
+  key: string,
+  label: string,
+): Promise<CheckResult> {
+  const { data, error } = await sb.from('site_settings').select('value').eq('key', key).maybeSingle();
+
+  if (error) {
+    return { label, state: 'unknown', detail: error.message ?? 'خطأ غير متوقّع' };
+  }
+
+  const raw = (data as { value?: unknown } | null)?.value;
+  const filled = typeof raw === 'string' ? raw.trim() !== '' : raw != null && raw !== 0;
+
+  return filled
+    ? { label, state: 'ok' }
+    : { label, state: 'missing', detail: `الحقل «${key}» فارغ — العنصر مخفي في الموقع` };
+}
+
 /** وجود مخزن ملفات في Supabase Storage */
 async function probeBucket(sb: ProbeClient, bucket: string, label: string): Promise<CheckResult> {
   const { data, error } = await sb.storage.getBucket(bucket);
@@ -357,6 +380,18 @@ export async function runHealthCheck(): Promise<HealthReport> {
     breaks: 'المعرض يعرض صورة الخلفية وحدها بلا اسم المناسبة ولا تاريخها ولا أي نص كتبه صاحبها.',
     checks: await Promise.all([
       probeColumn(sb, 'shared_designs', 'design', 'كشف التصميم كاملاً للمعرض'),
+    ]),
+    state: 'ok',
+  });
+
+  // ---- 0017 ----
+  migrations.push({
+    file: '0017_support_contact_defaults.sql',
+    title: 'رقم واتساب الدعم مضبوط',
+    breaks: 'زر الواتساب العائم ورابط الفوتر لا يظهران إطلاقاً ما دام الحقل فارغاً.',
+    checks: await Promise.all([
+      probeSettingValue(sb, 'support_whatsapp', 'رقم الواتساب مضبوط'),
+      probeSettingValue(sb, 'support_email', 'بريد الدعم مضبوط'),
     ]),
     state: 'ok',
   });
