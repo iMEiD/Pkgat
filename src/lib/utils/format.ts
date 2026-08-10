@@ -34,6 +34,41 @@ export function arabicDigits(value: number | string): string {
   return String(value).replace(/\d/g, (d) => AR_DIGITS[Number(d)]);
 }
 
+/**
+ * تمييز العدد في العربية — أربع صيغ لا اثنتان.
+ *
+ *   ١ يوم · ٢ يومان · ٣–١٠ أيام · ١١ فأكثر يوماً
+ *
+ * «٤ يوماً» و«٣ مناسبة» أخطاء يلحظها القارئ العربي فوراً، وصيغة
+ * المفرد/الجمع الإنجليزية لا تكفي هنا.
+ */
+export function pluralAr(
+  count: number,
+  one: string,
+  two: string,
+  few: string,
+  many: string,
+): string {
+  const n = Math.abs(count) % 100;
+  if (count === 1) return one;
+  if (count === 2) return two;
+  if (n >= 3 && n <= 10) return few;
+  return many;
+}
+
+/** «٤ أيام» — العدد بأرقام عربية مع التمييز الصحيح */
+export function countAr(
+  count: number,
+  one: string,
+  two: string,
+  few: string,
+  many: string,
+): string {
+  // المثنّى يُذكر بلفظه بلا عدد: «يومان» لا «٢ يومان»
+  if (count === 2) return two;
+  return `${arabicDigits(count)} ${pluralAr(count, one, two, few, many)}`;
+}
+
 export function formatDateTime(value: string | Date | null | undefined): string {
   if (!value) return '—';
   return dateTimeFmt.format(new Date(value));

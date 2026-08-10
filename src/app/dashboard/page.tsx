@@ -8,6 +8,8 @@ import { Icon } from '@/components/ui/Icon';
 import { EmptyState, ProgressBar, Stat } from '@/components/ui/Misc';
 import { createClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth/session';
+import { PlanBanner } from '@/components/dashboard/PlanBanner';
+import { getPlanStatus } from '@/lib/data/subscription';
 import { EVENT_TYPE_LABELS, formatDateTime, formatNumber, formatPercent, relativeTime } from '@/lib/utils/format';
 import { PHASE_LABELS, PHASE_TONES, computeEventPhase } from '@/lib/utils/event-phase';
 import type { EventRow } from '@/lib/types/database';
@@ -34,6 +36,7 @@ export default async function DashboardHome() {
   }
 
   let rows = await loadEvents();
+  const planStatus = await getPlanStatus(session.id);
 
   // أول زيارة بلا مناسبات: نزرع مناسبة تجريبية ليجرّب المسح فوراً.
   // seedDemoEvent يحرس نفسه بعلامة demo_seeded فلا يتكرر الزرع.
@@ -93,6 +96,9 @@ export default async function DashboardHome() {
           مناسبة جديدة
         </ButtonLink>
       </div>
+
+      {/* الباقة أولاً: يعرفها المستخدم قبل أن يصطدم بحدّها وهو يضيف مدعوين */}
+      <PlanBanner status={planStatus} />
 
       {enriched.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-3">
