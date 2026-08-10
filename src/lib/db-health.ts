@@ -356,13 +356,10 @@ export async function runHealthCheck(): Promise<HealthReport> {
   // ---- 0010 ----
   migrations.push({
     file: '0010_suggestions_and_showcase.sql',
-    title: 'صندوق الاقتراحات ومشاركة التصاميم',
-    breaks: 'صفحة الاقتراحات ومعرض التصاميم المشتركة لا تعملان.',
-    checks: await Promise.all([
-      probeColumn(sb, 'suggestions', 'id', 'جدول الاقتراحات'),
-      probeColumn(sb, 'events', 'shared_design', 'موافقة صاحب المناسبة على العرض'),
-      probeColumn(sb, 'shared_designs', 'id', 'عرض التصاميم المشتركة للزوار'),
-    ]),
+    title: 'صندوق الاقتراحات',
+    breaks: 'صفحة الاقتراحات لا تعمل — ملاحظات المستخدمين ما توصلك.',
+    // مشاركة التصاميم كانت في هذا الترحيل أيضاً، ورُفعت في 0022
+    checks: await Promise.all([probeColumn(sb, 'suggestions', 'id', 'جدول الاقتراحات')]),
     state: 'ok',
   });
 
@@ -415,16 +412,7 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
-  // ---- 0016 (يشمل 0013) ----
-  migrations.push({
-    file: '0016_showcase_full_design.sql',
-    title: 'المعرض يعرض الدعوة كاملة بنصوصها',
-    breaks: 'المعرض يعرض صورة الخلفية وحدها بلا اسم المناسبة ولا تاريخها ولا أي نص كتبه صاحبها.',
-    checks: await Promise.all([
-      probeColumn(sb, 'shared_designs', 'design', 'كشف التصميم كاملاً للمعرض'),
-    ]),
-    state: 'ok',
-  });
+  // 0013 و0016 كانا عن معرض التصاميم المشتركة، وقد رُفع في 0022
 
   // ---- 0017 ----
   migrations.push({

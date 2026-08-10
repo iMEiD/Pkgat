@@ -273,32 +273,3 @@ export async function deleteEvent(eventId: string): Promise<ActionResult> {
   revalidatePath('/dashboard');
   redirect('/dashboard');
 }
-
-/**
- * مشاركة تصميم الدعوة في الصفحة الرئيسية.
- *
- * المشاركة تكشف خلفية التصميم وعنوان المناسبة للعامة — ولا شيء غيرهما:
- * لا مدعوين ولا باركودات ولا موقع. ولهذا هي قرار صريح من صاحب المناسبة
- * لا سلوك افتراضي، ويقدر يتراجع عنه في أي وقت.
- */
-export async function setDesignShared(
-  eventId: string,
-  shared: boolean,
-): Promise<ActionResult> {
-  await requireUser();
-  const supabase = await createClient();
-
-  const { error } = await supabase
-    .from('events')
-    .update({
-      shared_design: shared,
-      shared_at: shared ? new Date().toISOString() : null,
-    })
-    .eq('id', eventId);
-
-  if (error) return { ok: false, error: 'تعذّر تغيير حالة المشاركة.' };
-
-  revalidatePath(`/dashboard/events/${eventId}/design`);
-  revalidatePath('/');
-  return { ok: true };
-}

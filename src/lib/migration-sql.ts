@@ -2416,6 +2416,28 @@ do $$ begin
   grant execute on function public.security_guards_installed() to anon, authenticated;
   grant execute on function public.account_free_allowance(uuid) to anon, authenticated;
 exception when undefined_object then null; end $$;`,
+  '0022_retire_design_sharing.sql': `-- =============================================================
+-- 0022 — إلغاء مشاركة العميل لتصميمه في الصفحة الرئيسية
+--
+-- الميزة كانت: مفتاح في محرّر التصميم يوافق به صاحب المناسبة على عرض
+-- دعوته في الرئيسية، وعرضٌ عام (shared_designs) يكشفها للزوار.
+--
+-- أُلغيت بقرار صاحب المنصة: طلبٌ يقع في منتصف عمل العميل — وهو مشغول
+-- بمناسبته لا بتسويق المنصة — فلا أحد يفعّله، ويبقى القسم فارغاً في
+-- الرئيسية. ومعرض الأعمال (gallery_items) يؤدي الغرض نفسه بأعمال
+-- يختارها صاحب المنصة.
+--
+-- والعرض العام يُحذف أولاً: ما دام لا أحد يشارك، فبقاؤه فتحةُ كشفٍ
+-- لتصاميم العملاء بلا مقابل.
+-- =============================================================
+
+drop view if exists public.shared_designs;
+
+-- الموافقة نفسها لم تعد تعني شيئاً بعد رفع الميزة، والعمودان يبقيان
+-- إغراءً لكتابة قارئة لهما لاحقاً
+alter table public.events
+  drop column if exists shared_design,
+  drop column if exists shared_at;`,
 };
 
 /** نص ترحيل بعينه، أو null إن لم يكن مضمّناً */

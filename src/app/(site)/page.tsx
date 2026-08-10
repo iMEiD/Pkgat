@@ -8,10 +8,6 @@ import { SocialProof } from '@/components/site/SocialProof';
 import { Faq, type FaqItem } from '@/components/site/Faq';
 import { StickyCta } from '@/components/site/StickyCta';
 import { readSocialProof } from '@/lib/site-settings';
-import { SharedShowcase } from '@/components/site/SharedShowcase';
-import { createClient } from '@/lib/supabase/server';
-import { buildShowcase, showcaseIsReady } from '@/lib/showcase';
-import type { SharedDesign } from '@/lib/types/database';
 import { cn } from '@/lib/utils/cn';
 
 export const revalidate = 60;
@@ -62,17 +58,9 @@ const ACCENT: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [c, sharedDesigns, settings] = await Promise.all([
-    getPageContent('home'),
-    getSharedDesigns(),
-    getSettings(),
-  ]);
+  const [c, settings] = await Promise.all([getPageContent('home'), getSettings()]);
 
   const proof = readSocialProof(settings);
-
-  // القسم يَعِد بتصاميم عملاء — فإما ثلاثة فأكثر، أو يختفي بالكامل
-  const showcase = buildShowcase(sharedDesigns);
-  const showShowcase = showcaseIsReady(showcase);
 
   const stats = list<StatItem>(c, 'home.stats', [
     { value: '٣ دقائق', label: 'من التسجيل لأول دعوة' },
@@ -216,30 +204,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ===== تصاميم شاركها أصحابها ===== */}
-      {showShowcase && (
-        <section className="py-16 lg:py-24">
-          <div className="pk-container">
-            <Reveal>
-              <SectionTitle
-                center
-                eyebrow={text(c, 'home.showcase.eyebrow', 'من تصاميم عملائنا')}
-                title={text(c, 'home.showcase.title', 'دعوات صمّمها عملاؤنا على بكجات')}
-                subtitle={text(
-                  c,
-                  'home.showcase.subtitle',
-                  'اختار أصحابها مشاركتها — وأنت تقدر تشارك تصميمك أيضاً بعد ما تخلصه.',
-                )}
-              />
-            </Reveal>
-
-            <div className="mt-12">
-              <SharedShowcase items={showcase} />
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ===== أسئلة شائعة مختصرة ===== */}
       {faq.length > 0 && (
         <section className="pk-container py-16 lg:py-24">
@@ -367,18 +331,4 @@ function FakeQr() {
       ))}
     </div>
   );
-}
-
-/**
- * تصاميم وافق أصحابها على مشاركتها.
- * العرض shared_designs يكشف الخلفية والعنوان فقط — لا شيء عن المدعوين.
- */
-async function getSharedDesigns(): Promise<SharedDesign[]> {
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase.from('shared_designs').select('*').limit(8);
-    return (data ?? []) as SharedDesign[];
-  } catch {
-    return [];
-  }
 }

@@ -11,7 +11,7 @@ import { Icon } from '@/components/ui/Icon';
 import { InvitationPreview, extraIdOf, type DragTarget } from '@/components/design/InvitationPreview';
 import { TemplatePicker } from '@/components/design/TemplatePicker';
 import { UploadDesign } from '@/components/design/UploadDesign';
-import { saveDesign, setDesignShared } from '@/lib/actions/events';
+import { saveDesign } from '@/lib/actions/events';
 import { mergeDesign } from '@/lib/design/defaults';
 import {
   allFontOptions,
@@ -65,7 +65,6 @@ export function DesignEditor({
   const [mode, setMode] = useState<Mode>(design.source === 'upload' ? 'upload' : 'template');
   const [selected, setSelected] = useState<DragTarget>('name');
   const [saved, setSaved] = useState(false);
-  const [shared, setShared] = useState(event.shared_design);
   // وضع الإضافة الحرّة: الضغطة التالية على التصميم تضع نصاً في موضعها
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -245,22 +244,6 @@ export function DesignEditor({
             </Alert>
           )}
 
-          {design.backgroundUrl && (
-            <div className="mt-4 rounded-2xl border border-sand-200 p-4">
-              <Switch
-                checked={shared}
-                onChange={(v) => {
-                  setShared(v);
-                  startTransition(async () => {
-                    const res = await setDesignShared(event.id, v);
-                    if (!res.ok) setShared(!v);
-                  });
-                }}
-                label="شارك تصميمي في الصفحة الرئيسية"
-                description="يظهر التصميم وعنوان المناسبة فقط — لا المدعوون ولا الباركودات ولا الموقع. تقدر توقفه في أي وقت."
-              />
-            </div>
-          )}
           {error && (
             <Alert tone="danger" className="mt-3">
               {error}
