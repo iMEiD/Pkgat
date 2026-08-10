@@ -178,6 +178,133 @@ export async function adminUpdateUser(
   return { ok: true };
 }
 
+/**
+ * تفعيل حساب يدوياً — يؤكّد البريد بلا انتظار ضغط المستخدم على الرابط.
+ *
+ * يُحتاج حين لا تصل رسالة التأكيد: مرشّح البريد ابتلعها، أو المستخدم
+ * أخطأ في بريده وصحّحناه له، أو نُنشئ حساباً لعميل بأنفسنا.
+ */
+export async function adminConfirmEmail(userId: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { error } = await supabase.auth.admin.updateUserById(userId, { email_confirm: true });
+  if (error) return { ok: false, error: describeDbError(error, 'تعذّر تفعيل الحساب.') };
+
+  await logAdminAction('user.email_confirmed', 'profiles', userId);
+  revalidatePath('/admin/users');
+  return { ok: true };
+}
+
+/**
+ * إنشاء حساب من لوحة الأدمن.
+ *
+ * يُنشأ مؤكَّداً مباشرة: الأدمن ينشئه لعميل يعرفه، فانتظار رسالة تأكيد
+ * لا معنى له — وهو أصلاً أكثر ما تعطّل في هذه المنصة.
+ */
+export async function adminCreateUser(input: {
+  email: string;
+  password: string;
+  fullName: string;
+  phone?: string | null;
+}): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const email = input.email.trim().toLowerCase();
+  const fullName = input.fullName.trim();
+  const phone = input.phone?.trim() || null;
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, error: 'صيغة البريد غير صحيحة.' };
+  }
+  if (!fullName) return { ok: false, error: 'الاسم مطلوب.' };
+  if (input.password.length < 8) {
+    return { ok: false, error: 'كلمة المرور ٨ أحرف على الأقل.' };
+  }
+
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    password: input.password,
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
+  });
+
+  if (error || !data.user) {
+    return {
+      ok: false,
+      error: error?.message.includes('already')
+        ? 'هذا البريد مسجّل مسبقاً.'
+        : 'تعذّر إنشاء الحساب.',
+    };
+  }
+
+  // مُشغّل handle_new_user ينشئ الملف؛ نكمل ما لا يعرفه
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ full_name: fullName, phone, email, updated_at: new Date().toISOString() })
+    .eq('id', data.user.id);
+
+  if (profileError) {
+    return { ok: false, error: describeDbError(profileError, 'أُنشئ الحساب لكن تعذّر حفظ بياناته.') };
+  }
+
+  await logAdminAction('user.created', 'profiles', data.user.id, { email });
+  revalidatePath('/admin/users');
+  return { ok: true, id: data.user.id };
+}
+
+/**
+ * حذف حساب نهائياً — ومعه مناسباته ومدعووه بحكم القيود المتسلسلة.
+ *
+ * لا رجعة فيه، ولهذا يُمنع الأدمن من حذف نفسه (فيبقى للمنصة أدمن واحد
+ * على الأقل)، ومن حذف أدمن آخر إلا بعد نزع صلاحيته أولاً.
+ */
+export async function adminDeleteUser(userId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (userId === admin.id) return { ok: false, error: 'ما تقدر تحذف حسابك أنت.' };
+
+  const supabase = createServiceClient();
+
+  const { data: target } = await supabase
+    .from('profiles')
+    .select('email, is_super_admin')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (target?.is_super_admin) {
+    return { ok: false, error: 'انزع صلاحية الأدمن أولاً، ثم احذف الحساب.' };
+  }
+
+  const { error } = await supabase.auth.admin.deleteUser(userId);
+  if (error) return { ok: false, error: 'تعذّر حذف الحساب.' };
+
+  await logAdminAction('user.deleted', 'profiles', userId, { email: target?.email ?? '' });
+  revalidatePath('/admin/users');
+  return { ok: true };
+}
+
+/** منح صلاحية الأدمن أو نزعها — الحارس في قاعدة البيانات يمنع فعلها من المتصفح */
+export async function adminSetSuperAdmin(
+  userId: string,
+  isAdmin: boolean,
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (userId === admin.id) return { ok: false, error: 'ما تقدر تغيّر صلاحيتك أنت.' };
+
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from('profiles')
+    .update({ is_super_admin: isAdmin })
+    .eq('id', userId);
+
+  if (error) return { ok: false, error: describeDbError(error, 'تعذّر تغيير الصلاحية.') };
+
+  await logAdminAction(isAdmin ? 'user.admin_granted' : 'user.admin_revoked', 'profiles', userId);
+  revalidatePath('/admin/users');
+  return { ok: true };
+}
+
 // ===================== منح الأدمن للمستخدمين =====================
 
 /**

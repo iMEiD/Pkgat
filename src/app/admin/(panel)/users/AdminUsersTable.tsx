@@ -12,13 +12,17 @@ import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
 import { Stat } from '@/components/ui/Misc';
 import {
+  adminConfirmEmail,
+  adminCreateUser,
+  adminDeleteUser,
   adminGrantMembership,
   adminRevokeMembership,
+  adminSetSuperAdmin,
   adminSetUserQuota,
   adminUpdateUser,
   setUserSuspended,
 } from '@/lib/actions/admin';
-import { formatDate, formatDateTime, formatNumber } from '@/lib/utils/format';
+import { countAr, formatDate, formatDateTime, formatNumber } from '@/lib/utils/format';
 import type { AdminUserRow } from './page';
 
 export interface PlanOption {
@@ -41,6 +45,7 @@ export function AdminUsersTable({
     'all' | 'suspended' | 'subscribed' | 'admins' | 'with_phone' | 'unconfirmed' | 'marketing'
   >('all');
   const [editing, setEditing] = useState<AdminUserRow | null>(null);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -122,10 +127,16 @@ export function AdminUsersTable({
             بيانات التواصل وحجم الاستخدام لكل حساب — قابلة للتعديل والتصدير.
           </p>
         </div>
-        <Button variant="secondary" onClick={exportCsv} disabled={filtered.length === 0}>
-          <Icon name="download" className="h-4 w-4" />
-          تصدير CSV ({formatNumber(filtered.length)})
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={exportCsv} disabled={filtered.length === 0}>
+            <Icon name="download" className="h-4 w-4" />
+            تصدير CSV ({formatNumber(filtered.length)})
+          </Button>
+          <Button onClick={() => setCreating(true)}>
+            <Icon name="plus" className="h-4 w-4" />
+            مستخدم جديد
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -294,8 +305,15 @@ export function AdminUsersTable({
         حماية البيانات الشخصية السعودي — يُفضّل إضافة خانة موافقة صريحة عند التسجيل قبل أي حملة.
       </p>
 
+      {creating && <CreateUserModal onClose={() => setCreating(false)} />}
+
       {editing && (
-        <EditUserModal user={editing} plans={plans} onClose={() => setEditing(null)} />
+        <EditUserModal
+          user={editing}
+          plans={plans}
+          currentAdminId={currentAdminId}
+          onClose={() => setEditing(null)}
+        />
       )}
     </div>
   );
@@ -489,10 +507,12 @@ function QuotaPanel({ user }: { user: AdminUserRow }) {
 function EditUserModal({
   user,
   plans,
+  currentAdminId,
   onClose,
 }: {
   user: AdminUserRow;
   plans: PlanOption[];
+  currentAdminId: string;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -562,6 +582,7 @@ function EditUserModal({
 
         <MembershipPanel user={user} plans={plans} />
         <QuotaPanel user={user} />
+        <AccountActions user={user} isSelf={user.id === currentAdminId} onDone={onClose} />
 
         <div className="rounded-2xl bg-sand-50 p-4 text-xs text-ink-soft">
           <p>
@@ -581,6 +602,229 @@ function EditUserModal({
           <Button type="submit" loading={pending}>
             حفظ
           </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * إجراءات الحساب — مجموعة في مكان واحد بدل أزرار متناثرة في الصف.
+ *
+ * كل إجراء مصحوب بأثره: الأدمن لا يفترض ماذا يفعل الزر، بل يقرأه.
+ * والحذف في آخرها ومعزول، لأنه الوحيد الذي لا رجعة فيه.
+ */
+function AccountActions({
+  user,
+  isSelf,
+  onDone,
+}: {
+  user: AdminUserRow;
+  isSelf: boolean;
+  onDone: () => void;
+}) {
+  const router = useRouter();
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [confirmText, setConfirmText] = useState('');
+  const [pending, startTransition] = useTransition();
+
+  function run(fn: () => Promise<{ ok: boolean; error?: string }>, done: string) {
+    setErr(null);
+    setMsg(null);
+    startTransition(async () => {
+      const res = await fn();
+      if (!res.ok) return setErr(res.error ?? 'تعذّر تنفيذ الإجراء.');
+      setMsg(done);
+      router.refresh();
+    });
+  }
+
+  const label = user.full_name || user.email || 'هذا الحساب';
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-sand-200 p-4">
+      <h4 className="text-sm font-bold text-ink">إجراءات الحساب</h4>
+
+      {msg && <Alert tone="success">{msg}</Alert>}
+      {err && <Alert tone="danger">{err}</Alert>}
+
+      {!user.email_confirmed && (
+        <ActionRow
+          title="تفعيل الحساب يدوياً"
+          note="يؤكّد البريد بلا انتظار الرسالة — استخدمه حين لا تصل."
+          cta="فعّل الآن"
+          disabled={pending}
+          onClick={() => run(() => adminConfirmEmail(user.id), 'فُعّل الحساب.')}
+        />
+      )}
+
+      {!isSelf && (
+        <>
+          <ActionRow
+            title={user.is_suspended ? 'رفع الإيقاف' : 'إيقاف الحساب'}
+            note={
+              user.is_suspended
+                ? 'يعود المستخدم للدخول ومناسباته كما هي.'
+                : 'يُمنع من الدخول، ومناسباته وباركوداتها تبقى محفوظة.'
+            }
+            cta={user.is_suspended ? 'ارفع الإيقاف' : 'أوقف'}
+            tone={user.is_suspended ? 'ok' : 'warn'}
+            disabled={pending}
+            onClick={() =>
+              run(
+                () => setUserSuspended(user.id, !user.is_suspended),
+                user.is_suspended ? 'رُفع الإيقاف.' : 'أُوقف الحساب.',
+              )
+            }
+          />
+
+          <ActionRow
+            title={user.is_super_admin ? 'نزع صلاحية الأدمن' : 'منح صلاحية الأدمن'}
+            note="الأدمن يرى كل الحسابات والمناسبات ويتحكم بالمنصة كاملة."
+            cta={user.is_super_admin ? 'انزع' : 'امنح'}
+            tone={user.is_super_admin ? 'warn' : 'ok'}
+            disabled={pending}
+            onClick={() =>
+              run(
+                () => adminSetSuperAdmin(user.id, !user.is_super_admin),
+                user.is_super_admin ? 'نُزعت الصلاحية.' : 'مُنحت الصلاحية.',
+              )
+            }
+          />
+
+          <div className="rounded-2xl bg-coral-50 p-3.5">
+            <p className="text-sm font-bold text-coral-700">حذف الحساب نهائياً</p>
+            <p className="mt-1 text-xs leading-6 text-ink-soft">
+              يُحذف الحساب ومعه{' '}
+              <span className="font-bold text-ink">
+                {countAr(user.event_count, 'مناسبة', 'مناسبتين', 'مناسبات', 'مناسبة')} و
+                {countAr(user.guest_count, 'مدعو', 'مدعوين', 'مدعوين', 'مدعواً')}
+              </span>
+              . لا يمكن التراجع.
+            </p>
+            <p className="mt-2 text-xs text-ink-soft">
+              للتأكيد اكتب: <span className="font-bold text-ink">حذف</span>
+            </p>
+            <div className="mt-2 flex gap-2">
+              <Input
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="حذف"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="danger"
+                disabled={pending || confirmText.trim() !== 'حذف'}
+                onClick={() =>
+                  run(async () => {
+                    const res = await adminDeleteUser(user.id);
+                    if (res.ok) onDone();
+                    return res;
+                  }, `حُذف حساب ${label}.`)
+                }
+              >
+                احذف
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {isSelf && (
+        <p className="text-xs leading-6 text-ink-soft">
+          هذا حسابك أنت — الإيقاف وتغيير الصلاحية والحذف معطّلة عليه، حتى لا تُغلق على نفسك الباب.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ActionRow({
+  title,
+  note,
+  cta,
+  onClick,
+  disabled,
+  tone = 'ok',
+}: {
+  title: string;
+  note: string;
+  cta: string;
+  onClick: () => void;
+  disabled?: boolean;
+  tone?: 'ok' | 'warn';
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-sand-50 p-3.5">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-ink">{title}</p>
+        <p className="mt-0.5 text-xs leading-6 text-ink-soft">{note}</p>
+      </div>
+      <Button
+        type="button"
+        size="sm"
+        variant={tone === 'warn' ? 'secondary' : 'primary'}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {cta}
+      </Button>
+    </div>
+  );
+}
+
+/** إنشاء حساب لعميل — يُنشأ مفعّلاً فيدخل بكلمة المرور مباشرة */
+function CreateUserModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    startTransition(async () => {
+      const res = await adminCreateUser({ email, password, fullName, phone });
+      if (!res.ok) return setErr(res.error ?? 'تعذّر إنشاء الحساب.');
+      router.refresh();
+      onClose();
+    });
+  }
+
+  return (
+    <Modal open title="مستخدم جديد" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <Alert tone="info">
+          يُنشأ الحساب <span className="font-bold">مفعّلاً</span> — يدخل صاحبه بالبريد وكلمة
+          المرور مباشرة بلا رسالة تأكيد.
+        </Alert>
+
+        {err && <Alert tone="danger">{err}</Alert>}
+
+        <Field label="الاسم" htmlFor="nu-name" required>
+          <Input id="nu-name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+        </Field>
+        <Field label="البريد الإلكتروني" htmlFor="nu-email" required>
+          <Input id="nu-email" type="email" dir="ltr" value={email}
+                 onChange={(e) => setEmail(e.target.value)} required />
+        </Field>
+        <Field label="رقم الجوال" htmlFor="nu-phone" hint="بصيغة دولية مثل 966551221129">
+          <Input id="nu-phone" dir="ltr" inputMode="numeric" value={phone}
+                 onChange={(e) => setPhone(e.target.value)} />
+        </Field>
+        <Field label="كلمة المرور" htmlFor="nu-pass" hint="٨ أحرف على الأقل — سلّمها لصاحب الحساب" required>
+          <Input id="nu-pass" dir="ltr" value={password}
+                 onChange={(e) => setPassword(e.target.value)} required />
+        </Field>
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>إلغاء</Button>
+          <Button type="submit" loading={pending}>أنشئ الحساب</Button>
         </div>
       </form>
     </Modal>

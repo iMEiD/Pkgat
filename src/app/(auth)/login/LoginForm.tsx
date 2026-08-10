@@ -10,12 +10,26 @@ import { Card } from '@/components/ui/Card';
 import { Field, Input } from '@/components/ui/Field';
 import { createClient } from '@/lib/supabase/client';
 
+/**
+ * أسباب سقوط رابط البريد — كان المستخدم يُعاد لصفحة الدخول بلا كلمة
+ * واحدة تشرح، فيظنّ الرابط «لا يعمل».
+ */
+const LINK_ERRORS: Record<string, string> = {
+  expired: 'انتهت صلاحية الرابط أو استُخدم من قبل. اطلب رابطاً جديداً من «نسيت كلمة المرور».',
+  device:
+    'افتح الرابط في نفس المتصفح الذي طلبته منه. أو اطلب رابطاً جديداً من هذا المتصفح.',
+  invalid: 'الرابط غير مكتمل. انسخه كاملاً من الرسالة، أو اطلب رابطاً جديداً.',
+  auth: 'تعذّر إكمال العملية. اطلب رابطاً جديداً.',
+};
+
 export function LoginForm({
   nextPath,
   justRegistered,
+  linkError,
 }: {
   nextPath?: string;
   justRegistered?: boolean;
+  linkError?: string;
 }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -71,6 +85,15 @@ export function LoginForm({
       {justRegistered && (
         <Alert tone="success" className="mt-5" title="تم إنشاء حسابك">
           أرسلنا رابط تأكيد إلى بريدك. فعّل حسابك ثم سجّل دخولك من هنا.
+        </Alert>
+      )}
+
+      {linkError && (
+        <Alert tone="warning" className="mt-5" title="الرابط لم يعمل">
+          {LINK_ERRORS[linkError] ?? LINK_ERRORS.auth}{' '}
+          <Link href="/forgot-password" className="font-bold underline underline-offset-4">
+            اطلب رابطاً جديداً
+          </Link>
         </Alert>
       )}
 

@@ -1,26 +1,68 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import type { EmailOtpType } from '@supabase/supabase-js';
 
 import { createClient } from '@/lib/supabase/server';
 
 /**
  * نقطة رجوع تأكيد البريد وإعادة تعيين كلمة المرور.
- * تحوّل رمز Supabase إلى جلسة ثم تعيد التوجيه للمسار المطلوب.
+ *
+ * Supabase يرسل رابط البريد بأحد شكلين حسب القالب وإصدار المشروع:
+ *
+ *   ?code=…                     تدفّق PKCE
+ *   ?token_hash=…&type=recovery رمز مُجزّأ — وهو ما ترسله قوالب البريد
+ *                               المخصّصة عادةً
+ *
+ * كان هذا المسار يتعامل مع `code` وحده، فأي رابط بالشكل الثاني يسقط
+ * إلى /login بلا رسالة — وهو ما يجعل رابط استعادة كلمة المرور يبدو
+ * وكأنه «يفتح صفحة تسجيل الدخول».
+ *
+ * وتدفّق ثالث (implicit) يضع الرمز في جزء العنوان بعد # ولا يصل الخادم
+ * إطلاقاً؛ تتكفّل به صفحة /reset-password في المتصفح.
  */
+
+const OTP_TYPES = new Set<EmailOtpType>([
+  'recovery',
+  'signup',
+  'invite',
+  'magiclink',
+  'email_change',
+  'email',
+]);
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
+
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/dashboard';
+  const tokenHash = searchParams.get('token_hash');
+  const rawType = searchParams.get('type');
+  const supabaseError = searchParams.get('error_description') ?? searchParams.get('error');
 
-  // نمنع إعادة التوجيه لنطاق خارجي
-  const safeNext = next.startsWith('/') ? next : '/dashboard';
+  const type = rawType && OTP_TYPES.has(rawType as EmailOtpType) ? (rawType as EmailOtpType) : null;
 
-  if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(`${origin}${safeNext}`);
-    }
+  // استعادة كلمة المرور تنتهي دائماً بصفحة تعيينها، مهما كان next
+  const requested = searchParams.get('next') ?? '/dashboard';
+  const safeNext =
+    type === 'recovery' ? '/reset-password' : requested.startsWith('/') ? requested : '/dashboard';
+
+  // Supabase قد يشرح سبب الرفض بنفسه — ننقله بدل ابتلاعه
+  if (supabaseError) {
+    return NextResponse.redirect(`${origin}/login?error=expired`);
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth`);
+  const supabase = await createClient();
+
+  if (tokenHash && type) {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+    if (!error) return NextResponse.redirect(`${origin}${safeNext}`);
+    return NextResponse.redirect(`${origin}/login?error=expired`);
+  }
+
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) return NextResponse.redirect(`${origin}${safeNext}`);
+    // فشل تبادل PKCE يقع أيضاً حين يُفتح الرابط في متصفح غير الذي طلبه
+    return NextResponse.redirect(`${origin}/login?error=device`);
+  }
+
+  return NextResponse.redirect(`${origin}/login?error=invalid`);
 }
