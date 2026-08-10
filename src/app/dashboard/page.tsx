@@ -9,7 +9,14 @@ import { EmptyState, ProgressBar, Stat } from '@/components/ui/Misc';
 import { createClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth/session';
 import { PlanBanner } from '@/components/dashboard/PlanBanner';
+import { NextEventCard } from '@/components/dashboard/NextEventCard';
+import { AttentionList } from '@/components/dashboard/AttentionList';
+import { QuickLinks } from '@/components/dashboard/QuickLinks';
+import { GettingStarted, type StartStep } from '@/components/dashboard/GettingStarted';
 import { getPlanStatus } from '@/lib/data/subscription';
+import { collectIssues, loadReadiness, pickNextEvent } from '@/lib/data/dashboard';
+import { getSettings } from '@/lib/cms';
+import { readContactLinks } from '@/lib/site-settings';
 import { EVENT_TYPE_LABELS, formatDateTime, formatNumber, formatPercent, relativeTime } from '@/lib/utils/format';
 import { PHASE_LABELS, PHASE_TONES, computeEventPhase } from '@/lib/utils/event-phase';
 import type { EventRow } from '@/lib/types/database';
@@ -53,29 +60,47 @@ export default async function DashboardHome() {
     }
   }
 
-  // نجلب عدّادات المدعوين لكل المناسبات في استعلام واحد
-  const ids = rows.map((e) => e.id);
-  const counts = new Map<string, { total: number; attended: number }>();
+  // الجاهزية والنواقص تُحسب مرة واحدة لكل المناسبات
+  const [readiness, settings] = await Promise.all([loadReadiness(rows, session.id), getSettings()]);
 
-  if (ids.length > 0) {
-    const { data: guests } = await supabase
-      .from('guests')
-      .select('event_id, checked_in_at')
-      .in('event_id', ids);
-
-    for (const g of guests ?? []) {
-      const entry = counts.get(g.event_id) ?? { total: 0, attended: 0 };
-      entry.total += 1;
-      if (g.checked_in_at) entry.attended += 1;
-      counts.set(g.event_id, entry);
-    }
-  }
-
-  const enriched: EventWithCounts[] = rows.map((e) => ({
-    ...e,
-    guestCount: counts.get(e.id)?.total ?? 0,
-    attendedCount: counts.get(e.id)?.attended ?? 0,
+  const enriched: EventWithCounts[] = readiness.map((r) => ({
+    ...r.event,
+    guestCount: r.guestCount,
+    attendedCount: r.attendedCount,
   }));
+
+  const nextEvent = pickNextEvent(readiness);
+  const issues = collectIssues(readiness, nextEvent?.event.id);
+  const contact = readContactLinks(settings);
+
+  const realEvents = readiness.filter((r) => !r.event.is_demo);
+  const first = realEvents[0];
+  const startSteps: StartStep[] = [
+    {
+      label: 'أنشئ مناسبتك',
+      hint: 'اسمها ونوعها وتاريخها وموقعها',
+      done: realEvents.length > 0,
+      href: '/dashboard/events/new',
+    },
+    {
+      label: 'صمّم الدعوة',
+      hint: 'قالب جاهز أو تصميمك الخاص، وحدّد مكان الاسم والباركود',
+      done: Boolean(first?.hasDesign),
+      href: first ? `/dashboard/events/${first.event.id}/design` : '/dashboard/events/new',
+    },
+    {
+      label: 'أضف المدعوين',
+      hint: 'يدوي أو لصق قائمة أو استيراد ملف',
+      done: (first?.guestCount ?? 0) > 0,
+      href: first ? `/dashboard/events/${first.event.id}/guests` : '/dashboard/events/new',
+    },
+    {
+      label: 'جرّب المسح',
+      hint: 'أنشئ حساب مسح وامسح باركوداً من جوال ثانٍ',
+      done: (first?.scannerCount ?? 0) > 0,
+      href: first ? `/dashboard/events/${first.event.id}/scanners` : '/dashboard/events/new',
+    },
+  ];
 
   const upcoming = enriched.filter((e) => computeEventPhase(e) !== 'ended');
   const past = enriched.filter((e) => computeEventPhase(e) === 'ended');
@@ -99,6 +124,14 @@ export default async function DashboardHome() {
 
       {/* الباقة أولاً: يعرفها المستخدم قبل أن يصطدم بحدّها وهو يضيف مدعوين */}
       <PlanBanner status={planStatus} />
+
+      {/* الدليل يختفي وحده بعد إتمام خطواته */}
+      <GettingStarted steps={startSteps} />
+
+      {/* ما الذي عليّ فعله الآن؟ — سؤال صاحب المناسبة الأول */}
+      {nextEvent && <NextEventCard item={nextEvent} />}
+
+      <AttentionList issues={issues} />
 
       {enriched.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-3">
@@ -144,6 +177,12 @@ export default async function DashboardHome() {
             </section>
           )}
         </>
+      )}
+      {enriched.length > 0 && (
+        <QuickLinks
+          scanUrl={`${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://pkgat.com'}/scan/login`}
+          supportWhatsapp={contact.whatsapp}
+        />
       )}
     </div>
   );

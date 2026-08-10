@@ -23,8 +23,8 @@ function Subscribed({ status }: { status: PlanStatus }) {
     <Card
       className={
         expiringSoon
-          ? 'border-sunny-200 bg-sunny-50/60 p-5'
-          : 'border-grape-200 bg-grape-50/50 p-5'
+          ? 'border-sunny-200 bg-sunny-50 p-5'
+          : 'border-grape-200 bg-grape-50 p-5'
       }
     >
       <div className="flex flex-wrap items-center justify-between gap-4">

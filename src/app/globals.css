@@ -121,6 +121,7 @@
 /* النص: الدرجة ٦٠٠ مصمّمة لخلفية بيضاء ولا تُقرأ على الداكن */
 :root[data-theme='dark'] .text-mint-600  { color: #7FE0C6; }
 :root[data-theme='dark'] .text-coral-600 { color: #FFA893; }
+:root[data-theme='dark'] .text-coral-700 { color: #FFA893; }
 :root[data-theme='dark'] .text-sunny-600 { color: #FFD467; }
 :root[data-theme='dark'] .text-sky-600   { color: #84BFFF; }
 :root[data-theme='dark'] .text-rose-600  { color: #FF9BC1; }
