@@ -13,7 +13,9 @@ import { NextEventCard } from '@/components/dashboard/NextEventCard';
 import { AttentionList } from '@/components/dashboard/AttentionList';
 import { QuickLinks } from '@/components/dashboard/QuickLinks';
 import { GettingStarted, type StartStep } from '@/components/dashboard/GettingStarted';
+import { ReviewPrompt } from '@/components/dashboard/ReviewPrompt';
 import { getPlanStatus } from '@/lib/data/subscription';
+import { getMyReview } from '@/lib/data/reviews';
 import { collectIssues, loadReadiness, pickNextEvent } from '@/lib/data/dashboard';
 import { getSettings } from '@/lib/cms';
 import { readContactLinks } from '@/lib/site-settings';
@@ -61,7 +63,11 @@ export default async function DashboardHome() {
   }
 
   // الجاهزية والنواقص تُحسب مرة واحدة لكل المناسبات
-  const [readiness, settings] = await Promise.all([loadReadiness(rows, session.id), getSettings()]);
+  const [readiness, settings, myReview] = await Promise.all([
+    loadReadiness(rows, session.id),
+    getSettings(),
+    getMyReview(session.id),
+  ]);
 
   const enriched: EventWithCounts[] = readiness.map((r) => ({
     ...r.event,
@@ -101,6 +107,14 @@ export default async function DashboardHome() {
       href: first ? `/dashboard/events/${first.event.id}/scanners` : '/dashboard/events/new',
     },
   ];
+
+  /*
+   * نسأل عن التقييم بعد أن يستخدم المنصة فعلاً — مناسبة حقيقية فيها
+   * مدعوون. سؤال قبل التجربة يزعج ولا يجيب عنه أحد. ومن قيّم مسبقاً
+   * تُعرض له حالة تقييمه بدل السؤال.
+   */
+  const usedPlatform = realEvents.some((r) => r.guestCount > 0);
+  const askForReview = usedPlatform || myReview !== null;
 
   const upcoming = enriched.filter((e) => computeEventPhase(e) !== 'ended');
   const past = enriched.filter((e) => computeEventPhase(e) === 'ended');
@@ -178,6 +192,8 @@ export default async function DashboardHome() {
           )}
         </>
       )}
+      {askForReview && <ReviewPrompt existing={myReview} />}
+
       {enriched.length > 0 && (
         <QuickLinks
           scanUrl={`${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://pkgat.com'}/scan/login`}

@@ -7,6 +7,8 @@ import { getPageContent, getSettings, list, text } from '@/lib/cms';
 import { SocialProof } from '@/components/site/SocialProof';
 import { Faq, type FaqItem } from '@/components/site/Faq';
 import { StickyCta } from '@/components/site/StickyCta';
+import { Reviews } from '@/components/site/Reviews';
+import { getPublishedReviews } from '@/lib/data/reviews';
 import { readSocialProof } from '@/lib/site-settings';
 import { cn } from '@/lib/utils/cn';
 
@@ -58,7 +60,11 @@ const ACCENT: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [c, settings] = await Promise.all([getPageContent('home'), getSettings()]);
+  const [c, settings, reviews] = await Promise.all([
+    getPageContent('home'),
+    getSettings(),
+    getPublishedReviews(),
+  ]);
 
   const proof = readSocialProof(settings);
 
@@ -203,6 +209,30 @@ export default async function HomePage() {
           </ol>
         </div>
       </section>
+
+      {/* ===== آراء العملاء ===== */}
+      {reviews.ready && (
+        <section className="bg-sand-50/60 py-16 lg:py-24">
+          <div className="pk-container">
+            <Reveal>
+              <SectionTitle
+                center
+                eyebrow={text(c, 'home.reviews.eyebrow', 'رأي عملائنا')}
+                title={text(c, 'home.reviews.title', 'وش يقولون اللي جرّبوا بكجات؟')}
+                subtitle={text(
+                  c,
+                  'home.reviews.subtitle',
+                  'تقييمات كتبها أصحاب مناسبات نُظِّمت فعلاً على المنصة.',
+                )}
+              />
+            </Reveal>
+
+            <div className="mt-12">
+              <Reviews items={reviews.items} average={reviews.average} count={reviews.count} />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ===== أسئلة شائعة مختصرة ===== */}
       {faq.length > 0 && (

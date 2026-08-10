@@ -6,6 +6,7 @@ import * as OTPAuth from 'otpauth';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { markAdmin2faPassed, requireAdmin, requireUser } from '@/lib/auth/session';
 import { describeDbError } from '@/lib/db-errors';
+import { logAdminAction } from '@/lib/audit';
 import type { ActionResult } from '@/lib/actions/events';
 import type { DesignConfig } from '@/lib/types/database';
 import type { Profile } from '@/lib/types/database';
@@ -77,25 +78,6 @@ export async function verifyTotp(token: string): Promise<ActionResult> {
 
   await logAdminAction('admin.2fa.verified', 'profiles', session.id);
   return { ok: true };
-}
-
-async function logAdminAction(
-  action: string,
-  table: string | null,
-  targetId: string | null,
-  meta?: Record<string, unknown>,
-) {
-  const session = await requireUser();
-  const service = createServiceClient();
-  await service.from('audit_logs').insert({
-    actor_type: 'admin',
-    actor_id: session.id,
-    actor_name: session.profile.full_name ?? session.email,
-    action,
-    target_table: table,
-    target_id: targetId,
-    meta: meta ?? null,
-  });
 }
 
 // ===================== إدارة المستخدمين =====================

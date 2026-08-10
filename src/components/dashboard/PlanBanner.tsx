@@ -23,7 +23,7 @@ function Subscribed({ status }: { status: PlanStatus }) {
     <Card
       className={
         expiringSoon
-          ? 'border-sunny-200 bg-sunny-50 p-5'
+          ? 'border-sunny-100 bg-sunny-50 p-5'
           : 'border-grape-200 bg-grape-50 p-5'
       }
     >
@@ -83,7 +83,7 @@ function FreeTier({ status }: { status: PlanStatus }) {
   const exhausted = freeLeft === 0;
 
   return (
-    <Card className={exhausted ? 'border-sunny-200 bg-sunny-50 p-5' : 'border-sand-300 p-5'}>
+    <Card className={exhausted ? 'border-sunny-100 bg-sunny-50 p-5' : 'border-sand-300 p-5'}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-start gap-3.5">
           <span

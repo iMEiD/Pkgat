@@ -130,6 +130,41 @@ export type Suggestion = {
   created_at: string;
 }
 
+export type ReviewStatus = 'pending' | 'published' | 'hidden';
+
+/**
+ * تقييم عميل للخدمة.
+ * الاسم والصفة منسوخان وقت الإرسال لا مرجعاً حيّاً — فالمنشور باسمٍ
+ * لا يتغيّر لو غيّر صاحبه اسمه أو حذف حسابه.
+ */
+export type Review = {
+  id: string;
+  user_id: string | null;
+  author_name: string;
+  author_title: string | null;
+  rating: number;
+  body: string;
+  status: ReviewStatus;
+  /** customer: كتبه صاحبه · admin: أضافه صاحب المنصة */
+  source: 'customer' | 'admin';
+  sort_order: number;
+  admin_note: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** ما يراه الزائر من التقييم — بلا هوية صاحبه ولا حالة مراجعته */
+export type PublishedReview = {
+  id: string;
+  author_name: string;
+  author_title: string | null;
+  rating: number;
+  body: string;
+  published_at: string | null;
+  sort_order: number;
+}
+
 /** خط رفعه الأدمن — يظهر في محرّر التصميم مع الخطوط الجاهزة */
 export type CustomFontRow = {
   id: string;
@@ -386,9 +421,11 @@ export interface Database {
       audit_logs: Table<AuditLog>;
       suggestions: Table<Suggestion>;
       custom_fonts: Table<CustomFontRow>;
+      reviews: Table<Review>;
     };
     Views: {
       guest_states: View<GuestState>;
+      published_reviews: View<PublishedReview>;
     };
     Functions: {
       process_scan: {

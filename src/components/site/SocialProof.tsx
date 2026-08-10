@@ -1,4 +1,4 @@
-import { Icon } from '@/components/ui/Icon';
+import { Stars } from '@/components/ui/Stars';
 import { arabicDigits } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 import { hasSocialProof, type SocialProof as SocialProofData } from '@/lib/site-settings';
@@ -26,12 +26,7 @@ export function SocialProof({
         {proof.guests && <Figure value={proof.guests} label="مدعو دخل بباركوده" />}
         {proof.rating && (
           <div className="text-center">
-            <div className="flex items-center justify-center gap-1.5">
-              <Stars rating={proof.rating} />
-              <span className="font-display text-2xl font-bold text-grape-600">
-                {arabicDigits(proof.rating.toFixed(1))}
-              </span>
-            </div>
+            <Stars rating={proof.rating} showValue className="justify-center" />
             <p className="mt-1.5 text-xs leading-5 text-ink-soft">
               {proof.ratingCount
                 ? `تقييم ${arabicDigits(proof.ratingCount)} من العملاء`
@@ -57,22 +52,5 @@ function Figure({ value, label }: { value: number; label: string }) {
       </p>
       <p className="mt-1.5 text-xs leading-5 text-ink-soft">{label}</p>
     </div>
-  );
-}
-
-/** خمس نجوم، تُملأ حسب التقييم — والقيمة الرقمية مكتوبة بجانبها للوضوح */
-function Stars({ rating }: { rating: number }) {
-  const rounded = Math.round(rating);
-
-  return (
-    <span className="flex items-center gap-0.5" aria-hidden="true">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Icon
-          key={i}
-          name="star"
-          className={cn('h-4 w-4', i <= rounded ? 'text-sunny-500' : 'text-sand-300')}
-        />
-      ))}
-    </span>
   );
 }

@@ -187,6 +187,19 @@ async function probeGuestSuggestion(sb: ProbeClient): Promise<CheckResult> {
 }
 
 /**
+ * فحص معكوس: الترحيل يحذف شيئاً، فوجوده هو النقص.
+ * تُستعمل مع الترحيلات التي ترفع ميزة بدل أن تضيفها.
+ */
+async function probeGone(sb: ProbeClient, table: string, label: string): Promise<CheckResult> {
+  const { error } = await sb.from(table).select('id').limit(1);
+  if (!error) return { label, state: 'missing', detail: `${table} ما زال موجوداً` };
+
+  const code = error.code ?? '';
+  if (MISSING_TABLE.has(code) || MISSING_COLUMN.has(code)) return { label, state: 'ok' };
+  return { label, state: 'unknown', detail: error.message ?? 'خطأ غير متوقّع' };
+}
+
+/**
  * وجود صفّ بمفتاح بعينه في جدول مفاتيح/قيم.
  * تُستعمل لإعدادات ونصوص يضيفها الترحيل صفوفاً لا أعمدة.
  */
@@ -478,6 +491,32 @@ export async function runHealthCheck(): Promise<HealthReport> {
       probeColumn(sb, 'profiles', 'free_guests_used', 'دفتر ما استهلكه الحساب'),
       probeColumn(sb, 'guests', 'free_seq', 'رقم المدعو في الدفتر'),
       probeBooleanFunction(sb, 'security_guards_installed', 'حرّاس الدفتر والصلاحيات مركّبون'),
+    ]),
+    state: 'ok',
+  });
+
+  // ---- 0022 ----
+  migrations.push({
+    file: '0022_retire_design_sharing.sql',
+    title: 'رفع مشاركة التصاميم',
+    breaks:
+      'العرض العام shared_designs ما زال يكشف تصاميم من شاركها سابقاً، ' +
+      'وقسمٌ رُفع من الموقع لا مبرّر لبقاء بياناته مكشوفة.',
+    checks: await Promise.all([
+      probeGone(sb, 'shared_designs', 'العرض العام محذوف فعلاً'),
+    ]),
+    state: 'ok',
+  });
+
+  // ---- 0023 ----
+  migrations.push({
+    file: '0023_reviews.sql',
+    title: 'تقييمات العملاء',
+    breaks: 'صفحة التقييمات لا تعمل، والعميل ما يقدر يقيّم الخدمة من لوحته.',
+    checks: await Promise.all([
+      probeColumn(sb, 'reviews', 'status', 'جدول التقييمات'),
+      probeColumn(sb, 'published_reviews', 'author_name', 'ما يراه الزائر من المنشور'),
+      probeKeyRow(sb, 'site_content', 'home.reviews.title', 'عنوان قسم التقييمات قابل للتعديل'),
     ]),
     state: 'ok',
   });
