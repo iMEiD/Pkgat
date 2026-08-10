@@ -234,6 +234,29 @@ async function probeSettingValue(
     : { label, state: 'missing', detail: `الحقل «${key}» فارغ — العنصر مخفي في الموقع` };
 }
 
+/**
+ * دالة تُرجع صواباً حين يكون الشيء مركّباً.
+ * غيابها نفسه دليل على أن الترحيل لم يُنفَّذ.
+ */
+async function probeBooleanFunction(
+  sb: ProbeClient,
+  fn: string,
+  label: string,
+): Promise<CheckResult> {
+  const { data, error } = await sb.rpc(fn, {});
+
+  if (error) {
+    if (MISSING_FUNCTION.has(error.code ?? '')) {
+      return { label, state: 'missing', detail: 'الترحيل لم يُنفَّذ بعد' };
+    }
+    return { label, state: 'unknown', detail: error.message ?? 'خطأ غير متوقّع' };
+  }
+
+  return data === true
+    ? { label, state: 'ok' }
+    : { label, state: 'missing', detail: 'الترحيل نُفِّذ جزئياً — الحارس غير مركّب' };
+}
+
 /** وجود مخزن ملفات في Supabase Storage */
 async function probeBucket(sb: ProbeClient, bucket: string, label: string): Promise<CheckResult> {
   const { data, error } = await sb.storage.getBucket(bucket);
@@ -392,6 +415,19 @@ export async function runHealthCheck(): Promise<HealthReport> {
     checks: await Promise.all([
       probeSettingValue(sb, 'support_whatsapp', 'رقم الواتساب مضبوط'),
       probeSettingValue(sb, 'support_email', 'بريد الدعم مضبوط'),
+    ]),
+    state: 'ok',
+  });
+
+  // ---- 0018 — الأهم على الإطلاق ----
+  migrations.push({
+    file: '0018_privilege_and_billing_guards.sql',
+    title: '🔒 حارس الصلاحيات والحدود',
+    breaks:
+      'أي مستخدم مسجّل يستطيع من متصفحه أن يجعل نفسه أدمن على المنصة كاملة، ' +
+      'أو يرفع حصته المجانية فتعمل باركوداته بلا دفع. نفّذ هذا الترحيل قبل أي شيء آخر.',
+    checks: await Promise.all([
+      probeBooleanFunction(sb, 'security_guards_installed', 'الحارسان مركّبان في قاعدة البيانات'),
     ]),
     state: 'ok',
   });
