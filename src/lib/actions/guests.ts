@@ -70,11 +70,24 @@ export async function addGuests(
   const quota = await getEventQuota(event, session.id);
   const limit = quota.limit;
 
-  if (limit !== null && current + cleaned.length > limit) {
+  /*
+   * في نطاق الحساب يُفرض الحد على ما بقي في الدفتر لا على عدد المدعوين
+   * الحاليين: من يحذف مدعويه لا يسترد شيئاً، فالعدّ الحالي وحده يخدعنا.
+   */
+  const overLimit =
+    quota.reason === 'free' && quota.accountScope
+      ? cleaned.length > quota.remaining
+      : limit !== null && current + cleaned.length > limit;
+
+  if (overLimit) {
     return {
       ok: false,
       paymentRequired: !event.is_paid,
-      limit,
+      // في نطاق الحساب: أقصى ما يقدر يوصله هنا = الموجود + ما بقي في الدفتر
+      limit:
+        quota.reason === 'free' && quota.accountScope
+          ? current + quota.remaining
+          : (limit ?? undefined),
       current,
       error: quotaMessage(quota, current),
     };

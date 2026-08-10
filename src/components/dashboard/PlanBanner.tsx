@@ -73,29 +73,54 @@ function Subscribed({ status }: { status: PlanStatus }) {
   );
 }
 
+/**
+ * التجربة المجانية تُحسب على الحساب كله مرة واحدة، ولا ترجع بحذف
+ * مناسبة أو مدعو. ولهذا لا يكفي أن نقول «١٠ مجاناً»: لازم يشوف كم بقي
+ * له الآن، وإلا اكتشف نفاد رصيده وهو يضيف مدعويه قبل المناسبة بيوم.
+ */
 function FreeTier({ status }: { status: PlanStatus }) {
-  const { freeQuota, paidEvents } = status;
+  const { freeQuota, freeUsed, freeLeft, paidEvents } = status;
+  const exhausted = freeLeft === 0;
 
   return (
-    <Card className="border-sand-300 p-5">
+    <Card className={exhausted ? 'border-sunny-200 bg-sunny-50 p-5' : 'border-sand-300 p-5'}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-start gap-3.5">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-sand-100 text-ink-soft">
+          <span
+            className={
+              'grid h-11 w-11 shrink-0 place-items-center rounded-2xl ' +
+              (exhausted ? 'bg-sunny-500 text-white' : 'bg-sand-100 text-ink-soft')
+            }
+          >
             <Icon name="sparkle" className="h-5 w-5" />
           </span>
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-bold text-ink">التجربة المجانية</h2>
-              <Badge tone="sand">بدون اشتراك</Badge>
+              <Badge tone={exhausted ? 'sunny' : 'sand'}>
+                {exhausted ? 'خلصت' : 'بدون اشتراك'}
+              </Badge>
             </div>
 
             <p className="mt-1 text-sm leading-6 text-ink-soft">
-              أول{' '}
-              <span className="font-bold text-ink">
-                {countAr(freeQuota, 'مدعو', 'مدعوين', 'مدعوين', 'مدعواً')}
-              </span>{' '}
-              مجاناً قبل أي دفع
+              {exhausted ? (
+                <>
+                  استهلكت{' '}
+                  <span className="font-bold text-ink">
+                    {countAr(freeUsed, 'دعوة', 'دعوتين', 'دعوات', 'دعوة')}
+                  </span>{' '}
+                  من {countAr(freeQuota, 'دعوة', 'دعوتين', 'دعوات', 'دعوة')} — اشترك عشان تكمّل
+                </>
+              ) : (
+                <>
+                  بقي لك{' '}
+                  <span className="font-bold text-ink">
+                    {countAr(freeLeft, 'دعوة', 'دعوتين', 'دعوات', 'دعوة')}
+                  </span>{' '}
+                  من {countAr(freeQuota, 'دعوة', 'دعوتين', 'دعوات', 'دعوة')} للحساب كله
+                </>
+              )}
               {paidEvents > 0 && (
                 <>
                   <span className="px-1.5 text-ink-faint">·</span>

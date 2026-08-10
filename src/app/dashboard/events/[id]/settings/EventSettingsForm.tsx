@@ -34,10 +34,19 @@ export function EventSettingsForm({
   const [lead, setLead] = useState(event.activation_lead_minutes);
   const [grace, setGrace] = useState(event.expiry_grace_minutes);
 
+  /*
+   * الدعوات المجانية تُحسب على الحساب مرة واحدة ولا ترجع بالحذف. من
+   * يحذف مناسبة ظنّاً أنه يستعيد حصته يفاجأ بعدها — فنقولها قبل الحذف
+   * لا بعده.
+   */
+  const freeSpent = !event.is_paid && !event.is_demo && guestCount > 0;
+
   function remove() {
     if (
       !confirm(
-        `سيُحذف «${event.title}» نهائياً مع كل المدعوين والباركودات وسجل المسح وحسابات المسؤولين. هذا الإجراء لا يمكن التراجع عنه. متأكد؟`,
+        `سيُحذف «${event.title}» نهائياً مع كل المدعوين والباركودات وسجل المسح وحسابات المسؤولين. ` +
+          (freeSpent ? 'والدعوات المجانية اللي استهلكتها ما ترجع بالحذف. ' : '') +
+          'هذا الإجراء لا يمكن التراجع عنه. متأكد؟',
       )
     )
       return;
@@ -182,6 +191,12 @@ export function EventSettingsForm({
           description="يحذف المدعوين والباركودات وسجل المسح وحسابات المسؤولين. لا يمكن التراجع."
         />
         <CardBody>
+          {freeSpent && (
+            <Alert tone="warning" className="mb-4">
+              الدعوات المجانية اللي استهلكتها محسوبة على حسابك مرة واحدة — ما ترجع لك بحذف
+              المناسبة.
+            </Alert>
+          )}
           <Button variant="danger" onClick={remove} loading={deleting}>
             حذف المناسبة نهائياً
           </Button>

@@ -24,6 +24,10 @@ export interface PlanStatus {
   expiringSoon: boolean;
   /** الحصة المجانية للحساب */
   freeQuota: number;
+  /** ما استُهلك منها طوال عمر الحساب — لا ينقص بحذف مناسبة أو مدعو */
+  freeUsed: number;
+  /** ما بقي منها */
+  freeLeft: number;
   /** عدد المناسبات التي دُفع لها منفردة */
   paidEvents: number;
 }
@@ -33,13 +37,19 @@ const DAY = 24 * 60 * 60 * 1000;
 export async function getPlanStatus(userId: string): Promise<PlanStatus> {
   const supabase = await createClient();
 
-  const [{ data: subs }, { data: paid }, freeQuota] = await Promise.all([
+  const [{ data: subs }, { data: paid }, { data: profile }, freeQuota] = await Promise.all([
     supabase
       .from('subscriptions')
       .select('current_period_end, plans(name, billing_period)')
       .eq('user_id', userId)
       .eq('status', 'active'),
     supabase.from('events').select('id').eq('owner_id', userId).eq('is_paid', true),
+    // دفتر التجربة المجانية — الحصة الخاصة تسبق الإعداد العام
+    supabase
+      .from('profiles')
+      .select('free_guests_used, free_quota_override')
+      .eq('id', userId)
+      .maybeSingle(),
     getFreeQuota(),
   ]);
 
@@ -51,6 +61,9 @@ export async function getPlanStatus(userId: string): Promise<PlanStatus> {
   );
 
   const paidEvents = (paid ?? []).length;
+  const allowance = profile?.free_quota_override ?? freeQuota;
+  const freeUsed = profile?.free_guests_used ?? 0;
+  const freeLeft = Math.max(0, allowance - freeUsed);
 
   if (!active) {
     return {
@@ -60,7 +73,9 @@ export async function getPlanStatus(userId: string): Promise<PlanStatus> {
       periodEnd: null,
       daysLeft: null,
       expiringSoon: false,
-      freeQuota,
+      freeQuota: allowance,
+      freeUsed,
+      freeLeft,
       paidEvents,
     };
   }
@@ -81,7 +96,9 @@ export async function getPlanStatus(userId: string): Promise<PlanStatus> {
     periodEnd: end,
     daysLeft,
     expiringSoon: daysLeft !== null && daysLeft <= 7,
-    freeQuota,
+    freeQuota: allowance,
+    freeUsed,
+    freeLeft,
     paidEvents,
   };
 }

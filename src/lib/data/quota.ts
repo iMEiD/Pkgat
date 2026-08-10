@@ -14,6 +14,10 @@ import type { EventRow } from '@/lib/types/database';
  *   مناسبة مدفوعة     ⇒ حدّ الباقة (null = بلا حد)
  *   غير ذلك          ⇒ الحصة المجانية، على الحساب كله أو على المناسبة
  *                       حسب إعداد free_quota_scope
+ *
+ * والمستهلك من الحصة يُقرأ من دفتر الحساب (profiles.free_guests_used)
+ * لا بعدّ المدعوين الموجودين — لأن العدّ يرجع صفراً بحذف المناسبة
+ * فترجع الحصة كاملة، وهي الثغرة التي سدّها الترحيل 0021.
  */
 export type QuotaReason = 'demo' | 'subscription' | 'paid_plan' | 'free';
 
@@ -24,8 +28,10 @@ export interface EventQuota {
   reason: QuotaReason;
   /** الحصة المجانية الكاملة للحساب */
   freeAllowance: number;
-  /** ما استُهلك منها في مناسبات أخرى غير مدفوعة (في نطاق الحساب فقط) */
+  /** ما استُهلك من الدفتر خارج هذه المناسبة — بما فيه مناسبات محذوفة */
   usedElsewhere: number;
+  /** ما بقي للحساب كله من الحصة المجانية */
+  remaining: number;
   accountScope: boolean;
 }
 
@@ -43,6 +49,7 @@ export async function getEventQuota(
   const base: Omit<EventQuota, 'limit' | 'reason'> = {
     freeAllowance: event.free_quota ?? freeQuota,
     usedElsewhere: 0,
+    remaining: event.free_quota ?? freeQuota,
     accountScope,
   };
 
@@ -74,29 +81,29 @@ export async function getEventQuota(
     return { ...base, limit: base.freeAllowance, reason: 'free' };
   }
 
-  // نطاق الحساب: ما استُهلك في بقية المناسبات غير المدفوعة يخصم من الحد
-  const { data: others } = await supabase
-    .from('events')
-    .select('id')
-    .eq('owner_id', userId)
-    .eq('is_paid', false)
-    .eq('is_demo', false)
-    .neq('id', event.id);
-
-  const otherIds = (others ?? []).map((e) => e.id);
-  let usedElsewhere = 0;
-
-  if (otherIds.length > 0) {
-    const { count } = await supabase
+  /*
+   * نطاق الحساب. الحد المعروض لهذه المناسبة = الحصة ناقص ما استُهلك
+   * خارجها، ليبقى الكسر «٣ من ١٠» مفهوماً في الواجهة.
+   *
+   * والمستهلك خارجها = دفتر الحساب ناقص ما تحمله هي من الدفتر. فلو حُذفت
+   * مناسبة أخرى بقي استهلاكها في الدفتر ونقص الحد هنا — وهو المقصود.
+   */
+  const [{ data: profile }, { count: stampedHere }] = await Promise.all([
+    supabase.from('profiles').select('free_guests_used').eq('id', userId).maybeSingle(),
+    supabase
       .from('guests')
       .select('id', { count: 'exact', head: true })
-      .in('event_id', otherIds);
-    usedElsewhere = count ?? 0;
-  }
+      .eq('event_id', event.id)
+      .not('free_seq', 'is', null),
+  ]);
+
+  const usedAccount = profile?.free_guests_used ?? 0;
+  const usedElsewhere = Math.max(0, usedAccount - (stampedHere ?? 0));
 
   return {
     ...base,
     usedElsewhere,
+    remaining: Math.max(0, base.freeAllowance - usedAccount),
     limit: Math.max(0, base.freeAllowance - usedElsewhere),
     reason: 'free',
   };
@@ -111,10 +118,17 @@ export function quotaMessage(quota: EventQuota, current: number): string {
   }
 
   if (quota.accountScope) {
+    if (quota.remaining === 0) {
+      return (
+        `خلصت تجربتك المجانية — ${quota.freeAllowance} دعوة للحساب كله، ` +
+        'وهي تُحسب مرة واحدة ولا ترجع بحذف المناسبات. اشترك عشان تكمّل.'
+      );
+    }
+
     return (
-      `الحصة المجانية ${quota.freeAllowance} مدعو للحساب كله` +
-      (quota.usedElsewhere > 0 ? `، استهلكت منها ${quota.usedElsewhere} في مناسبات أخرى` : '') +
-      `. تبقّى لك ${remaining}. اشترك لإضافة المزيد.`
+      `الحصة المجانية ${quota.freeAllowance} دعوة للحساب كله` +
+      (quota.usedElsewhere > 0 ? `، استهلكت منها ${quota.usedElsewhere} سابقاً` : '') +
+      `. تبقّى لك ${quota.remaining}. اشترك لإضافة المزيد.`
     );
   }
 

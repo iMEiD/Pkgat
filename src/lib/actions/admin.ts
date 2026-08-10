@@ -433,6 +433,78 @@ export async function adminSetUserQuota(
   return { ok: true, updatedEvents } as ActionResult & { updatedEvents: number };
 }
 
+/**
+ * إعادة التجربة المجانية لمستخدم — تصفير دفتر استهلاكه.
+ *
+ * الدفتر لا ينقص أبداً من تلقاء نفسه: لا بحذف مدعو ولا بحذف مناسبة.
+ * وهذا مقصود، لكنه يحتاج مخرجاً بشرياً — عميل جرّب وصار عنده عذر، أو
+ * حساب اختبار. المخرج هنا: قرار أدمن صريح، مسجَّل في سجل الأحداث.
+ *
+ * مفتاح الخدمة وحده يمرّ من حارس الملف، فلا يستطيع المستخدم فعلها بنفسه.
+ */
+export async function adminResetFreeTrial(userId: string): Promise<ActionResult> {
+  await requireAdmin();
+
+  const supabase = createServiceClient();
+
+  const { data: before } = await supabase
+    .from('profiles')
+    .select('free_guests_used')
+    .eq('id', userId)
+    .maybeSingle();
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ free_guests_used: 0, updated_at: new Date().toISOString() })
+    .eq('id', userId);
+
+  if (error) return { ok: false, error: 'تعذّر تصفير الاستهلاك.' };
+
+  /*
+   * الدفتر صار صفراً، لكن مدعويه القدامى ما زالوا يحملون أرقاماً كبيرة
+   * فتبقى باركوداتهم «غير مفعّلة». نُعيد ترقيمهم من واحد ونرفع الدفتر
+   * بعددهم، فتعود حالتهم مطابقة لحساب جديد بنفس عدد المدعوين.
+   */
+  const { data: freeEvents } = await supabase
+    .from('events')
+    .select('id')
+    .eq('owner_id', userId)
+    .eq('is_paid', false)
+    .eq('is_demo', false);
+
+  const ids = (freeEvents ?? []).map((e) => e.id);
+  let restamped = 0;
+
+  if (ids.length > 0) {
+    const { data: guests } = await supabase
+      .from('guests')
+      .select('id')
+      .in('event_id', ids)
+      .order('created_at', { ascending: true });
+
+    const rows = guests ?? [];
+    for (let i = 0; i < rows.length; i += 1) {
+      await supabase.from('guests').update({ free_seq: i + 1 }).eq('id', rows[i].id);
+    }
+    restamped = rows.length;
+
+    if (restamped > 0) {
+      await supabase
+        .from('profiles')
+        .update({ free_guests_used: restamped })
+        .eq('id', userId);
+    }
+  }
+
+  await logAdminAction('user.free_trial_reset', 'profiles', userId, {
+    was: String(before?.free_guests_used ?? 0),
+    now: String(restamped),
+  });
+
+  revalidatePath('/admin/users');
+  return { ok: true, restamped } as ActionResult & { restamped: number };
+}
+
 // ===================== إدارة المحتوى (CMS) =====================
 
 export async function updateContent(key: string, value: unknown): Promise<ActionResult> {

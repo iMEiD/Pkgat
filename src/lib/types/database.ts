@@ -81,6 +81,8 @@ export type Profile = {
   marketing_consent_at: string | null;
   // حصة دعوات خاصة منحها الأدمن — null يعني الإعداد العام
   free_quota_override: number | null;
+  // دفتر التجربة المجانية: ما استُهلك طوال عمر الحساب. لا ينقص بالحذف.
+  free_guests_used: number;
   // زُرعت المناسبة التجريبية لهذا المستخدم
   demo_seeded: boolean;
   created_at: string;
@@ -175,6 +177,8 @@ export type Guest = {
   checked_in_at: string | null;
   checked_in_by: string | null;
   entries_count: number;
+  // رقم هذا المدعو في دفتر الحساب المجاني — فارغ في المدفوعة والتجريبية
+  free_seq: number | null;
   created_at: string;
 }
 

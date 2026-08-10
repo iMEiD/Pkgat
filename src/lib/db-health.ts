@@ -479,6 +479,21 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0021 ----
+  migrations.push({
+    file: '0021_free_trial_ledger.sql',
+    title: '🔒 دفتر التجربة المجانية',
+    breaks:
+      'حذف المناسبة يُرجع العشر دعوات كاملة — فيقدر أي مستخدم يعيد الكرّة بلا نهاية ' +
+      'ولا يدفع أبداً. نفّذ هذا الترحيل قبل تفعيل بوابة الدفع.',
+    checks: await Promise.all([
+      probeColumn(sb, 'profiles', 'free_guests_used', 'دفتر ما استهلكه الحساب'),
+      probeColumn(sb, 'guests', 'free_seq', 'رقم المدعو في الدفتر'),
+      probeBooleanFunction(sb, 'security_guards_installed', 'حرّاس الدفتر والصلاحيات مركّبون'),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {

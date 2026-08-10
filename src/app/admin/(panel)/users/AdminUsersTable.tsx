@@ -16,6 +16,7 @@ import {
   adminCreateUser,
   adminDeleteUser,
   adminGrantMembership,
+  adminResetFreeTrial,
   adminRevokeMembership,
   adminSetSuperAdmin,
   adminSetUserQuota,
@@ -443,6 +444,32 @@ function QuotaPanel({ user }: { user: AdminUserRow }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [resetting, startReset] = useTransition();
+
+  const used = user.free_guests_used ?? 0;
+
+  function resetTrial() {
+    setErr(null);
+    setMsg(null);
+
+    if (!confirm('تصفير استهلاكه المجاني؟ راح يبدأ تجربته من جديد كأنه حساب جديد.')) return;
+
+    startReset(async () => {
+      const res = (await adminResetFreeTrial(user.id)) as {
+        ok: boolean;
+        error?: string;
+        restamped?: number;
+      };
+      if (!res.ok) return setErr(res.error ?? 'تعذّر التصفير.');
+
+      setMsg(
+        res.restamped
+          ? `تم. ورجعت باركودات ${countAr(res.restamped, 'مدعو', 'مدعوَين', 'مدعوين', 'مدعواً')} القائمين للتفعيل.`
+          : 'تم — رجع رصيده كاملاً.',
+      );
+      router.refresh();
+    });
+  }
 
   function save() {
     setErr(null);
@@ -500,6 +527,34 @@ function QuotaPanel({ user }: { user: AdminUserRow }) {
         يُطبَّق فوراً على مناسباته القائمة غير المدفوعة — وإلا ظهر له أنه يقدر
         يضيف مدعوين بينما باركوداتهم تخرج «غير مفعّلة» على الباب.
       </p>
+
+      <div className="mt-4 border-t border-sand-200 pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-bold text-ink">استهلاكه من التجربة المجانية</h4>
+            <p className="mt-1 text-[11px] leading-5 text-ink-faint">
+              {used === 0
+                ? 'ما استهلك شيئاً بعد.'
+                : `استهلك ${countAr(used, 'دعوة', 'دعوتين', 'دعوات', 'دعوة')} — والرقم ما ينقص بحذف مناسبة أو مدعو.`}
+            </p>
+          </div>
+          <span className="shrink-0 font-display text-2xl font-bold tabular-nums text-ink">
+            {formatNumber(used)}
+          </span>
+        </div>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="mt-3"
+          onClick={resetTrial}
+          loading={resetting}
+          disabled={used === 0}
+        >
+          تصفير الاستهلاك وإعادة التجربة
+        </Button>
+      </div>
     </div>
   );
 }
