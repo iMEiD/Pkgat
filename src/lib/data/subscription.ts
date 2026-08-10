@@ -22,7 +22,7 @@ export interface PlanStatus {
   daysLeft: number | null;
   /** أوشك على الانتهاء — أقل من أسبوع */
   expiringSoon: boolean;
-  /** الحصة المجانية لكل مناسبة جديدة */
+  /** الحصة المجانية للحساب */
   freeQuota: number;
   /** عدد المناسبات التي دُفع لها منفردة */
   paidEvents: number;

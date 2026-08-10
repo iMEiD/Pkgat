@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { createClient } from '@/lib/supabase/server';
+import { getEventQuota } from '@/lib/data/quota';
 import { requireUser } from '@/lib/auth/session';
 import { mergeDesign } from '@/lib/design/defaults';
 import type { EventRow, EventTag, GuestState } from '@/lib/types/database';
@@ -69,29 +70,6 @@ export async function getEventCounts(eventId: string): Promise<EventCounts> {
  * يراعي: الاشتراك الفعّال ← الباقة المدفوعة ← الحد التجريبي المجاني.
  */
 export async function getGuestLimit(event: EventRow, userId: string): Promise<number | null> {
-  const supabase = await createClient();
-
-  const { data: subs } = await supabase
-    .from('subscriptions')
-    .select('current_period_end')
-    .eq('user_id', userId)
-    .eq('status', 'active');
-
-  const hasActiveSub = (subs ?? []).some(
-    (s) => !s.current_period_end || new Date(s.current_period_end) > new Date(),
-  );
-  if (hasActiveSub) return null;
-
-  if (!event.is_paid) return event.free_quota;
-
-  if (event.plan_id) {
-    const { data: plan } = await supabase
-      .from('plans')
-      .select('guests_limit')
-      .eq('id', event.plan_id)
-      .single();
-    return plan?.guests_limit ?? null;
-  }
-
-  return null;
+  return (await getEventQuota(event, userId)).limit;
 }
+

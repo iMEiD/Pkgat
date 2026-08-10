@@ -257,6 +257,25 @@ async function probeBooleanFunction(
     : { label, state: 'missing', detail: 'الترحيل نُفِّذ جزئياً — الحارس غير مركّب' };
 }
 
+/** نص محفوظ في site_content يطابق ما يتوقعه الترحيل */
+async function probeContentValue(
+  sb: ProbeClient,
+  key: string,
+  expected: string,
+  label: string,
+): Promise<CheckResult> {
+  const { data, error } = await sb.from('site_content').select('value').eq('key', key).maybeSingle();
+
+  if (error) return { label, state: 'unknown', detail: error.message ?? 'خطأ غير متوقّع' };
+  // غياب المفتاح يعني أن الكود يستخدم قيمته الاحتياطية الصحيحة أصلاً
+  if (!data) return { label, state: 'ok', detail: 'يعمل بالقيمة الاحتياطية' };
+
+  const value = (data as { value?: unknown }).value;
+  return value === expected
+    ? { label, state: 'ok' }
+    : { label, state: 'missing', detail: 'النص المحفوظ ما زال القديم' };
+}
+
 /** وجود مخزن ملفات في Supabase Storage */
 async function probeBucket(sb: ProbeClient, bucket: string, label: string): Promise<CheckResult> {
   const { data, error } = await sb.storage.getBucket(bucket);
@@ -428,6 +447,34 @@ export async function runHealthCheck(): Promise<HealthReport> {
       'أو يرفع حصته المجانية فتعمل باركوداته بلا دفع. نفّذ هذا الترحيل قبل أي شيء آخر.',
     checks: await Promise.all([
       probeBooleanFunction(sb, 'security_guards_installed', 'الحارسان مركّبان في قاعدة البيانات'),
+    ]),
+    state: 'ok',
+  });
+
+  // ---- 0019 ----
+  migrations.push({
+    file: '0019_account_wide_free_quota.sql',
+    title: 'الحصة المجانية على الحساب كله',
+    breaks:
+      'العشر دعوات تبقى لكل مناسبة على حدة — فمن ينشئ خمس مناسبات يحصل على خمسين دعوة مجاناً.',
+    checks: await Promise.all([
+      probeKeyRow(sb, 'site_settings', 'free_quota_scope', 'إعداد نطاق الحصة موجود'),
+    ]),
+    state: 'ok',
+  });
+
+  // ---- 0020 ----
+  migrations.push({
+    file: '0020_free_quota_copy.sql',
+    title: 'نصوص الحصة المجانية محدَّثة',
+    breaks: 'الموقع يَعِد بـ«١٠ دعوات لكل مناسبة» بينما النظام يمنحها للحساب كله — وعدٌ يخالف السلوك.',
+    checks: await Promise.all([
+      probeContentValue(
+        sb,
+        'home.stats.free_label',
+        'مجاناً قبل أي دفع',
+        'نص بطاقة الحصة في الرئيسية',
+      ),
     ]),
     state: 'ok',
   });

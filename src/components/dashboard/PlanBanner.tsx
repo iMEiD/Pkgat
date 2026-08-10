@@ -95,7 +95,7 @@ function FreeTier({ status }: { status: PlanStatus }) {
               <span className="font-bold text-ink">
                 {countAr(freeQuota, 'مدعو', 'مدعوين', 'مدعوين', 'مدعواً')}
               </span>{' '}
-              في كل مناسبة مجاناً
+              مجاناً قبل أي دفع
               {paidEvents > 0 && (
                 <>
                   <span className="px-1.5 text-ink-faint">·</span>

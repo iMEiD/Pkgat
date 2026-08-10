@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { createClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth/session';
+import { getEventQuota, quotaMessage } from '@/lib/data/quota';
 import type { ActionResult } from '@/lib/actions/events';
 import type { EventTag, Guest } from '@/lib/types/database';
 
@@ -52,7 +53,7 @@ export async function addGuests(
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, free_quota, is_paid, plan_id, owner_id')
+    .select('id, free_quota, is_paid, plan_id, owner_id, is_demo')
     .eq('id', eventId)
     .single();
 
@@ -65,19 +66,17 @@ export async function addGuests(
 
   const current = currentCount ?? 0;
 
-  // حد الباقة المدفوعة (إن وُجد) أو الحد التجريبي المجاني
-  const limit = await effectiveGuestLimit(event.is_paid, event.plan_id, session.id, event.free_quota);
+  // المصدر الموحّد نفسه الذي يعرضه التطبيق ويفرضه guest_over_limit في SQL
+  const quota = await getEventQuota(event, session.id);
+  const limit = quota.limit;
 
   if (limit !== null && current + cleaned.length > limit) {
-    const remaining = Math.max(0, limit - current);
     return {
       ok: false,
       paymentRequired: !event.is_paid,
       limit,
       current,
-      error: event.is_paid
-        ? `باقتك الحالية تسمح بـ ${limit} مدعو. تبقّى لك ${remaining} فقط.`
-        : `الحد المجاني ${limit} مدعو لكل مناسبة. تبقّى لك ${remaining}. فعّل الباقة لإضافة المزيد.`,
+      error: quotaMessage(quota, current),
     };
   }
 
@@ -90,41 +89,6 @@ export async function addGuests(
   revalidatePath(`/dashboard/events/${eventId}/guests`);
   revalidatePath(`/dashboard/events/${eventId}`);
   return { ok: true, added: cleaned.length, skipped: guests.length - cleaned.length };
-}
-
-/** الحد الأقصى للمدعوين: null يعني غير محدود */
-async function effectiveGuestLimit(
-  isPaid: boolean,
-  planId: string | null,
-  userId: string,
-  freeQuota: number,
-): Promise<number | null> {
-  const supabase = await createClient();
-
-  // اشتراك فعّال ⇒ لا حد
-  const { data: subs } = await supabase
-    .from('subscriptions')
-    .select('id, plan_id, current_period_end, status')
-    .eq('user_id', userId)
-    .eq('status', 'active');
-
-  const activeSub = (subs ?? []).find(
-    (s) => !s.current_period_end || new Date(s.current_period_end) > new Date(),
-  );
-  if (activeSub) return null;
-
-  if (!isPaid) return freeQuota;
-
-  if (planId) {
-    const { data: plan } = await supabase
-      .from('plans')
-      .select('guests_limit')
-      .eq('id', planId)
-      .single();
-    return plan?.guests_limit ?? null;
-  }
-
-  return null;
 }
 
 export async function updateGuest(

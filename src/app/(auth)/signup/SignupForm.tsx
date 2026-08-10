@@ -158,7 +158,7 @@ export function SignupForm() {
     <Card className="p-7 sm:p-8">
       <h1 className="font-display text-2xl font-bold text-ink">أنشئ حسابك</h1>
       <p className="mt-1.5 text-sm text-ink-soft">
-        أول ١٠ دعوات في كل مناسبة مجاناً — بدون بطاقة.
+        أول ١٠ دعوات مجاناً — بدون بطاقة.
       </p>
 
       {error && (
