@@ -103,7 +103,7 @@ export function PlansManager({ plans }: { plans: Plan[] }) {
                           type="button"
                           onClick={() => remove(plan)}
                           disabled={pending}
-                          className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-600 transition-colors hover:bg-coral-100"
+                          className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-600 transition-colors hover:opacity-80"
                         >
                           حذف
                         </button>

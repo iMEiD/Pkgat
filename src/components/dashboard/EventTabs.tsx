@@ -22,7 +22,7 @@ export function EventTabs({ eventId }: { eventId: string }) {
 
   return (
     <div className="-mx-4 mb-6 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 pk-scrollbar">
-      <nav className="flex min-w-max gap-1 rounded-2xl border border-sand-200 bg-white/70 p-1.5">
+      <nav className="flex min-w-max gap-1 rounded-2xl border border-sand-200 bg-surface/70 p-1.5">
         {tabs.map((tab) => {
           const active = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href);
           return (

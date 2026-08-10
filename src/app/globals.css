@@ -146,8 +146,14 @@
     background-attachment: fixed;
   }
 
+  /*
+   * grape-200 درجة فاتحة ثابتة، و text-ink ينقلب أبيض في الليل — فيصير
+   * التحديد أبيض على لافندر فاتح. نبرة شفافة تعمل فوق أي أرضية، واللون
+   * يبقى لون النص نفسه فيحتفظ بتباينه.
+   */
   ::selection {
-    @apply bg-grape-200 text-ink;
+    background-color: rgb(var(--pk-primary-500) / 0.32);
+    color: inherit;
   }
 
   h1,
@@ -269,5 +275,42 @@
   @page {
     size: A4;
     margin: 16mm 14mm;
+  }
+}
+
+/*
+ * توهج بطاقة البطل.
+ *
+ * كان مبنياً على coral-100 و grape-100 — ودرجات المئة الفاتحة بلا مقابل
+ * في الوضع الليلي، فتبقى هالة بيضاء فاقعة حول البطاقة على خلفية سوداء.
+ * هنا يُعرَّف للوضعين: دافئ متعدد الألوان على الورق الكريمي، وهادئ
+ * أحادي النبرة في الليل — التوهج المتعدد على السواد يبدو رخيصاً.
+ */
+.pk-hero-glow {
+  background-image: linear-gradient(
+    to top right,
+    rgb(255 107 74 / 0.45),
+    rgb(245 176 27 / 0.30),
+    rgb(var(--pk-primary-500) / 0.40)
+  );
+}
+
+:root[data-theme='dark'] .pk-hero-glow {
+  background-image: radial-gradient(
+    120% 90% at 70% 15%,
+    rgb(var(--pk-primary-500) / 0.30),
+    rgb(var(--pk-primary-500) / 0.10) 45%,
+    transparent 72%
+  );
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .pk-hero-glow {
+    background-image: radial-gradient(
+      120% 90% at 70% 15%,
+      rgb(var(--pk-primary-500) / 0.30),
+      rgb(var(--pk-primary-500) / 0.10) 45%,
+      transparent 72%
+    );
   }
 }

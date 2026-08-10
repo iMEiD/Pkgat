@@ -307,10 +307,10 @@ export default async function HomePage() {
 function HeroArtwork() {
   return (
     <div className="relative mx-auto w-full max-w-sm animate-fade-up [animation-delay:150ms]">
-      <div className="absolute -inset-6 -z-10 rounded-[3rem] bg-gradient-to-tr from-coral-100 via-sunny-50 to-grape-100 blur-2xl" aria-hidden="true" />
+      <div className="pk-hero-glow absolute -inset-6 -z-10 rounded-[3rem] blur-2xl" aria-hidden="true" />
 
       <Card className="overflow-hidden p-0">
-        <div className="relative aspect-[3/4] bg-gradient-to-b from-sand-100 to-white p-6">
+        <div className="relative aspect-[3/4] bg-gradient-to-b from-sand-100 to-surface p-6">
           <div className="flex h-full flex-col items-center justify-between text-center">
             <div>
               <p className="text-[11px] font-bold tracking-[0.3em] text-ink-faint">دعوة خاصة</p>
@@ -323,7 +323,8 @@ function HeroArtwork() {
               <p className="mt-1 font-display text-xl font-bold text-grape-600">عبدالله الشمري</p>
             </div>
 
-            <div className="rounded-2xl bg-surface p-3 shadow-soft">
+            {/* الباركود يُثبَّت داكناً على فاتح: هكذا يُطبع ويُمسح فعلاً */}
+            <div className="rounded-2xl bg-[#FFFDF9] p-3 shadow-soft">
               <FakeQr />
             </div>
           </div>
@@ -362,7 +363,7 @@ function FakeQr() {
       aria-hidden="true"
     >
       {pattern.map((on, i) => (
-        <span key={i} className={cn('h-1.5 w-1.5 rounded-[1px]', on ? 'bg-ink' : 'bg-transparent')} />
+        <span key={i} className={cn('h-1.5 w-1.5 rounded-[1px]', on ? 'bg-[#141019]' : 'bg-transparent')} />
       ))}
     </div>
   );

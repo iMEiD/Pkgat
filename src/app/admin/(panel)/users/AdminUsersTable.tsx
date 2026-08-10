@@ -270,8 +270,8 @@ export function AdminUsersTable({
                                 disabled={pending}
                                 className={`rounded-full px-3 py-1 text-xs font-bold transition-colors ${
                                   user.is_suspended
-                                    ? 'bg-mint-50 text-mint-600 hover:bg-mint-100'
-                                    : 'bg-coral-50 text-coral-600 hover:bg-coral-100'
+                                    ? 'bg-mint-50 text-mint-600 hover:opacity-80'
+                                    : 'bg-coral-50 text-coral-600 hover:opacity-80'
                                 }`}
                               >
                                 {user.is_suspended ? 'تفعيل' : 'إيقاف'}

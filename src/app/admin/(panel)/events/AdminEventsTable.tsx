@@ -153,7 +153,7 @@ export function AdminEventsTable({ events }: { events: AdminEventRow[] }) {
                               type="button"
                               onClick={() => remove(event)}
                               disabled={pending}
-                              className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-600 transition-colors hover:bg-coral-100"
+                              className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-600 transition-colors hover:opacity-80"
                             >
                               حذف
                             </button>
