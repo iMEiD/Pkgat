@@ -61,6 +61,18 @@ export async function clearScannerCookie() {
 }
 
 /**
+ * هل يحمل الجهاز كوكي جلسة أصلاً؟
+ *
+ * يفرّق بين «انتهت جلستك» و«ما سجّلت دخول بعد» — وهما يبدوان واحداً
+ * لأن كليهما يعطي جلسة فارغة. ومسؤول الاستقبال الذي يُقذف لصفحة الدخول
+ * بلا سبب معلن يتصل بصاحب المناسبة وهو واقف على الباب.
+ */
+export async function hasScannerCookie(): Promise<boolean> {
+  const store = await cookies();
+  return Boolean(store.get(SCANNER_COOKIE)?.value);
+}
+
+/**
  * جلسة مسؤول المسح الحالية من الكوكي — أو null.
  *
  * لا ترمي عند غياب السرّ: بدون سرّ لا توجد جلسة صالحة أصلاً، والانهيار هنا

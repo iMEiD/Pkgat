@@ -55,6 +55,23 @@ export function ScannerDashboard({
 
   const recentCodes = useRef(new Map<string, number>());
 
+  /*
+   * الحارس والصوت في مراجع لا في تبعيات.
+   *
+   * كانت submit تعتمد على busy وsoundOn، وonDetected تعتمد عليها،
+   * وأثر الكاميرا في QrCamera يعتمد على onDetected. فكل مسحة تقلب busy
+   * مرتين (true ثم false) فتُبنى الدالة من جديد مرتين، ويُفكَّك أثر
+   * الكاميرا ويُعاد تشغيله مرتين: getUserMedia يُغلق ويُفتح أثناء
+   * الاستعمال. على الجوال هذا يفشل كثيراً (NotReadableError على أندرويد،
+   * قطع play() على iOS) فتظهر اللوحة سوداء وكأن الصفحة لم تفتح.
+   */
+  const busyRef = useRef(false);
+  const soundOnRef = useRef(soundOn);
+
+  useEffect(() => {
+    soundOnRef.current = soundOn;
+  }, [soundOn]);
+
   useEffect(() => {
     const update = () => setOffline(!navigator.onLine);
     update();
@@ -68,7 +85,8 @@ export function ScannerDashboard({
 
   const submit = useCallback(
     async (code: string, override = false) => {
-      if (busy) return;
+      if (busyRef.current) return;
+      busyRef.current = true;
       setBusy(true);
 
       try {
@@ -102,7 +120,7 @@ export function ScannerDashboard({
         );
 
         vibrate(data.result);
-        if (soundOn) playScanTone(data.result);
+        if (soundOnRef.current) playScanTone(data.result);
       } catch {
         setResult({
           ok: false,
@@ -110,10 +128,12 @@ export function ScannerDashboard({
           message: 'تعذّر الاتصال بالخادم — تأكد من الشبكة وأعد المسح.',
         });
       } finally {
+        busyRef.current = false;
         setBusy(false);
       }
     },
-    [busy, soundOn],
+    // بلا تبعيات عمداً: الدالة ثابتة طوال عمر اللوحة فلا تُعيد تشغيل الكاميرا
+    [],
   );
 
   const onDetected = useCallback(

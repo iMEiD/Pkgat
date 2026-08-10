@@ -27,6 +27,16 @@ export function QrCamera({
   const lastScanAt = useRef(0);
   const pausedRef = useRef(Boolean(paused));
 
+  /*
+   * دالة الكشف في مرجع لا في تبعيات الأثر.
+   *
+   * كانت [onDetected] تبعيةً للأثر، وهي تتغيّر مع كل مسحة، فيُفكَّك
+   * الأثر ويُعاد تشغيله: الكاميرا تُغلق وتُفتح أثناء الاستعمال. وفتحٌ
+   * وإغلاق متلاحقان يفشلان كثيراً على الجوال، فتبقى الكاميرا محجوزة
+   * وتظهر شاشة سوداء وكأن الصفحة لم تفتح.
+   */
+  const onDetectedRef = useRef(onDetected);
+
   const [state, setState] = useState<CameraState>('idle');
   const [torchOn, setTorchOn] = useState(false);
   const [hasTorch, setHasTorch] = useState(false);
@@ -36,15 +46,42 @@ export function QrCamera({
   }, [paused]);
 
   useEffect(() => {
-    let cancelled = false;
+    onDetectedRef.current = onDetected;
+  }, [onDetected]);
 
-    async function start() {
+  useEffect(() => {
+    let cancelled = false;
+    let starting = false;
+    // كل إعادة تشغيل تبدأ حلقة فحص جديدة — والقديمة لازم تتوقف، وإلا
+    // تراكمت حلقات requestAnimationFrame تستهلك المعالج والبطارية معاً
+    let loopId = 0;
+
+    function stopStream() {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+
+    /**
+     * أخطاء عابرة: الجهاز ما زال يحرّر الكاميرا من محاولة سابقة، أو
+     * قُطعت المحاولة بتبديل تطبيق. المحاولة الثانية بعد لحظة تنجح غالباً.
+     */
+    function isTransient(name: string): boolean {
+      return name === 'NotReadableError' || name === 'AbortError' || name === 'TrackStartError';
+    }
+
+    async function start(attempt = 0) {
+      if (cancelled || starting) return;
+
       if (!navigator.mediaDevices?.getUserMedia) {
         setState('unsupported');
         return;
       }
 
+      starting = true;
       setState('starting');
+
+      // ما تبقّى من محاولة سابقة يحجز الكاميرا فيُفشل هذه — نحرّرها أولاً
+      stopStream();
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -63,11 +100,26 @@ export function QrCamera({
 
         streamRef.current = stream;
         const video = videoRef.current;
-        if (!video) return;
+        if (!video) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
 
         video.srcObject = stream;
         video.setAttribute('playsinline', 'true');
-        await video.play();
+
+        // play() يُرفض على iOS لو قُوطع بتحميل مصدر جديد — والمصدر مضبوط
+        // أصلاً، فالرفض وحده لا يعني فشل الكاميرا
+        try {
+          await video.play();
+        } catch {
+          /* نكمل: الحلقة تنتظر readyState بنفسها */
+        }
+
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
 
         const track = stream.getVideoTracks()[0];
         const capabilities = track.getCapabilities?.() as { torch?: boolean } | undefined;
@@ -78,14 +130,44 @@ export function QrCamera({
       } catch (err) {
         if (cancelled) return;
         const name = (err as Error).name;
-        setState(name === 'NotAllowedError' || name === 'SecurityError' ? 'denied' : 'error');
+
+        if (name === 'NotAllowedError' || name === 'SecurityError') {
+          setState('denied');
+        } else if (isTransient(name) && attempt < 2) {
+          starting = false;
+          window.setTimeout(() => void start(attempt + 1), 500 * (attempt + 1));
+          return;
+        } else {
+          setState('error');
+        }
+      } finally {
+        starting = false;
       }
     }
 
+    /*
+     * العودة من الخلفية: قفل الشاشة أو تبديل التطبيق بين ضيف وضيف يوقف
+     * مسار الفيديو، ويعود المستخدم إلى صورة مجمّدة أو سوداء. نفحص المسار
+     * ونعيد التشغيل إن انتهى — أهون بكثير من مطالبته بتحديث الصفحة وهو
+     * واقف على الباب.
+     */
+    function onVisible() {
+      if (document.visibilityState !== 'visible' || cancelled) return;
+
+      const track = streamRef.current?.getVideoTracks()[0];
+      if (!track || track.readyState === 'ended') void start();
+      else void videoRef.current?.play().catch(() => void start());
+    }
+
+    document.addEventListener('visibilitychange', onVisible);
+
     async function loop() {
+      const myLoop = ++loopId;
       const jsQR = (await import('jsqr')).default;
+      if (cancelled || myLoop !== loopId) return;
 
       const tick = () => {
+        if (cancelled || myLoop !== loopId) return;
         rafRef.current = requestAnimationFrame(tick);
 
         const video = videoRef.current;
@@ -112,7 +194,7 @@ export function QrCamera({
           inversionAttempts: 'dontInvert',
         });
 
-        if (code?.data) onDetected(code.data.trim());
+        if (code?.data) onDetectedRef.current(code.data.trim());
       };
 
       rafRef.current = requestAnimationFrame(tick);
@@ -122,11 +204,12 @@ export function QrCamera({
 
     return () => {
       cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
+      stopStream();
     };
-  }, [onDetected]);
+    // مرة واحدة طوال عمر اللوحة: الكاميرا لا تُفتح وتُغلق مع كل مسحة
+  }, []);
 
   async function toggleTorch() {
     const track = streamRef.current?.getVideoTracks()[0];

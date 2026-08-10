@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { Field, Input } from '@/components/ui/Field';
 import { LogoMark } from '@/components/ui/Logo';
 
-export function ScannerLoginForm() {
+export function ScannerLoginForm({ notice }: { notice?: string }) {
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -68,6 +68,13 @@ export function ScannerLoginForm() {
         </div>
 
         <Card className="p-6">
+          {/* سبب وصوله هنا وهو يظن نفسه داخلاً — يُقال أولاً */}
+          {notice && !error && (
+            <Alert tone="warning" className="mb-4">
+              {notice}
+            </Alert>
+          )}
+
           {error && (
             <Alert tone="danger" className="mb-4">
               {error}
