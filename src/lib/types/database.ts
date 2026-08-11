@@ -261,8 +261,65 @@ export type Payment = {
   currency: string;
   status: 'initiated' | 'paid' | 'failed' | 'refunded';
   raw: Json | null;
+  /** كود الخصم المستعمل في هذه الدفعة — إن وُجد */
+  discount_code_id: string | null;
+  discount_halalas: number;
   created_at: string;
   updated_at: string;
+}
+
+export type DiscountKind = 'percent' | 'fixed';
+
+/** كود خصم — ويصير كود مسوّق حين يُملأ اسمه ونسبة عمولته */
+export type DiscountCode = {
+  id: string;
+  code: string;
+  label: string | null;
+  kind: DiscountKind;
+  /** نسبة ١–١٠٠ حين percent، ومبلغ بالهللات حين fixed */
+  value: number;
+  /** الباقات المشمولة — الفراغ يعني كل الباقات */
+  plan_ids: string[];
+  max_uses: number | null;
+  max_uses_per_user: number;
+  used_count: number;
+  starts_at: string | null;
+  expires_at: string | null;
+  is_active: boolean;
+  marketer_name: string | null;
+  commission_percent: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** صفّ لكل استعمال ناجح — القيم منسوخة وقت الاستعمال لا مرجعاً حيّاً */
+export type DiscountRedemption = {
+  id: string;
+  code_id: string;
+  user_id: string | null;
+  payment_id: string;
+  original_halalas: number;
+  discount_halalas: number;
+  paid_halalas: number;
+  commission_halalas: number;
+  created_at: string;
+}
+
+/** تجميعة تقرير الأكواد والمسوّقين */
+export type DiscountCodeStats = {
+  id: string;
+  code: string;
+  label: string | null;
+  marketer_name: string | null;
+  commission_percent: number | null;
+  is_active: boolean;
+  used_count: number;
+  max_uses: number | null;
+  redemptions: number;
+  total_discount_halalas: number;
+  total_paid_halalas: number;
+  total_commission_halalas: number;
+  last_used_at: string | null;
 }
 
 export type Subscription = {
@@ -424,10 +481,13 @@ export interface Database {
       suggestions: Table<Suggestion>;
       custom_fonts: Table<CustomFontRow>;
       reviews: Table<Review>;
+      discount_codes: Table<DiscountCode>;
+      discount_redemptions: Table<DiscountRedemption>;
     };
     Views: {
       guest_states: View<GuestState>;
       published_reviews: View<PublishedReview>;
+      discount_code_stats: View<DiscountCodeStats>;
     };
     Functions: {
       process_scan: {
@@ -436,6 +496,8 @@ export interface Database {
       };
       event_report: { Args: { p_event_id: string }; Returns: EventReport };
       is_super_admin: { Args: Record<string, never>; Returns: boolean };
+      /** حجز ذرّي لاستعمال كود خصم — false حين نفد السقف */
+      claim_discount_use: { Args: { p_code_id: string }; Returns: boolean };
       has_active_subscription: { Args: { p_user: string }; Returns: boolean };
     };
     Enums: {

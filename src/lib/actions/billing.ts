@@ -6,12 +6,73 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth/session';
 import { createInvoice, fetchInvoice, isMoyasarConfigured } from '@/lib/payments/moyasar';
 import { SIMULATED_REF, paymentsTestMode } from '@/lib/payments/test-mode';
-import type { Plan } from '@/lib/types/database';
+import {
+  REJECTION_MESSAGES,
+  applyDiscount,
+  checkCode,
+  normalizeCode,
+  type DiscountResult,
+} from '@/lib/payments/discounts';
+import type { DiscountCode, Plan } from '@/lib/types/database';
 
 export interface CheckoutResult {
   ok: boolean;
   error?: string;
   url?: string;
+}
+
+export interface CodePreview {
+  ok: boolean;
+  error?: string;
+  /** المبلغ قبل الخصم وبعده بالهللات — للعرض قبل الضغط على الدفع */
+  originalHalalas?: number;
+  discountHalalas?: number;
+  finalHalalas?: number;
+  label?: string;
+}
+
+/**
+ * قراءة كود وتقييمه لباقة بعينها.
+ *
+ * تُستدعى من صفحة الدفع لعرض السعر بعد الخصم — ثم يُعاد التحقق كاملاً
+ * عند الشراء. ما يُعرض للعميل هنا لا يُبنى عليه شيء: من يستطيع نداء
+ * هذا الإجراء يستطيع تزوير ردّه، فالسعر الحقيقي يُحسب هناك لا هنا.
+ */
+export async function previewCode(rawCode: string, planId: string): Promise<CodePreview> {
+  const session = await requireUser();
+  const service = createServiceClient();
+
+  const code = normalizeCode(rawCode);
+  if (!code) return { ok: false, error: 'اكتب كود الخصم.' };
+
+  const [{ data: plan }, { data: row }] = await Promise.all([
+    service.from('plans').select('id, price_halalas').eq('id', planId).maybeSingle(),
+    service.from('discount_codes').select('*').eq('code', code).maybeSingle(),
+  ]);
+
+  if (!plan) return { ok: false, error: 'الباقة غير متاحة.' };
+  if (!row) return { ok: false, error: REJECTION_MESSAGES.not_found };
+
+  const discountCode = row as DiscountCode;
+
+  const { count: usesByUser } = await service
+    .from('discount_redemptions')
+    .select('id', { count: 'exact', head: true })
+    .eq('code_id', discountCode.id)
+    .eq('user_id', session.id);
+
+  const rejection = checkCode(discountCode, plan, usesByUser ?? 0);
+  if (rejection) return { ok: false, error: REJECTION_MESSAGES[rejection] };
+
+  const result = applyDiscount(discountCode, plan.price_halalas);
+
+  return {
+    ok: true,
+    originalHalalas: result.originalHalalas,
+    discountHalalas: result.discountHalalas,
+    finalHalalas: result.finalHalalas,
+    label: discountCode.label ?? undefined,
+  };
 }
 
 async function siteOrigin(): Promise<string> {
@@ -29,6 +90,7 @@ async function siteOrigin(): Promise<string> {
 export async function startCheckout(
   planId: string,
   eventId: string | null,
+  rawCode?: string | null,
 ): Promise<CheckoutResult> {
   const session = await requireUser();
 
@@ -72,20 +134,66 @@ export async function startCheckout(
     }
   }
 
-  const { data: payment, error: paymentError } = await supabase
+  /*
+   * الخصم يُحسب هنا في الخادم من الباقة نفسها. ما يصل من المتصفح هو نص
+   * الكود لا أكثر — ولو حُسب السعر هناك لصنع المشتري خصمه بنفسه.
+   */
+  const service = createServiceClient();
+
+  let discountCode: DiscountCode | null = null;
+  let discount: DiscountResult = {
+    originalHalalas: typedPlan.price_halalas,
+    discountHalalas: 0,
+    finalHalalas: typedPlan.price_halalas,
+    commissionHalalas: 0,
+  };
+
+  const code = rawCode ? normalizeCode(rawCode) : '';
+
+  if (code) {
+    const { data: row } = await service
+      .from('discount_codes')
+      .select('*')
+      .eq('code', code)
+      .maybeSingle();
+
+    if (!row) return { ok: false, error: REJECTION_MESSAGES.not_found };
+    discountCode = row as DiscountCode;
+
+    const { count: usesByUser } = await service
+      .from('discount_redemptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('code_id', discountCode.id)
+      .eq('user_id', session.id);
+
+    const rejection = checkCode(discountCode, typedPlan, usesByUser ?? 0);
+    if (rejection) return { ok: false, error: REJECTION_MESSAGES[rejection] };
+
+    discount = applyDiscount(discountCode, typedPlan.price_halalas);
+  }
+
+  /*
+   * سجل الدفع يُكتب بمفتاح الخدمة لا بهوية المستخدم.
+   *
+   * جدول payments عليه RLS بسياسة قراءة فقط بلا سياسة إدراج — فالكتابة
+   * بهوية المتصفح كانت تُرفض، وأي شراء يفشل قبل أن يبدأ. ولا نفتح
+   * سياسة إدراج: المبلغ يُشتق من الباقة في الخادم، ولا سبب يجعل
+   * المتصفح ينشئ سجل دفع بنفسه أصلاً.
+   */
+  const { data: payment, error: paymentError } = await service
     .from('payments')
     .insert({
       user_id: session.id,
       event_id: typedPlan.billing_period === 'one_time' ? eventId : null,
       plan_id: typedPlan.id,
-      amount_halalas: typedPlan.price_halalas,
+      amount_halalas: discount.finalHalalas,
       currency: typedPlan.currency,
       status: 'initiated',
-      // في المحاكاة نوسم السجل من لحظة إنشائه: كل ما يتفرّع عنه
-      // (اشتراك أو مناسبة مدفوعة) يحمل الوسم نفسه فيُنظَّف كله دفعة
-      ...(testMode
-        ? { provider: SIMULATED_REF, provider_payment_id: SIMULATED_REF, raw: { simulated: true } }
-        : {}),
+      discount_code_id: discountCode?.id ?? null,
+      discount_halalas: discount.discountHalalas,
+      // المحاكاة توسم بالمزوّد لا بالمعرّف: المعرّف عليه فهرس فريد،
+      // فقيمة ثابتة تعني أن أول شراء تجريبي هو آخر شراء تجريبي
+      ...(testMode ? { provider: SIMULATED_REF, raw: { simulated: true } } : {}),
     })
     .select('id')
     .single();
@@ -94,46 +202,61 @@ export async function startCheckout(
     return { ok: false, error: 'تعذّر بدء عملية الدفع.' };
   }
 
-  /*
-   * الوضع التجريبي: نمرّ بنفس الطريق تماماً — نفس سجل الدفع، ونفس دالة
-   * التفعيل، ونفس صفحة النتيجة — ولا نتصل بالبوابة. فما يُختبر هنا هو
-   * ما سيحدث فعلاً بعد الشراء الحقيقي، لا محاكاة موازية له.
-   */
+  const origin = await siteOrigin();
+  const callbackUrl = `${origin}/dashboard/billing/callback?payment=${payment.id}`;
+
   if (testMode) {
+    await service
+      .from('payments')
+      .update({ provider_payment_id: `${SIMULATED_REF}:${payment.id}` })
+      .eq('id', payment.id);
+  }
+
+  /*
+   * خصم يبلغ كامل السعر لا يمرّ ببوابة الدفع: البوابات ترفض فاتورة
+   * بصفر ريال. وهو استعمال مشروع — كود شريك أو تعويض عميل — فنفعّله
+   * مباشرة بنفس دالة التفعيل، ويبقى مسجّلاً كدفعة بصفر لا كمنحة بلا أثر.
+   */
+  if (testMode || discount.finalHalalas === 0) {
+    if (!testMode) {
+      await service
+        .from('payments')
+        .update({ provider: 'discount', provider_payment_id: `discount:${payment.id}` })
+        .eq('id', payment.id);
+    }
+
     await applyPaidPayment(payment.id);
-    const origin = await siteOrigin();
-    return { ok: true, url: `${origin}/dashboard/billing/callback?payment=${payment.id}` };
+    return { ok: true, url: callbackUrl };
   }
 
   try {
-    const origin = await siteOrigin();
     const invoice = await createInvoice({
-      amountHalalas: typedPlan.price_halalas,
+      amountHalalas: discount.finalHalalas,
       currency: typedPlan.currency,
-      description: `بكجات — ${typedPlan.name}`,
-      callbackUrl: `${origin}/dashboard/billing/callback?payment=${payment.id}`,
+      description: `بكجات — ${typedPlan.name}${discountCode ? ` (${discountCode.code})` : ''}`,
+      callbackUrl,
       metadata: {
         payment_id: payment.id,
         user_id: session.id,
         plan_code: typedPlan.code,
         event_id: eventId ?? '',
+        discount_code: discountCode?.code ?? '',
       },
     });
 
-    await supabase
+    await service
       .from('payments')
       .update({ provider_payment_id: invoice.id, updated_at: new Date().toISOString() })
       .eq('id', payment.id);
 
     return { ok: true, url: invoice.url };
   } catch (err) {
-    await supabase
+    await service
       .from('payments')
       .update({ status: 'failed', updated_at: new Date().toISOString() })
       .eq('id', payment.id);
 
     // نسجّل التفاصيل للأدمن ولا نكشفها للمستخدم
-    const service = createServiceClient();
     await service.from('error_logs').insert({
       level: 'error',
       source: 'billing/startCheckout',
@@ -169,7 +292,7 @@ export async function confirmPayment(paymentId: string): Promise<{
     return { ok: false, status: 'failed', message: 'عملية الدفع غير موجودة.' };
   }
 
-  const simulated = payment.provider_payment_id === SIMULATED_REF;
+  const simulated = payment.provider === SIMULATED_REF;
 
   if (payment.status === 'paid') {
     return {
@@ -298,6 +421,8 @@ export async function applyPaidPayment(paymentId: string): Promise<void> {
     }
   }
 
+  await recordRedemption(payment, plan);
+
   await supabase.from('audit_logs').insert({
     actor_type: 'system',
     actor_id: payment.user_id,
@@ -306,4 +431,55 @@ export async function applyPaidPayment(paymentId: string): Promise<void> {
     target_id: paymentId,
     meta: { plan: plan.code, amount: payment.amount_halalas },
   });
+}
+
+/**
+ * تسجيل استعمال كود الخصم بعد نجاح الدفع.
+ *
+ * الترتيب مقصود: نحجز الاستعمال بعد الدفع لا قبله، فالكود لا يُستهلك
+ * بمن بدأ الشراء ثم تركه. والقيم تُنسخ هنا — تعديل الكود أو حذفه لاحقاً
+ * لا يغيّر ما استُحق للمسوّق عن عملية تمّت.
+ *
+ * وعلى payment_id قيد تفرّد، فتكرار استدعاء التفعيل (من صفحة الرجوع
+ * ومن الويب-هوك معاً) لا يحسب العملية مرتين.
+ */
+async function recordRedemption(
+  payment: { id: string; user_id: string; discount_code_id: string | null; amount_halalas: number; discount_halalas: number },
+  plan: { price_halalas: number },
+): Promise<void> {
+  if (!payment.discount_code_id) return;
+
+  const supabase = createServiceClient();
+
+  const { data: code } = await supabase
+    .from('discount_codes')
+    .select('commission_percent')
+    .eq('id', payment.discount_code_id)
+    .maybeSingle();
+
+  const commissionPercent = Number(code?.commission_percent ?? 0);
+  const commission = commissionPercent
+    ? Math.floor((payment.amount_halalas * commissionPercent) / 100)
+    : 0;
+
+  const { error } = await supabase.from('discount_redemptions').insert({
+    code_id: payment.discount_code_id,
+    user_id: payment.user_id,
+    payment_id: payment.id,
+    original_halalas: plan.price_halalas,
+    discount_halalas: payment.discount_halalas,
+    paid_halalas: payment.amount_halalas,
+    commission_halalas: commission,
+  });
+
+  // 23505 = هذه الدفعة مسجّلة أصلاً؛ لا نزيد العدّاد مرتين لها
+  if (error) return;
+
+  /*
+   * الحجز الذرّي يمنع تجاوز السقف بمشتريين متزامنين. ولو رجع false —
+   * أي نفد السقف بين لحظة التحقق ولحظة الدفع — لا نُبطل شيئاً: العميل
+   * دفع فعلاً، وسحب ما اشتراه بسبب سباق داخلي عندنا ظلم له. يزيد
+   * الاستعمال عن السقف بواحد ويظهر ذلك في التقرير.
+   */
+  await supabase.rpc('claim_discount_use', { p_code_id: payment.discount_code_id });
 }

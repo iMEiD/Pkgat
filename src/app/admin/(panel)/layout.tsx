@@ -15,6 +15,7 @@ const NAV: NavItem[] = [
   { href: '/admin/fonts', label: 'الخطوط', icon: 'edit' },
   { href: '/admin/gallery', label: 'معرض الأعمال', icon: 'upload' },
   { href: '/admin/plans', label: 'الباقات والأسعار', icon: 'settings' },
+  { href: '/admin/discounts', label: 'أكواد الخصم', icon: 'sparkle' },
   { href: '/admin/reviews', label: 'التقييمات', icon: 'star' },
   { href: '/admin/suggestions', label: 'الاقتراحات', icon: 'edit' },
   { href: '/admin/logs', label: 'السجلات', icon: 'shield' },

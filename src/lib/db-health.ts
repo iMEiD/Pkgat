@@ -535,6 +535,20 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0025 ----
+  migrations.push({
+    file: '0025_discount_codes.sql',
+    title: 'أكواد الخصم والمسوّقين',
+    breaks: 'صفحة أكواد الخصم لا تعمل، ولا يمكن منح أي خصم ولا تتبّع عمولة مسوّق.',
+    checks: await Promise.all([
+      probeColumn(sb, 'discount_codes', 'code', 'جدول الأكواد'),
+      probeColumn(sb, 'discount_redemptions', 'commission_halalas', 'سجل الاستعمالات والعمولات'),
+      probeColumn(sb, 'payments', 'discount_halalas', 'أثر الخصم في سجل الدفع'),
+      probeFunction(sb, 'claim_discount_use', { p_code_id: '00000000-0000-0000-0000-000000000000' }, 'حجز الاستعمال بلا تجاوز السقف'),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {

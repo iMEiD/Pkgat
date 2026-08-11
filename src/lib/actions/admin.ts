@@ -8,7 +8,7 @@ import { markAdmin2faPassed, requireAdmin, requireUser } from '@/lib/auth/sessio
 import { describeDbError } from '@/lib/db-errors';
 import { logAdminAction } from '@/lib/audit';
 import type { ActionResult } from '@/lib/actions/events';
-import type { DesignConfig } from '@/lib/types/database';
+import type { DesignConfig, DiscountCode } from '@/lib/types/database';
 import type { Profile } from '@/lib/types/database';
 import { isValidHex, normalizeHex, type Theme } from '@/lib/design/theme';
 
@@ -570,6 +570,154 @@ export async function clearTestPayments(): Promise<ActionResult> {
       subscriptions: subs?.length ?? 0,
     },
   } as ActionResult & { cleared: { payments: number; events: number; subscriptions: number } };
+}
+
+// ===================== أكواد الخصم والمسوّقين =====================
+
+export interface DiscountInput {
+  code: string;
+  label: string;
+  kind: 'percent' | 'fixed';
+  /** نسبة ١–١٠٠ حين percent، وريالات حين fixed */
+  value: number;
+  planIds: string[];
+  maxUses: number | null;
+  maxUsesPerUser: number;
+  startsAt: string | null;
+  expiresAt: string | null;
+  isActive: boolean;
+  marketerName: string;
+  commissionPercent: number | null;
+}
+
+/** يتحقق من المدخلات ويحوّل الريالات لهللات — القيمة تُخزَّن بالهللات دائماً */
+function cleanDiscount(input: DiscountInput): { error?: string; row?: Partial<DiscountCode> } {
+  const code = input.code.trim().replace(/\s+/g, '').toUpperCase();
+
+  if (code.length < 3) return { error: 'الكود ٣ أحرف على الأقل.' };
+  if (code.length > 32) return { error: 'الكود طويل. اختصره في ٣٢ حرفاً.' };
+
+  if (!Number.isFinite(input.value) || input.value <= 0) {
+    return { error: 'قيمة الخصم لازم تكون أكبر من صفر.' };
+  }
+
+  if (input.kind === 'percent' && input.value > 100) {
+    return { error: 'نسبة الخصم لا تتجاوز ١٠٠٪.' };
+  }
+
+  if (input.maxUses !== null && (!Number.isInteger(input.maxUses) || input.maxUses < 1)) {
+    return { error: 'عدد الاستعمالات لازم يكون رقماً صحيحاً، أو اتركه فارغاً لبلا حد.' };
+  }
+
+  if (!Number.isInteger(input.maxUsesPerUser) || input.maxUsesPerUser < 1) {
+    return { error: 'عدد استعمالات المستخدم الواحد لازم يكون ١ فأكثر.' };
+  }
+
+  if (
+    input.commissionPercent !== null &&
+    (input.commissionPercent < 0 || input.commissionPercent > 100)
+  ) {
+    return { error: 'نسبة العمولة بين ٠ و١٠٠.' };
+  }
+
+  if (input.startsAt && input.expiresAt && new Date(input.expiresAt) <= new Date(input.startsAt)) {
+    return { error: 'تاريخ الانتهاء لازم يكون بعد تاريخ البداية.' };
+  }
+
+  return {
+    row: {
+      code,
+      label: input.label.trim() || null,
+      kind: input.kind,
+      // الثابت يُدخل بالريالات ويُخزَّن بالهللات؛ والنسبة تبقى كما هي
+      value: input.kind === 'fixed' ? Math.round(input.value * 100) : Math.round(input.value),
+      plan_ids: input.planIds,
+      max_uses: input.maxUses,
+      max_uses_per_user: input.maxUsesPerUser,
+      starts_at: input.startsAt || null,
+      expires_at: input.expiresAt || null,
+      is_active: input.isActive,
+      marketer_name: input.marketerName.trim() || null,
+      commission_percent: input.commissionPercent,
+      updated_at: new Date().toISOString(),
+    },
+  };
+}
+
+export async function saveDiscountCode(
+  id: string | null,
+  input: DiscountInput,
+): Promise<ActionResult> {
+  await requireAdmin();
+
+  const { error: invalid, row } = cleanDiscount(input);
+  if (invalid || !row) return { ok: false, error: invalid };
+
+  const supabase = createServiceClient();
+
+  const { error } = id
+    ? await supabase.from('discount_codes').update(row).eq('id', id)
+    : await supabase.from('discount_codes').insert(row);
+
+  if (error) {
+    return {
+      ok: false,
+      error: error.code === '23505' ? 'فيه كود بنفس الاسم.' : describeDbError(error, 'تعذّر الحفظ.'),
+    };
+  }
+
+  await logAdminAction(id ? 'discount.updated' : 'discount.created', 'discount_codes', id, {
+    code: String(row.code),
+  });
+  revalidatePath('/admin/discounts');
+  return { ok: true };
+}
+
+export async function setDiscountActive(id: string, active: boolean): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { error } = await supabase
+    .from('discount_codes')
+    .update({ is_active: active, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) return { ok: false, error: 'تعذّر تغيير الحالة.' };
+
+  await logAdminAction(active ? 'discount.activated' : 'discount.deactivated', 'discount_codes', id);
+  revalidatePath('/admin/discounts');
+  return { ok: true };
+}
+
+/**
+ * حذف كود.
+ *
+ * الاستعمالات السابقة تُحذف معه (on delete cascade)، ومعها ما يثبت
+ * استحقاق المسوّق. ولهذا نمنع الحذف متى استُعمل الكود ونوجّه للإيقاف:
+ * الإيقاف يمنع الاستعمال الجديد ويُبقي التاريخ.
+ */
+export async function deleteDiscountCode(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { count } = await supabase
+    .from('discount_redemptions')
+    .select('id', { count: 'exact', head: true })
+    .eq('code_id', id);
+
+  if ((count ?? 0) > 0) {
+    return {
+      ok: false,
+      error: 'هذا الكود استُعمل فعلاً — أوقفه بدل حذفه حتى يبقى سجل استعمالاته وعمولته.',
+    };
+  }
+
+  const { error } = await supabase.from('discount_codes').delete().eq('id', id);
+  if (error) return { ok: false, error: 'تعذّر الحذف.' };
+
+  await logAdminAction('discount.deleted', 'discount_codes', id);
+  revalidatePath('/admin/discounts');
+  return { ok: true };
 }
 
 // ===================== إدارة المحتوى (CMS) =====================
