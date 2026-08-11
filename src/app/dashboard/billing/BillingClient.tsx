@@ -29,6 +29,7 @@ export function BillingClient({
   activePlanName,
   preselectedEvent,
   gatewayReady,
+  testMode,
 }: {
   plans: Plan[];
   events: EventRow[];
@@ -37,6 +38,8 @@ export function BillingClient({
   activePlanName: string | null;
   preselectedEvent: string | null;
   gatewayReady: boolean;
+  /** شراء محاكاة بلا بوابة — لاختبار ما بعد الدفع قبل ربط مُيسّر */
+  testMode: boolean;
 }) {
   const [eventId, setEventId] = useState(preselectedEvent ?? events[0]?.id ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +78,14 @@ export function BillingClient({
           ادفع لمناسبة واحدة، أو اشترك لمناسبات غير محدودة.
         </p>
       </div>
+
+      {/* الوعد يسبق الضغط: لا أحد يضغط «اشترك» وهو يظن أنه يدفع فعلاً */}
+      {testMode && (
+        <Alert tone="warning" title="وضع اختبار — ما ينخصم أي مبلغ">
+          الشراء هنا محاكاة كاملة: الباقة راح تنفتح فعلاً وتقدر تجرّب كل شي بعدها، بلا بوابة
+          دفع وبلا أي خصم.
+        </Alert>
+      )}
 
       {!gatewayReady && (
         <Alert tone="warning" title="بوابة الدفع غير مفعّلة">

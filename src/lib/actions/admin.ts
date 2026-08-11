@@ -487,6 +487,91 @@ export async function adminResetFreeTrial(userId: string): Promise<ActionResult>
   return { ok: true, restamped } as ActionResult & { restamped: number };
 }
 
+// ===================== اختبار الدفع قبل ربط البوابة =====================
+
+/**
+ * تشغيل/إيقاف وضع اختبار الدفع.
+ *
+ * الإعداد وحده لا يكفي لتفعيله: الكود يتجاهله متى ضُبط مفتاح مُيسّر،
+ * فالبوابة الحقيقية تُلغيه تلقائياً. ولهذا لا خطر من نسيانه مفتوحاً.
+ */
+export async function setPaymentsTestMode(enabled: boolean): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { error } = await supabase
+    .from('site_settings')
+    .upsert({
+      key: 'payments_test_mode',
+      value: enabled,
+      label: 'وضع اختبار الدفع: يحاكي شراءً ناجحاً بلا بوابة. يتعطّل تلقائياً متى رُبطت مُيسّر.',
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) return { ok: false, error: 'تعذّر حفظ الإعداد.' };
+
+  await logAdminAction(enabled ? 'payments.test_mode_on' : 'payments.test_mode_off', 'site_settings', null);
+  revalidatePath('/admin/plans');
+  revalidatePath('/dashboard/billing');
+  return { ok: true };
+}
+
+/**
+ * مسح كل أثر الشراء التجريبي.
+ *
+ * الاختبار يترك خلفه اشتراكات فعّالة ومناسبات مدفوعة لم يُدفع لها ريال.
+ * لو بقيت بعد الإطلاق صارت حسابات مجانية دائمة بلا أن يلاحظها أحد —
+ * فالتنظيف جزء من الاختبار لا خطوة اختيارية بعده.
+ *
+ * كل ما نشأ عن المحاكاة موسوم بـ«simulated»، فالتنظيف دقيق ولا يقترب
+ * من أي دفعة حقيقية.
+ */
+export async function clearTestPayments(): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { data: payments } = await supabase
+    .from('payments')
+    .select('id, event_id')
+    .eq('provider_payment_id', 'simulated');
+
+  const rows = payments ?? [];
+  const eventIds = rows.map((p) => p.event_id).filter((id): id is string => Boolean(id));
+
+  // المناسبات ترجع غير مدفوعة — وباركوداتها بعد الحد ترجع «غير مفعّلة»
+  if (eventIds.length > 0) {
+    await supabase
+      .from('events')
+      .update({ is_paid: false, paid_at: null, plan_id: null })
+      .in('id', eventIds);
+  }
+
+  const { data: subs } = await supabase
+    .from('subscriptions')
+    .delete()
+    .eq('provider_ref', 'simulated')
+    .select('id');
+
+  await supabase.from('payments').delete().eq('provider_payment_id', 'simulated');
+
+  await logAdminAction('payments.test_data_cleared', 'payments', null, {
+    payments: String(rows.length),
+    events: String(eventIds.length),
+    subscriptions: String(subs?.length ?? 0),
+  });
+
+  revalidatePath('/admin/plans');
+  revalidatePath('/dashboard');
+  return {
+    ok: true,
+    cleared: {
+      payments: rows.length,
+      events: eventIds.length,
+      subscriptions: subs?.length ?? 0,
+    },
+  } as ActionResult & { cleared: { payments: number; events: number; subscriptions: number } };
+}
+
 // ===================== إدارة المحتوى (CMS) =====================
 
 export async function updateContent(key: string, value: unknown): Promise<ActionResult> {

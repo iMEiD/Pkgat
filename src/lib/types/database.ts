@@ -272,6 +272,8 @@ export type Subscription = {
   status: 'active' | 'canceled' | 'expired';
   current_period_end: string | null;
   provider_ref: string | null;
+  /** نهاية الفترة التي أُرسل عنها تذكير التجديد — يمنع تكراره ويسمح به بعد كل تجديد */
+  renewal_notice_for: string | null;
   created_at: string;
 }
 

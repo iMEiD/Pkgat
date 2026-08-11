@@ -4,6 +4,7 @@ import { BillingClient } from './BillingClient';
 import { requireUser } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { isMoyasarConfigured } from '@/lib/payments/moyasar';
+import { paymentsTestMode } from '@/lib/payments/test-mode';
 import type { EventRow, Payment, Plan, Subscription } from '@/lib/types/database';
 
 export const metadata: Metadata = { title: 'الاشتراك والدفع' };
@@ -18,7 +19,7 @@ export default async function BillingPage({
   const session = await requireUser('/dashboard/billing');
   const supabase = await createClient();
 
-  const [plansRes, eventsRes, paymentsRes, subsRes] = await Promise.all([
+  const [plansRes, eventsRes, paymentsRes, subsRes, testMode] = await Promise.all([
     supabase.from('plans').select('*').eq('is_active', true).order('sort_order'),
     supabase
       .from('events')
@@ -36,6 +37,7 @@ export default async function BillingPage({
       .select('*')
       .eq('user_id', session.id)
       .eq('status', 'active'),
+    paymentsTestMode(),
   ]);
 
   const subscriptions = (subsRes.data ?? []) as Subscription[];
@@ -54,7 +56,8 @@ export default async function BillingPage({
       activeSubscription={activeSub}
       activePlanName={plans.find((p) => p.id === activeSub?.plan_id)?.name ?? null}
       preselectedEvent={preselectedEvent ?? null}
-      gatewayReady={isMoyasarConfigured()}
+      gatewayReady={isMoyasarConfigured() || testMode}
+      testMode={testMode}
     />
   );
 }

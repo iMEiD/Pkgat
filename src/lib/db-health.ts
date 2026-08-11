@@ -521,6 +521,20 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0024 ----
+  migrations.push({
+    file: '0024_test_payments_and_renewal.sql',
+    title: 'اختبار الشراء وتذكير التجديد',
+    breaks:
+      'ما تقدر تختبر الباقات قبل ربط مُيسّر، والمشترك ما يوصله تذكير قبل انتهاء اشتراكه ' +
+      'فيكتشف الانتهاء حين تتوقف باركوداته على الباب.',
+    checks: await Promise.all([
+      probeKeyRow(sb, 'site_settings', 'payments_test_mode', 'إعداد وضع اختبار الدفع'),
+      probeColumn(sb, 'subscriptions', 'renewal_notice_for', 'منع تكرار تذكير التجديد'),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {

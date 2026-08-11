@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { createServiceClient } from '@/lib/supabase/server';
 import { emailShell, isEmailConfigured, sendEmail } from '@/lib/email';
+import { runSubscriptionMaintenance } from '@/lib/data/subscription-maintenance';
 import { formatDateTime } from '@/lib/utils/format';
 
 export const dynamic = 'force-dynamic';
@@ -47,11 +48,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: 'query_failed' }, { status: 500 });
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? '';
+
+  /*
+   * صيانة الاشتراكات مستقلة عن تذكير المناسبات، فلا تُعلَّق على وجودها:
+   * يوم بلا مناسبات قريبة ما زال فيه اشتراكات تنتهي.
+   */
+  const subscriptions = await runSubscriptionMaintenance(siteUrl);
+
   if (!events?.length) {
-    return NextResponse.json({ ok: true, checked: 0, sent: 0 });
+    return NextResponse.json({ ok: true, checked: 0, sent: 0, subscriptions });
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? '';
   let sent = 0;
 
   for (const event of events) {
@@ -117,6 +125,7 @@ export async function GET(request: Request) {
     ok: true,
     checked: events.length,
     sent,
+    subscriptions,
     emailConfigured: isEmailConfigured(),
   });
 }

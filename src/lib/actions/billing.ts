@@ -5,6 +5,7 @@ import { headers } from 'next/headers';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth/session';
 import { createInvoice, fetchInvoice, isMoyasarConfigured } from '@/lib/payments/moyasar';
+import { SIMULATED_REF, paymentsTestMode } from '@/lib/payments/test-mode';
 import type { Plan } from '@/lib/types/database';
 
 export interface CheckoutResult {
@@ -31,7 +32,9 @@ export async function startCheckout(
 ): Promise<CheckoutResult> {
   const session = await requireUser();
 
-  if (!isMoyasarConfigured()) {
+  const testMode = await paymentsTestMode();
+
+  if (!isMoyasarConfigured() && !testMode) {
     return {
       ok: false,
       error: 'بوابة الدفع غير مفعّلة بعد على هذه البيئة. تواصل مع الدعم لإتمام الدفع.',
@@ -78,12 +81,28 @@ export async function startCheckout(
       amount_halalas: typedPlan.price_halalas,
       currency: typedPlan.currency,
       status: 'initiated',
+      // في المحاكاة نوسم السجل من لحظة إنشائه: كل ما يتفرّع عنه
+      // (اشتراك أو مناسبة مدفوعة) يحمل الوسم نفسه فيُنظَّف كله دفعة
+      ...(testMode
+        ? { provider: SIMULATED_REF, provider_payment_id: SIMULATED_REF, raw: { simulated: true } }
+        : {}),
     })
     .select('id')
     .single();
 
   if (paymentError || !payment) {
     return { ok: false, error: 'تعذّر بدء عملية الدفع.' };
+  }
+
+  /*
+   * الوضع التجريبي: نمرّ بنفس الطريق تماماً — نفس سجل الدفع، ونفس دالة
+   * التفعيل، ونفس صفحة النتيجة — ولا نتصل بالبوابة. فما يُختبر هنا هو
+   * ما سيحدث فعلاً بعد الشراء الحقيقي، لا محاكاة موازية له.
+   */
+  if (testMode) {
+    await applyPaidPayment(payment.id);
+    const origin = await siteOrigin();
+    return { ok: true, url: `${origin}/dashboard/billing/callback?payment=${payment.id}` };
   }
 
   try {
@@ -150,8 +169,16 @@ export async function confirmPayment(paymentId: string): Promise<{
     return { ok: false, status: 'failed', message: 'عملية الدفع غير موجودة.' };
   }
 
+  const simulated = payment.provider_payment_id === SIMULATED_REF;
+
   if (payment.status === 'paid') {
-    return { ok: true, status: 'paid', message: 'تم تأكيد الدفع مسبقاً.' };
+    return {
+      ok: true,
+      status: 'paid',
+      message: simulated
+        ? 'دفع تجريبي ناجح — ما انخصم أي مبلغ. الباقة مفعّلة الآن كأنك دفعت فعلاً.'
+        : 'تم تأكيد الدفع مسبقاً.',
+    };
   }
 
   if (!payment.provider_payment_id) {
@@ -251,7 +278,14 @@ export async function applyPaidPayment(paymentId: string): Promise<void> {
     if (existing) {
       await supabase
         .from('subscriptions')
-        .update({ plan_id: plan.id, current_period_end: periodEnd.toISOString() })
+        .update({
+          plan_id: plan.id,
+          current_period_end: periodEnd.toISOString(),
+          // مرجع آخر دفعة مدّدت الاشتراك — وبه تُميَّز المحاكاة عند التنظيف
+          provider_ref: payment.provider_payment_id,
+          // النهاية تغيّرت ⇒ تذكير التجديد مسموح من جديد للفترة الجديدة
+          renewal_notice_for: null,
+        })
         .eq('id', existing.id);
     } else {
       await supabase.from('subscriptions').insert({
