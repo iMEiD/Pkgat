@@ -4,6 +4,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+import { EventSteps, type EventStep } from '@/components/dashboard/EventSteps';
 import { Icon } from '@/components/ui/Icon';
 import { ProgressBar, Stat } from '@/components/ui/Misc';
 import { getEventCounts, getEventTags, getGuestLimit, getOwnedEvent } from '@/lib/data/event';
@@ -38,30 +39,60 @@ export default async function EventOverview({ params }: { params: Promise<{ id: 
   const hasDesign = Boolean(event.design?.backgroundUrl);
   const scanners = scannerCount ?? 0;
 
-  const checklist = [
+  /*
+   * خطوات التجهيز بالترتيب الذي يمشي به صاحب المناسبة فعلاً.
+   *
+   * «إتمام التجهيز» خطوة قائمة بذاتها عمداً: هي اللحظة التي يراجع فيها
+   * توقيت المناسبة وموقعها قبل أن يوزّع دعواتٍ لا رجعة فيها. وبعدها
+   * التحميل والتوزيع — آخر ما يُفعل لأنه أول ما لا يُتراجَع عنه.
+   */
+  const settingsDone = Boolean(event.venue) && hasDesign && counts.total > 0 && scanners > 0;
+
+  const steps: EventStep[] = [
     {
-      done: true,
-      label: 'إنشاء المناسبة',
-      hint: formatDateTime(event.starts_at),
-      href: `/dashboard/events/${id}/settings`,
-    },
-    {
+      label: 'صمّم الدعوة',
+      hint: hasDesign ? 'التصميم جاهز' : 'اختر قالباً جاهزاً أو ارفع تصميمك',
       done: hasDesign,
-      label: 'تصميم الدعوة',
-      hint: hasDesign ? 'التصميم جاهز' : 'اختر قالباً أو ارفع تصميمك',
       href: `/dashboard/events/${id}/design`,
+      cta: 'ابدأ التصميم',
     },
     {
+      label: 'أضف المدعوين',
+      hint:
+        counts.total > 0
+          ? `${formatNumber(counts.total)} مدعو — لكل واحد باركود خاص فيه`
+          : 'اكتب أسماءهم أو استورد ملفاً',
       done: counts.total > 0,
-      label: 'إضافة المدعوين',
-      hint: counts.total > 0 ? `${formatNumber(counts.total)} مدعو` : 'لم تُضف أي مدعو بعد',
       href: `/dashboard/events/${id}/guests`,
+      cta: 'أضف المدعوين',
     },
     {
+      label: 'أضف مسؤولي المسح',
+      hint:
+        scanners > 0
+          ? `${formatNumber(scanners)} حساب — يمسحون الباركودات على الباب`
+          : 'حساب لكل شخص يستقبل الضيوف على الباب',
       done: scanners > 0,
-      label: 'حسابات مسؤولي المسح',
-      hint: scanners > 0 ? `${formatNumber(scanners)} حساب` : 'أنشئ حساباً واحداً على الأقل',
       href: `/dashboard/events/${id}/scanners`,
+      cta: 'أنشئ حساب مسح',
+    },
+    {
+      label: 'أتمم التجهيز',
+      hint: settingsDone
+        ? 'الموقع والتوقيت مضبوطان'
+        : 'راجع الموقع والتوقيت قبل ما توزّع الدعوات',
+      done: settingsDone,
+      href: `/dashboard/events/${id}/settings`,
+      cta: 'راجع البيانات',
+    },
+    {
+      label: 'حمّل الدعوات ووزّعها',
+      hint: settingsDone
+        ? 'نزّلها صوراً وأرسلها لكل مدعو'
+        : 'تُفتح بعد ما تكمل الخطوات السابقة',
+      done: false,
+      href: `/dashboard/events/${id}/guests`,
+      cta: 'حمّل الدعوات',
     },
   ];
 
@@ -109,6 +140,9 @@ export default async function EventOverview({ params }: { params: Promise<{ id: 
         </Alert>
       )}
 
+      {/* الخطوات أولاً: هي جواب «وش أسوي الحين» — والأرقام تجي بعدها */}
+      <EventSteps steps={steps} />
+
       {/* الأرقام */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="المدعوون" value={formatNumber(counts.total)} tone="sky" />
@@ -141,39 +175,7 @@ export default async function EventOverview({ params }: { params: Promise<{ id: 
         </CardBody>
       </Card>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        {/* قائمة التجهيز */}
-        <Card>
-          <CardHeader title="جاهزية المناسبة" description="أكمل الخطوات قبل موعد المناسبة." />
-          <CardBody className="space-y-2">
-            {checklist.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="flex items-center gap-3 rounded-2xl border border-sand-200 p-3.5 transition-colors hover:border-grape-200 hover:bg-grape-50/40"
-              >
-                <span
-                  className={cn(
-                    'grid h-8 w-8 shrink-0 place-items-center rounded-xl',
-                    item.done ? 'bg-mint-500 text-white' : 'bg-sand-100 text-ink-faint',
-                  )}
-                >
-                  {item.done ? (
-                    <Icon name="check" className="h-4 w-4" strokeWidth={2.5} />
-                  ) : (
-                    <Icon name="plus" className="h-4 w-4" />
-                  )}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold text-ink">{item.label}</span>
-                  <span className="block truncate text-xs text-ink-soft">{item.hint}</span>
-                </span>
-                <Icon name="arrow" className="h-4 w-4 shrink-0 text-ink-faint" />
-              </Link>
-            ))}
-          </CardBody>
-        </Card>
-
+      <div className="grid gap-5">
         {/* الفئات */}
         <Card>
           <CardHeader

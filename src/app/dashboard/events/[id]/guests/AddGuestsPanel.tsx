@@ -12,7 +12,18 @@ import type { EventTag } from '@/lib/types/database';
 import { formatNumber } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 
-type Method = 'manual' | 'paste' | 'file';
+/*
+ * طريقتان لا ثلاث.
+ *
+ * «يدوي» كان يضيف اسماً واحداً في كل مرة بحقول جوال ومقاعد — و«لصق
+ * قائمة» يفعل الشيء نفسه وأكثر: اسم في كل سطر، واحداً كان أو ثلاثمئة.
+ * وجودهما معاً يجعل المستخدم يختار بين طريقين إلى مكان واحد، وهو
+ * تفريعٌ بلا مقابل.
+ *
+ * والجوال رُفع: المنصة لا ترسل الدعوات — صاحب المناسبة يوزّعها بنفسه —
+ * فالرقم حقلٌ يُطلب ولا يُستعمل.
+ */
+type Method = 'paste' | 'file';
 
 export function AddGuestsPanel({
   eventId,
@@ -25,7 +36,7 @@ export function AddGuestsPanel({
   onDone: (added: number) => void;
   onPaymentRequired: (message: string) => void;
 }) {
-  const [method, setMethod] = useState<Method>('manual');
+  const [method, setMethod] = useState<Method>('paste');
   const [tagId, setTagId] = useState<string>('');
   const [result, setResult] = useState<AddGuestsResult | null>(null);
   const [pending, startTransition] = useTransition();
@@ -45,11 +56,10 @@ export function AddGuestsPanel({
 
   return (
     <div>
-      <div className="mb-5 grid grid-cols-3 gap-2 rounded-2xl bg-sand-100 p-1.5">
+      <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl bg-sand-100 p-1.5">
         {(
           [
-            { key: 'manual', label: 'يدوي', icon: 'plus' },
-            { key: 'paste', label: 'لصق قائمة', icon: 'edit' },
+            { key: 'paste', label: 'اكتب أو الصق', icon: 'edit' },
             { key: 'file', label: 'استيراد ملف', icon: 'upload' },
           ] as const
         ).map((tab) => (
@@ -100,59 +110,9 @@ export function AddGuestsPanel({
         </Alert>
       )}
 
-      {method === 'manual' && <ManualForm pending={pending} onSubmit={submit} />}
       {method === 'paste' && <PasteForm pending={pending} onSubmit={submit} />}
       {method === 'file' && <FileForm pending={pending} onSubmit={submit} />}
     </div>
-  );
-}
-
-function ManualForm({
-  pending,
-  onSubmit,
-}: {
-  pending: boolean;
-  onSubmit: (guests: GuestInput[]) => void;
-}) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [seats, setSeats] = useState(1);
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!name.trim()) return;
-        onSubmit([{ name, phone: phone || null, seats }]);
-        setName('');
-        setPhone('');
-        setSeats(1);
-      }}
-      className="space-y-4"
-    >
-      <Field label="اسم المدعو" required>
-        <Input value={name} onChange={(e) => setName(e.target.value)} required placeholder="مثال: عبدالله الشمري" autoFocus />
-      </Field>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="رقم الجوال" hint="اختياري — يفيد لاحقاً في الإرسال التلقائي">
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" placeholder="05xxxxxxxx" />
-        </Field>
-        <Field label="عدد الأشخاص" hint="للدعوة العائلية بباركود واحد">
-          <Input
-            type="number"
-            min={1}
-            max={50}
-            value={seats}
-            onChange={(e) => setSeats(Number(e.target.value))}
-          />
-        </Field>
-      </div>
-
-      <Button type="submit" loading={pending} fullWidth>
-        إضافة المدعو
-      </Button>
-    </form>
   );
 }
 
@@ -179,7 +139,7 @@ function PasteForm({
       }}
       className="space-y-4"
     >
-      <Field label="الصق الأسماء" hint="كل اسم في سطر مستقل">
+      <Field label="أسماء المدعوين" hint="اسم واحد في كل سطر — اكتبهم أو الصق قائمة جاهزة">
         <Textarea
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -190,7 +150,7 @@ function PasteForm({
 
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm text-ink-soft">
-          {names.length > 0 ? `سيُضاف ${formatNumber(names.length)} مدعو` : 'الصق قائمة الأسماء'}
+          {names.length > 0 ? `سيُضاف ${formatNumber(names.length)} مدعو` : 'اكتب الأسماء أو الصقها'}
         </span>
         <Button type="submit" loading={pending} disabled={names.length === 0}>
           إضافة الكل
@@ -215,7 +175,6 @@ function FileForm({
   const inputRef = useRef<HTMLInputElement>(null);
   const [parsed, setParsed] = useState<ParsedFile | null>(null);
   const [nameCol, setNameCol] = useState('');
-  const [phoneCol, setPhoneCol] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -244,9 +203,7 @@ function FileForm({
       // نخمّن عمود الاسم تلقائياً
       const guessName =
         data.headers.find((h) => /اسم|name|full.?name|الاسم/i.test(h)) ?? data.headers[0];
-      const guessPhone = data.headers.find((h) => /جوال|هاتف|phone|mobile|tel/i.test(h)) ?? '';
       setNameCol(guessName);
-      setPhoneCol(guessPhone);
     } catch (e) {
       setError(
         (e as Error).message === 'unsupported'
@@ -306,16 +263,6 @@ function FileForm({
                 ))}
               </Select>
             </Field>
-            <Field label="عمود الجوال" hint="اختياري">
-              <Select value={phoneCol} onChange={(e) => setPhoneCol(e.target.value)}>
-                <option value="">بدون</option>
-                {parsed.headers.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </Select>
-            </Field>
           </div>
 
           {preview.length > 0 && (
@@ -344,7 +291,6 @@ function FileForm({
                     .filter((r) => r[nameCol]?.trim())
                     .map((r) => ({
                       name: r[nameCol],
-                      phone: phoneCol ? r[phoneCol] || null : null,
                     })),
                 )
               }
