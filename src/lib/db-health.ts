@@ -549,6 +549,19 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0026 ----
+  migrations.push({
+    file: '0026_ended_beats_override.sql',
+    title: 'إنهاء المناسبة يسبق التفعيل اليدوي',
+    breaks:
+      'من فعّل الباركودات يدوياً ثم أنهى مناسبته تبقى باركوداته تعمل على الباب، ' +
+      'واللوحة تقول «مفعّلة» وهو أنهاها بنفسه.',
+    checks: await Promise.all([
+      probeRowFunction(sb, 'guest_code_state', 'دالة حالة الباركود موجودة'),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {

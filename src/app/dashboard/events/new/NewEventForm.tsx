@@ -76,15 +76,15 @@ export function NewEventForm() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
-            label="تاريخ ووقت البداية"
+            label="بداية المناسبة"
             htmlFor="starts_at"
-            hint="اضغط أيقونة التقويم لاختياره"
+            hint="التاريخ والوقت — اضغط أيقونة التقويم"
             required
           >
             <DateTimeInput id="starts_at" name="starts_at" minNow required />
           </Field>
           <Field
-            label="وقت الانتهاء"
+            label="نهاية المناسبة"
             htmlFor="ends_at"
             hint="اختياري — الافتراضي ٦ ساعات بعد البداية"
           >

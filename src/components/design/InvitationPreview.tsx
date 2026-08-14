@@ -57,6 +57,8 @@ export function InvitationPreview({
   onSelect,
   placing,
   onPlace,
+  picking,
+  onPick,
   className,
 }: {
   design: DesignConfig;
@@ -69,10 +71,26 @@ export function InvitationPreview({
   /** وضع الإضافة الحرّة: الضغط على أي موضع في التصميم يضع نصاً هناك */
   placing?: boolean;
   onPlace?: (x: number, y: number) => void;
+  /** وضع القطّارة: الضغط على التصميم يلتقط لون تلك النقطة */
+  picking?: boolean;
+  onPick?: (hex: string) => void;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  /*
+   * دوال الأب في مراجع لا في تبعيات الأثر.
+   *
+   * onMove وonResize تُبنى من جديد مع كل تصيير، وكل حركة إصبع تسبّب
+   * تصييراً. فكان أثر المستمعات يُفكَّك ويُركَّب ستين مرة في الثانية،
+   * وتضيع بين الفكّ والتركيب أحداث حركة — وهو ما يُحسّ «تعليقاً»
+   * وتقطّعاً في السحب.
+   */
+  const onMoveRef = useRef(onMove);
+  const onResizeRef = useRef(onResize);
+  onMoveRef.current = onMove;
+  onResizeRef.current = onResize;
   const [dragging, setDragging] = useState<DragTarget>(null);
   const [pinching, setPinching] = useState(false);
   const [rendering, setRendering] = useState(false);
@@ -85,28 +103,61 @@ export function InvitationPreview({
   const designRef = useRef(design);
   designRef.current = design;
 
+  /*
+   * الرسم مخنوق بإطار العرض ولا يتراكم.
+   *
+   * كان كل تغيير في التصميم يستدعي رسماً كاملاً فوراً — وأثناء السحب
+   * بالإصبع يقع ذلك ستين مرة في الثانية. الرسم يشمل الخلفية والنص
+   * وتوليد الباركود، فتتكدّس عمليات رسم لا يظهر منها إلا آخرها،
+   * ويتجمّد الجوال تحت الإصبع.
+   *
+   * الآن: طلب واحد لكل إطار عرض، ولا يبدأ رسم جديد قبل انتهاء الجاري.
+   */
+  const drawPending = useRef(false);
+  const drawing = useRef(false);
+  const rafDraw = useRef<number | null>(null);
+
   const draw = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    if (drawing.current) {
+      drawPending.current = true;
+      return;
+    }
+
+    drawing.current = true;
     const token = ++renderToken.current;
     setRendering(true);
+
     try {
+      const current = designRef.current;
       await renderInvitation(
-        { design, guestName: design.name.sample || 'اسم المدعو', code: sampleCode },
+        { design: current, guestName: current.name.sample || 'اسم المدعو', code: sampleCode },
         canvas,
       );
     } catch {
       // خلفية مفقودة أو تعذّر تحميلها — نبقي المعاينة كما هي
     } finally {
-      // نتجاهل نتيجة أي رسم قديم تجاوزه رسم أحدث
+      drawing.current = false;
       if (token === renderToken.current) setRendering(false);
+
+      // وصل تغيير أثناء الرسم — نرسم مرة واحدة بأحدث حالة لا مرة لكل تغيير
+      if (drawPending.current) {
+        drawPending.current = false;
+        void draw();
+      }
     }
-  }, [design, sampleCode]);
+  }, [sampleCode]);
 
   useEffect(() => {
-    void draw();
-  }, [draw]);
+    if (rafDraw.current !== null) cancelAnimationFrame(rafDraw.current);
+    rafDraw.current = requestAnimationFrame(() => void draw());
+
+    return () => {
+      if (rafDraw.current !== null) cancelAnimationFrame(rafDraw.current);
+    };
+  }, [design, draw]);
 
   const relativePos = useCallback((clientX: number, clientY: number) => {
     const rect = wrapRef.current!.getBoundingClientRect();
@@ -179,16 +230,16 @@ export function InvitationPreview({
         const distance = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
         const g = gesture.current;
 
-        if (onResize) {
+        if (onResizeRef.current) {
           const limits = limitsFor(target);
           const next = g.startSize * (distance / g.startDistance);
-          onResize(target, Math.min(limits.max, Math.max(limits.min, next)));
+          onResizeRef.current(target, Math.min(limits.max, Math.max(limits.min, next)));
         }
 
-        if (onMove) {
+        if (onMoveRef.current) {
           const midX = (a.x + b.x) / 2 / rect.width;
           const midY = (a.y + b.y) / 2 / rect.height;
-          onMove(
+          onMoveRef.current(
             target,
             Math.min(1, Math.max(0, g.startX + (midX - g.startMidX))),
             Math.min(1, Math.max(0, g.startY + (midY - g.startMidY))),
@@ -198,9 +249,9 @@ export function InvitationPreview({
       }
 
       // إصبع واحد: تحريك فقط
-      if (onMove) {
+      if (onMoveRef.current) {
         const { x, y } = relativePos(e.clientX, e.clientY);
-        onMove(target, x, y);
+        onMoveRef.current(target, x, y);
       }
     };
 
@@ -238,7 +289,8 @@ export function InvitationPreview({
       window.removeEventListener('pointerup', onPointerUp);
       window.removeEventListener('pointercancel', onPointerUp);
     };
-  }, [dragging, onMove, onResize, relativePos, beginPinch]);
+    // التبعيات ثابتة عمداً: المستمعات تُركَّب مرة لكل سحبة لا مرة لكل حركة
+  }, [dragging, relativePos, beginPinch]);
 
   function onHandlePointerDown(e: React.PointerEvent, target: Exclude<DragTarget, null>) {
     e.preventDefault();
@@ -295,6 +347,45 @@ export function InvitationPreview({
       style={{ aspectRatio: `${design.width} / ${design.height}` }}
     >
       <canvas ref={canvasRef} className="block h-full w-full" />
+
+      {/*
+        طبقة القطّارة.
+
+        اختيار اللون من نافذة النظام يعرض ألوان الشاشة كلها — والمستخدم
+        يريد لوناً من تصميمه هو: ذهب الإطار، أو خضرة الخلفية. وعلى الجوال
+        لا توجد قطّارة نظام أصلاً. فنقرأ البكسل من الكانفس مباشرة.
+      */}
+      {picking && !placing && (
+        <button
+          type="button"
+          aria-label="اضغط على اللون الذي تبيه من التصميم"
+          onClick={(e) => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+
+            const rect = e.currentTarget.getBoundingClientRect();
+            // من إحداثيات الشاشة إلى بكسل الكانفس بدقّته الحقيقية
+            const px = Math.round(((e.clientX - rect.left) / rect.width) * canvas.width);
+            const py = Math.round(((e.clientY - rect.top) / rect.height) * canvas.height);
+
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (!ctx) return;
+
+            try {
+              const [r, g, b] = ctx.getImageData(px, py, 1, 1).data;
+              const hex = `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+              onPick?.(hex);
+            } catch {
+              // كانفس ملوّث بصورة من نطاق آخر بلا CORS — لا يمكن قراءته
+            }
+          }}
+          className="absolute inset-0 z-30 cursor-crosshair"
+        >
+          <span className="pointer-events-none absolute inset-x-0 top-4 mx-auto w-fit rounded-full bg-ink/80 px-3 py-1.5 text-xs font-bold text-canvas">
+            اضغط على اللون اللي تبيه من التصميم
+          </span>
+        </button>
+      )}
 
       {/* طبقة الإضافة الحرّة — تلتقط الضغطة قبل المقابض فتضع النص حيث ضُغط */}
       {placing && (

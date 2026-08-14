@@ -41,6 +41,8 @@ export interface TextLayer {
   lineHeight?: number;
   letterSpacing?: number;
   shadow?: boolean;
+  /** شفافية الطبقة ٠..١ — الافتراضي معتم بالكامل */
+  opacity?: number;
 }
 
 export type NameLayer = Omit<TextLayer, 'id' | 'label' | 'text'> & {
@@ -60,6 +62,8 @@ export interface QrLayer {
   margin: number;
   rounded: boolean;
   visible: boolean;
+  /** شفافية الباركود ٠..١ — الافتراضي معتم بالكامل */
+  opacity?: number;
 }
 
 export interface Json {

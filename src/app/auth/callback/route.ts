@@ -60,8 +60,22 @@ export async function GET(request: NextRequest) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${origin}${safeNext}`);
-    // فشل تبادل PKCE يقع أيضاً حين يُفتح الرابط في متصفح غير الذي طلبه
-    return NextResponse.redirect(`${origin}/login?error=device`);
+
+    /*
+     * وصولنا هنا ومعنا `code` يعني أن Supabase تحقّق من الرمز ونجح —
+     * وإلا لأعادنا برسالة خطأ لا برمز. أي أن **البريد تأكّد فعلاً**،
+     * والفاشل هو فتح الجلسة وحدها: رمز PKCE مرتبط بالمتصفح الذي بدأ
+     * التسجيل، ويُستهلك مرة واحدة (وقد يستهلكه فاحص روابط البريد قبل
+     * أن يضغط المستخدم).
+     *
+     * فرقٌ جوهري في الرسالة: «الرابط لم يعمل» تُفزع من تأكّد حسابه
+     * فعلاً وتجعله يعيد التسجيل. الصحيح أن نقول له: تم التأكيد، سجّل
+     * دخولك.
+     */
+    const recovering = type === 'recovery' || requested.startsWith('/reset-password');
+    return NextResponse.redirect(
+      `${origin}/login?error=${recovering ? 'device' : 'confirmed'}`,
+    );
   }
 
   return NextResponse.redirect(`${origin}/login?error=invalid`);

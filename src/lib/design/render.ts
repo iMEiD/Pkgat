@@ -11,6 +11,29 @@ export interface RenderInput {
 
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
 
+/**
+ * مصفوفة الباركود محفوظة لكل رمز.
+ *
+ * QRCode.create حساب لا رسم: نتيجته لا تتغيّر ما دام الرمز نفسه — لكنها
+ * كانت تُحسب مع كل إطار أثناء سحب الباركود بالإصبع. تحريكه أو تكبيره
+ * لا يغيّر مصفوفته، فحسابها مرة واحدة يكفي.
+ */
+const qrCache = new Map<string, { size: number; data: Uint8Array }>();
+
+function qrMatrix(code: string) {
+  const cached = qrCache.get(code);
+  if (cached) return cached;
+
+  const qr = QRCode.create(code, { errorCorrectionLevel: 'H' });
+  const entry = { size: qr.modules.size, data: qr.modules.data };
+
+  // سقف بسيط يمنع نمو الذاكرة في صفحة تولّد مئات الدعوات
+  if (qrCache.size > 200) qrCache.clear();
+  qrCache.set(code, entry);
+
+  return entry;
+}
+
 /** يحمّل صورة الخلفية مرة واحدة ويعيد استخدامها لكل الدعوات */
 export function loadImage(url: string): Promise<HTMLImageElement> {
   const cached = imageCache.get(url);
@@ -51,6 +74,9 @@ function drawTextLayer(
 ) {
   const px = Math.round(layer.fontSize * W);
   ctx.save();
+  // الشفافية تُطبَّق على الطبقة كاملة — أنظف من دمجها في اللون نفسه،
+  // فيبقى اللون المحفوظ hex بسيطاً يقرأه منتقي الألوان والقطّارة
+  ctx.globalAlpha = layer.opacity ?? 1;
   // نثبّت الوزن على وجه متاح فعلاً حتى لا يزوّر المتصفح السُمك
   ctx.font = `${resolveWeight(layer.fontFamily, layer.weight)} ${px}px "${layer.fontFamily}", sans-serif`;
   ctx.fillStyle = layer.color;
@@ -101,13 +127,14 @@ async function drawQr(
   const left = Math.round(q.x * W - box / 2);
   const top = Math.round(q.y * H - box / 2);
 
-  const qr = QRCode.create(code, { errorCorrectionLevel: 'H' });
-  const count = qr.modules.size;
-  const data = qr.modules.data;
+  const qr = qrMatrix(code);
+  const count = qr.size;
+  const data = qr.data;
   const cell = box / (count + q.margin * 2);
   const offset = cell * q.margin;
 
   ctx.save();
+  ctx.globalAlpha = q.opacity ?? 1;
 
   if (q.background !== 'transparent') {
     ctx.fillStyle = q.background;

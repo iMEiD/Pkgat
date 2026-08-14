@@ -22,6 +22,16 @@ const LINK_ERRORS: Record<string, string> = {
   auth: 'تعذّر إكمال العملية. اطلب رابطاً جديداً.',
 };
 
+/**
+ * تأكيدٌ نجح ودخولٌ لم يكتمل.
+ *
+ * وصول المستخدم إلى هنا بـ`confirmed` يعني أن Supabase تحقّق من رمز
+ * البريد فعلاً — فحسابه مفعّل — وأن الفاشل هو فتح الجلسة تلقائياً.
+ * عرض ذلك كـ«الرابط لم يعمل» يُفزع من تأكّد حسابه ويدفعه لإعادة
+ * التسجيل، وهو أسوأ من الخلل نفسه.
+ */
+const CONFIRMED_NOTICE = 'تم تأكيد بريدك بنجاح ✅ سجّل دخولك الآن بنفس البريد وكلمة المرور.';
+
 export function LoginForm({
   nextPath,
   justRegistered,
@@ -88,13 +98,19 @@ export function LoginForm({
         </Alert>
       )}
 
-      {linkError && (
-        <Alert tone="warning" className="mt-5" title="الرابط لم يعمل">
-          {LINK_ERRORS[linkError] ?? LINK_ERRORS.auth}{' '}
-          <Link href="/forgot-password" className="font-bold underline underline-offset-4">
-            اطلب رابطاً جديداً
-          </Link>
+      {linkError === 'confirmed' ? (
+        <Alert tone="success" className="mt-5" title="تم تفعيل حسابك">
+          {CONFIRMED_NOTICE}
         </Alert>
+      ) : (
+        linkError && (
+          <Alert tone="warning" className="mt-5" title="الرابط لم يعمل">
+            {LINK_ERRORS[linkError] ?? LINK_ERRORS.auth}{' '}
+            <Link href="/forgot-password" className="font-bold underline underline-offset-4">
+              اطلب رابطاً جديداً
+            </Link>
+          </Alert>
+        )
       )}
 
       {error && (

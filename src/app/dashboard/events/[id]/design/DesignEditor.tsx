@@ -9,6 +9,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { ColorInput, Field, Input, Select, Slider, Switch, Textarea } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 import { InvitationPreview, extraIdOf, type DragTarget } from '@/components/design/InvitationPreview';
+import { FontPicker } from '@/components/design/FontPicker';
 import { TemplatePicker } from '@/components/design/TemplatePicker';
 import { UploadDesign } from '@/components/design/UploadDesign';
 import { saveDesign } from '@/lib/actions/events';
@@ -67,6 +68,8 @@ export function DesignEditor({
   const [saved, setSaved] = useState(false);
   // وضع الإضافة الحرّة: الضغطة التالية على التصميم تضع نصاً في موضعها
   const [placing, setPlacing] = useState(false);
+  /** الطبقة التي تنتظر لوناً من التصميم — null يعني القطّارة مطفأة */
+  const [picking, setPicking] = useState<'name' | 'qr-fg' | 'qr-bg' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -202,8 +205,12 @@ export function DesignEditor({
 
   const activeLayer = selected === 'qr' ? 'qr' : 'name';
 
+  // الأوزان المتاحة في الخط المختار — يحدّد إن كان لعنصر السُمك معنى أصلاً
+  const nameWeights =
+    fontOptions.find((f) => f.family === design.name.fontFamily)?.weights ?? [400, 700];
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+    <div className="grid gap-6 pb-24 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:pb-0">
       {/* ===== المعاينة ===== */}
       <div className="lg:order-2">
         <div className="lg:sticky lg:top-[92px]">
@@ -216,6 +223,16 @@ export function DesignEditor({
             onSelect={setSelected}
             placing={placing}
             onPlace={(x, y) => addExtra({ x, y })}
+            picking={picking !== null}
+            onPick={(hex) => {
+              patch((d) => {
+                if (picking === 'name') d.name.color = hex;
+                else if (picking === 'qr-fg') d.qr.foreground = hex;
+                else if (picking === 'qr-bg') d.qr.background = hex;
+                return d;
+              });
+              setPicking(null);
+            }}
           />
           <p className="mt-3 text-center text-xs leading-6 text-ink-faint">
             اسحب الإطار بإصبع لتحريكه، وباستخدام إصبعين للتكبير والتصغير.
@@ -224,7 +241,20 @@ export function DesignEditor({
             على الحاسب: الأسهم للتحريك و + و − للحجم.
           </p>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          {saved && (
+            <Alert tone="success" className="mt-4">
+              تم حفظ التصميم.
+            </Alert>
+          )}
+
+          {error && (
+            <Alert tone="danger" className="mt-4">
+              {error}
+            </Alert>
+          )}
+
+          {/* على الحاسب الأزرار هنا تحت المعاينة؛ وعلى الجوال في شريط ثابت أسفل الشاشة */}
+          <div className="mt-4 hidden flex-wrap items-center gap-2 lg:flex">
             <Button onClick={onSave} loading={pending} size="lg" className="flex-1">
               حفظ التصميم
             </Button>
@@ -237,18 +267,6 @@ export function DesignEditor({
               <Icon name="arrow" className="h-4 w-4" />
             </Button>
           </div>
-
-          {saved && (
-            <Alert tone="success" className="mt-3">
-              تم حفظ التصميم.
-            </Alert>
-          )}
-
-          {error && (
-            <Alert tone="danger" className="mt-3">
-              {error}
-            </Alert>
-          )}
         </div>
       </div>
 
@@ -334,12 +352,14 @@ export function DesignEditor({
             </Field>
 
             <Field label="الخط">
-              <Select
+              <FontPicker
+                fonts={fontOptions}
                 value={design.name.fontFamily}
-                onChange={(e) =>
+                sample={design.name.sample || 'اسم المدعو'}
+                onChange={(family) =>
                   patch((d) => {
-                    d.name.fontFamily = e.target.value;
-                    const font = fontOptions.find((f) => f.family === e.target.value);
+                    d.name.fontFamily = family;
+                    const font = fontOptions.find((f) => f.family === family);
                     // نضبط الوزن على أقرب وزن متاح في الخط الجديد
                     if (font && !font.weights.includes(d.name.weight)) {
                       d.name.weight = font.weights.includes(700) ? 700 : font.weights[0];
@@ -347,35 +367,48 @@ export function DesignEditor({
                     return d;
                   })
                 }
-              >
-                {fontOptions.map((f) => (
-                  <option key={f.family} value={f.family}>
-                    {f.label}
-                  </option>
-                ))}
-              </Select>
+              />
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="سُمك الخط">
-                <Select
-                  value={design.name.weight}
-                  onChange={(e) =>
-                    patch((d) => {
-                      d.name.weight = Number(e.target.value);
-                      return d;
-                    })
-                  }
-                >
-                  {(fontOptions.find((f) => f.family === design.name.fontFamily)?.weights ?? [400, 700]).map(
-                    (w) => (
-                      <option key={w} value={w}>
-                        {w}
-                      </option>
-                    ),
-                  )}
-                </Select>
-              </Field>
+              {/*
+                السُمك يظهر فقط حين يوجد أكثر من خيار فعلاً.
+                خطٌّ بوزن واحد كان يعرض قائمة بخيار وحيد لا يفعل شيئاً —
+                عنصر يشغل مساحة ويوحي بتحكّم غير موجود.
+              */}
+              {nameWeights.length > 1 && (
+                <Field label="سُمك الخط">
+                  <div className="grid grid-cols-2 gap-2 rounded-2xl bg-sand-100 p-1.5">
+                    {[
+                      { w: nameWeights.find((w) => w <= 500) ?? nameWeights[0], label: 'عادي' },
+                      {
+                        w: nameWeights.find((w) => w >= 600) ?? nameWeights[nameWeights.length - 1],
+                        label: 'عريض',
+                      },
+                    ].map((option) => (
+                      <button
+                        key={option.label}
+                        type="button"
+                        onClick={() =>
+                          patch((d) => {
+                            d.name.weight = option.w;
+                            return d;
+                          })
+                        }
+                        style={{ fontWeight: option.w }}
+                        className={cn(
+                          'rounded-xl py-2 text-sm transition-all',
+                          design.name.weight === option.w
+                            ? 'bg-surface text-ink shadow-soft'
+                            : 'text-ink-soft',
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+              )}
 
               <Field label="المحاذاة">
                 <Select
@@ -404,6 +437,26 @@ export function DesignEditor({
               onChange={(v) =>
                 patch((d) => {
                   d.name.fontSize = v / 100;
+                  return d;
+                })
+              }
+            />
+
+            <EyedropperButton
+              active={picking === 'name'}
+              onToggle={() => setPicking((p) => (p === 'name' ? null : 'name'))}
+            />
+
+            <Slider
+              label="شفافية النص"
+              min={10}
+              max={100}
+              step={5}
+              value={Math.round((design.name.opacity ?? 1) * 100)}
+              display={`${Math.round((design.name.opacity ?? 1) * 100)}٪`}
+              onChange={(v) =>
+                patch((d) => {
+                  d.name.opacity = v / 100;
                   return d;
                 })
               }
@@ -792,6 +845,56 @@ export function DesignEditor({
           </CardBody>
         </Card>
       </div>
+
+      {/*
+        شريط ثابت أسفل الشاشة على الجوال.
+
+        كانت أزرار الحفظ والمدعوين تقع تحت المعاينة مباشرة — أي في منتصف
+        صفحة طويلة — فتتوسّط الأدوات ويبدو كأن الصفحة انتهت عندها. مكانها
+        الطبيعي أسفل الشاشة دائماً: الحفظ في متناول الإبهام مهما نزل
+        المستخدم في الأدوات.
+      */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-sand-200 bg-canvas/95 p-3 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center gap-2">
+          <Button onClick={onSave} loading={pending} size="lg" className="flex-1">
+            حفظ التصميم
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={() => router.push(`/dashboard/events/${event.id}/guests`)}
+          >
+            المدعوون
+            <Icon name="arrow" className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
+  );
+}
+
+/**
+ * زرّ القطّارة.
+ *
+ * منتقي ألوان النظام يعرض ألوان الشاشة كلها، والمستخدم يريد لوناً من
+ * تصميمه هو — ذهب الإطار أو خضرة الخلفية. وعلى الجوال لا توجد قطّارة
+ * نظام أصلاً، فالمخرج الوحيد كان تخمين الرمز اللوني.
+ */
+function EyedropperButton({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={active}
+      className={cn(
+        'flex w-full items-center justify-center gap-2 rounded-2xl border-2 py-2.5 text-sm font-bold transition-all',
+        active
+          ? 'border-grape-500 bg-grape-50 text-grape-600'
+          : 'border-sand-200 text-ink-soft hover:border-sand-400',
+      )}
+    >
+      <Icon name="palette" className="h-4 w-4" />
+      {active ? 'اضغط على التصميم لالتقاط اللون' : 'اختر لوناً من التصميم'}
+    </button>
   );
 }

@@ -7,9 +7,19 @@ export type EventPhase = 'upcoming' | 'active' | 'ended';
  * تُستخدم للعرض فقط — القرار النهائي في المسح يبقى على قاعدة البيانات.
  */
 export function computeEventPhase(event: EventRow): EventPhase {
-  // التجاوز اليدوي يسبق أي حساب زمني — مطابق لمنطق قاعدة البيانات
-  if (event.activation_override === 'open') return 'active';
+  // إيقاف يدوي صريح
   if (event.activation_override === 'closed') return 'ended';
+
+  /*
+   * الإنهاء الصريح يسبق التفعيل اليدوي — مطابق لترتيب guest_code_state
+   * بعد الترحيل 0026. من فعّل الباركودات يدوياً ثم أنهى مناسبته كانت
+   * اللوحة تقول له «الباركودات مفعّلة» وهو أنهاها بنفسه.
+   */
+  if (event.status === 'ended' || event.status === 'archived') return 'ended';
+  if (event.ended_manually_at) return 'ended';
+
+  // التفعيل اليدوي يتجاوز التوقيت وحده
+  if (event.activation_override === 'open') return 'active';
 
   const now = Date.now();
   const activation = new Date(event.starts_at).getTime() - event.activation_lead_minutes * 60_000;
@@ -22,7 +32,8 @@ export function computeEventPhase(event: EventRow): EventPhase {
 
   const expiry = rawEnd + event.expiry_grace_minutes * 60_000;
 
-  if (event.status === 'ended' || event.status === 'archived' || now > expiry) return 'ended';
+  // الحالة والإنهاء اليدوي فُحصا أعلاه — يبقى انقضاء الوقت وحده
+  if (now > expiry) return 'ended';
   if (now >= activation) return 'active';
   return 'upcoming';
 }
