@@ -2841,7 +2841,55 @@ as $$
 
     else 'active'
   end;
-$$;`,
+$$;
+
+-- -------------------------------------------------------------
+-- إثبات أن الترتيب الجديد نُفِّذ فعلاً
+--
+-- guest_code_state موجودة منذ الترحيل الأول، فوجودها لا يثبت شيئاً عن
+-- هذا الترحيل — وفحصٌ يسأل عن وجودها يخرج «مكتمل» أبداً ولو لم يُنفَّذ
+-- الترحيل قط. وهذا بالضبط ما تقوم صفحة الفحص لتمنعه.
+--
+-- فنُثبت السلوك لا الوجود: نبني صفَّي مناسبة ومدعو في الذاكرة — لا
+-- يُكتب منهما شيء في أي جدول — ونسأل الدالة عن حالتهما. مناسبة منتهية
+-- ومفعّلة يدوياً يجب أن تخرج 'expired'؛ فإن خرجت 'active' فالترتيب
+-- القديم ما زال قائماً.
+-- -------------------------------------------------------------
+create or replace function public.ended_blocks_scanning()
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_event public.events;
+  v_guest public.guests;
+begin
+  v_event.id                      := gen_random_uuid();
+  v_event.owner_id                := gen_random_uuid();
+  v_event.status                  := 'ended';
+  v_event.activation_override     := 'open';
+  v_event.starts_at               := now() - interval '2 hours';
+  v_event.ends_at                 := now() + interval '2 hours';
+  v_event.activation_lead_minutes := 15;
+  v_event.expiry_grace_minutes    := 1440;
+  v_event.free_quota              := 10;
+  v_event.is_paid                 := false;
+  v_event.is_demo                 := false;
+
+  v_guest.id         := gen_random_uuid();
+  v_guest.event_id   := v_event.id;
+  v_guest.created_at := now();
+  v_guest.free_seq   := 1;
+
+  return public.guest_code_state(v_guest, v_event) = 'expired';
+end;
+$$;
+
+do $$ begin
+  grant execute on function public.ended_blocks_scanning() to anon, authenticated;
+exception when undefined_object then null; end $$;`,
 };
 
 /** نص ترحيل بعينه، أو null إن لم يكن مضمّناً */

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 import { Alert } from '@/components/ui/Alert';
+import { fetchMigrationSql } from '@/lib/actions/health';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -101,6 +102,29 @@ function MigrationCard({ migration }: { migration: MigrationView }) {
   const [open, setOpen] = useState(false);
   const isOk = migration.state === 'ok';
 
+  /*
+   * كود الترحيلات السليمة يُطلب عند الحاجة لا مع كل تحميل.
+   *
+   * وحجبه كلياً كان يترك صاحب المنصة بلا مخرج حين يخطئ فحصٌ ويقول
+   * «مكتمل»: لا يرى نقصاً ولا يجد كوداً ينفّذه. وقد وقع ذلك فعلاً.
+   */
+  const [lazySql, setLazySql] = useState<string | null>(null);
+  const [loadingSql, startLoad] = useTransition();
+
+  const sql = migration.sql ?? lazySql;
+
+  function loadSql() {
+    if (sql) return setOpen((v) => !v);
+
+    startLoad(async () => {
+      const res = await fetchMigrationSql(migration.file);
+      if (res.ok && res.sql) {
+        setLazySql(res.sql);
+        setOpen(true);
+      }
+    });
+  }
+
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-3 p-5 sm:p-6">
@@ -148,10 +172,10 @@ function MigrationCard({ migration }: { migration: MigrationView }) {
               </Alert>
             )}
 
-            {migration.sql ? (
+            {sql ? (
               <div className="mt-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <CopyButton sql={migration.sql} />
+                  <CopyButton sql={sql} />
                   <Button variant="ghost" size="sm" onClick={() => setOpen((v) => !v)}>
                     {open ? 'إخفاء الكود' : 'اعرض الكود'}
                   </Button>
@@ -172,7 +196,7 @@ function MigrationCard({ migration }: { migration: MigrationView }) {
                     dir="ltr"
                     className="mt-3 max-h-96 overflow-auto rounded-2xl bg-ink p-4 text-left text-xs leading-5 text-sand-100"
                   >
-                    <code>{migration.sql}</code>
+                    <code>{sql}</code>
                   </pre>
                 )}
               </div>
@@ -182,6 +206,44 @@ function MigrationCard({ migration }: { migration: MigrationView }) {
               </Alert>
             )}
           </>
+        )}
+
+        {/*
+          حتى المكتمل يبقى كوده في متناول اليد.
+
+          الفحص اجتهادٌ لا يقين: يقرأ أثراً ويستنتج منه. وقد يخطئ فيقول
+          «مكتمل» عمّا لم يُنفَّذ — فيبقى للمستخدم طريق يراجع به بنفسه
+          بدل أن يقف أمام صفحة خضراء لا تعطيه شيئاً. وتنفيذه مرة ثانية
+          لا يضر: كل الترحيلات مكتوبة لتُنفَّذ مراراً بلا أثر جانبي.
+        */}
+        {isOk && (
+          <div className="mt-4 border-t border-sand-200 pt-4">
+            {sql ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <CopyButton sql={sql} />
+                  <Button variant="ghost" size="sm" onClick={() => setOpen((v) => !v)}>
+                    {open ? 'إخفاء الكود' : 'اعرض الكود'}
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs leading-6 text-ink-faint">
+                  تنفيذه مرة ثانية آمن — لو شككت أن التحديث ما وصل كاملاً.
+                </p>
+                {open && (
+                  <pre
+                    dir="ltr"
+                    className="mt-3 max-h-96 overflow-auto rounded-2xl bg-ink p-4 text-left text-xs leading-5 text-sand-100"
+                  >
+                    <code>{sql}</code>
+                  </pre>
+                )}
+              </>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={loadSql} loading={loadingSql}>
+                اعرض كود هذا التحديث
+              </Button>
+            )}
+          </div>
         )}
       </div>
     </Card>
