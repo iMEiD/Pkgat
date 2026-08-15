@@ -24,6 +24,16 @@ export interface Appearance {
   mode: ColorModeSetting;
   surface: SurfaceStyle;
   glass: GlassStrength;
+  /**
+   * هل يختار الزائر شكل الأسطح بنفسه؟
+   *
+   * الوضع الليلي كان دائماً بيد الزائر — لأنه راحة عين لا هوية. والشكل
+   * كذلك: ما يراه أحدهم «عصرياً» يراه آخر مشوّشاً، والفرق ذوقٌ لا صواب.
+   * فيضبط الأدمن ما يبدأ به الزائر، ويبقى للزائر أن يبدّل.
+   *
+   * ومن أراد شكلاً واحداً لموقعه أطفأ هذا، فاختفى الزر عن الجميع.
+   */
+  visitorChoice: boolean;
 }
 
 /**
@@ -35,6 +45,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   mode: 'auto',
   surface: 'classic',
   glass: 'medium',
+  visitorChoice: true,
 };
 
 const MODES: ColorModeSetting[] = ['auto', 'light', 'dark'];
@@ -52,6 +63,10 @@ export function parseAppearance(value: unknown): Appearance {
     mode: pick('mode', MODES, DEFAULT_APPEARANCE.mode),
     surface: pick('surface', SURFACES, DEFAULT_APPEARANCE.surface),
     glass: pick('glass', STRENGTHS, DEFAULT_APPEARANCE.glass),
+    visitorChoice:
+      typeof raw.visitorChoice === 'boolean'
+        ? raw.visitorChoice
+        : DEFAULT_APPEARANCE.visitorChoice,
   };
 }
 
@@ -69,27 +84,38 @@ export function appearanceToCssVars(appearance: Appearance): string {
 }
 
 /**
- * السكربت الذي يضبط الوضع قبل أول رسم.
+ * السكربت الذي يضبط المظهر قبل أول رسم.
  *
- * حين يفرض الأدمن وضعاً نتجاهل ما في التخزين المحلي: قراره أعلى من
- * تفضيل الزائر، وإلا ظهر الموقع لزوّار سابقين بغير ما يريد صاحبه.
- * وحين يتركه تلقائياً يعود الترتيب: اختيار الزائر ثم تفضيل نظامه.
+ * يضبط الاثنين معاً — الوضع والشكل — لأن كليهما سمة على عنصر html،
+ * وتأخيرُ أيّهما إلى ما بعد ترطيب React يعني وميضاً: ترسم الصفحة
+ * بشكلٍ ثم تقفز إلى آخر في كل تنقّل.
+ *
+ * وقرار الأدمن أعلى من تفضيل الزائر: حين يفرض وضعاً أو يمنع اختيار
+ * الشكل نتجاهل المحفوظ في المتصفح تماماً، وإلا ظهر الموقع لزوّار
+ * سابقين بغير ما يريد صاحبه.
  */
-export function colorModeScript(mode: ColorModeSetting): string {
-  if (mode === 'light' || mode === 'dark') {
-    return `document.documentElement.dataset.theme='${mode}';`;
-  }
+export function appearanceScript(appearance: Appearance): string {
+  const mode =
+    appearance.mode === 'auto'
+      ? `(function(){var s=localStorage.getItem('pk-color-mode');
+           return s==='dark'||s==='light' ? s
+             : (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');})()`
+      : `'${appearance.mode}'`;
+
+  const surface = appearance.visitorChoice
+    ? `(function(){var s=localStorage.getItem('pk-surface');
+         return s==='glass'||s==='classic' ? s : '${appearance.surface}';})()`
+    : `'${appearance.surface}'`;
 
   return `
 (function(){
+  var r = document.documentElement;
   try {
-    var saved = localStorage.getItem('pk-color-mode');
-    document.documentElement.dataset.theme =
-      saved === 'dark' || saved === 'light'
-        ? saved
-        : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    r.dataset.theme = ${mode};
+    r.dataset.surface = ${surface};
   } catch (e) {
-    document.documentElement.dataset.theme = 'light';
+    r.dataset.theme = 'light';
+    r.dataset.surface = '${appearance.surface}';
   }
 })();`.trim();
 }

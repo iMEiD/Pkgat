@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 
 import { googleFontsHref } from '@/lib/design/fonts';
-import { appearanceToCssVars, colorModeScript } from '@/lib/design/appearance';
+import { appearanceScript, appearanceToCssVars } from '@/lib/design/appearance';
 import { themeToCssVars } from '@/lib/design/theme';
 import { getAppearance, getTheme } from '@/lib/cms';
 import './globals.css';
@@ -66,10 +66,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
        */
       data-surface={appearance.surface}
       /*
-       * حين يفرض الأدمن وضعاً نُعلمه هنا، فيُخفي زر الشمس/القمر نفسه.
-       * وزرٌ يظهر ولا يغيّر شيئاً أسوأ من غيابه.
+       * حين يفرض الأدمن وضعاً، أو يمنع اختيار الشكل، نُعلمه هنا فيُخفي
+       * الزرّ المعنيّ نفسه. وزرٌ يظهر ولا يغيّر شيئاً أسوأ من غيابه.
        */
       data-mode-locked={appearance.mode === 'auto' ? undefined : ''}
+      data-surface-locked={appearance.visitorChoice ? undefined : ''}
       suppressHydrationWarning
     >
       <head>
@@ -81,7 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
 
         {/* يضبط الوضع قبل أول رسم — بدونه تومض الصفحة فاتحة ثم تسودّ */}
-        <script dangerouslySetInnerHTML={{ __html: colorModeScript(appearance.mode) }} />
+        <script dangerouslySetInnerHTML={{ __html: appearanceScript(appearance) }} />
         {/*
           الخطوط تُحمَّل هنا وليس عبر next/font لأن نفس العائلات تُستخدم
           في الرسم على الكانفس، ونحتاج أسماء عائلات ثابتة نمررها إلى

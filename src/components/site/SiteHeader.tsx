@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Logo } from '@/components/ui/Logo';
 import { ButtonLink } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { SurfaceToggle } from '@/components/ui/SurfaceToggle';
 import { Icon } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils/cn';
 
@@ -89,6 +90,7 @@ export function SiteHeader({
               <Icon name="instagram" className="h-5 w-5" />
             </a>
           )}
+          <SurfaceToggle />
           <ThemeToggle />
           {signedIn ? (
             <ButtonLink href="/dashboard" size="sm">
@@ -107,6 +109,7 @@ export function SiteHeader({
         </div>
 
         <div className="flex items-center gap-1 md:hidden">
+          <SurfaceToggle />
           <ThemeToggle />
           <button
           type="button"

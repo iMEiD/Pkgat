@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Logo } from '@/components/ui/Logo';
 import { Icon } from '@/components/ui/Icon';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { SurfaceToggle } from '@/components/ui/SurfaceToggle';
 import { cn } from '@/lib/utils/cn';
 
 export interface NavItem {
@@ -39,8 +40,8 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen">
-      <header className="pk-chrome pk-panel-bar sticky top-0 z-40 border-b border-sand-200 bg-canvas/90 backdrop-blur-md">
-        <div className="mx-auto flex h-[68px] max-w-7xl items-center gap-4 px-4 sm:px-6">
+      <header className="pk-chrome pk-bar pk-panel-bar sticky top-0 z-40 border-b border-sand-200 bg-canvas/90 backdrop-blur-md">
+        <div className="pk-bar-inner mx-auto flex h-[68px] max-w-7xl items-center gap-4 px-4 sm:px-6">
           <Logo href="/dashboard" showTagline={false} />
 
           {contextTitle && (
@@ -81,6 +82,7 @@ export function DashboardShell({
             <span className="max-w-[160px] truncate text-sm font-semibold text-ink-soft">
               {userName}
             </span>
+            <SurfaceToggle className="h-9 w-9" />
             <ThemeToggle className="h-9 w-9" />
             <form action="/api/auth/signout" method="post">
               <button
@@ -99,6 +101,7 @@ export function DashboardShell({
             لا يجد الزر أصلاً. وهذه النسخة تظهر تحت ٦٤٠ فقط، فلا يتكرّر
             الزرّان في أي مقاس.
           */}
+          <SurfaceToggle className="h-9 w-9 sm:hidden" />
           <ThemeToggle className="h-9 w-9 sm:hidden" />
 
           <button
@@ -173,7 +176,12 @@ export function DashboardShell({
 
       <div className="pk-shell mx-auto flex max-w-7xl gap-8 px-4 py-8 sm:px-6">
         <aside className="pk-chrome hidden w-56 shrink-0 lg:block">
-          <nav className="sticky top-[92px] space-y-1">
+          {/*
+            في الشكل العصري يصير الشريط الجانبي لوحاً عائماً مستقلاً —
+            كالمرساة الجانبية في المراجع — لا قائمةً سائبة على الخلفية.
+            و pk-rail يحمل الحشو والاستدارة، فلا أثر له في الكلاسيكي.
+          */}
+          <nav className="pk-rail sticky top-[92px] space-y-1">
             {nav.map((item) => (
               <Link
                 key={item.href}

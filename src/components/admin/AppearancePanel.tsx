@@ -54,7 +54,8 @@ export function AppearancePanel({ initial }: { initial: Appearance }) {
   const dirty =
     value.mode !== initial.mode ||
     value.surface !== initial.surface ||
-    value.glass !== initial.glass;
+    value.glass !== initial.glass ||
+    value.visitorChoice !== initial.visitorChoice;
 
   /**
    * معاينة حيّة على لوحة الأدمن نفسها.
@@ -131,6 +132,33 @@ export function AppearancePanel({ initial }: { initial: Appearance }) {
             setValue((s) => ({ ...s, surface: v }));
           }}
         />
+
+        {/*
+          الشكل ذوقٌ لا صواب: ما يراه أحدهم «عصرياً» يراه آخر مشوّشاً.
+          فيضبط الأدمن ما يبدأ به الزائر، ويبقى للزائر أن يبدّل — إلا
+          أن يُطفأ هذا الخيار، فيختفي الزر عن الجميع ويثبت شكل واحد.
+        */}
+        <label className="flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-sand-200 p-3 transition-colors hover:border-sand-400">
+          <input
+            type="checkbox"
+            checked={value.visitorChoice}
+            onChange={(e) => {
+              setSaved(false);
+              setValue((s) => ({ ...s, visitorChoice: e.target.checked }));
+            }}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-grape-500"
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-ink">
+              خلّي المستخدم يختار الثيم بنفسه
+            </span>
+            <span className="mt-1 block text-xs leading-6 text-ink-faint">
+              يظهر زر «عصري / كلاسيكي» في ترويسة الموقع ولوحة التحكم، واختياره يُحفظ في
+              متصفحه. واللي تختاره أنت فوق يبقى الافتراضي لمن ما بدّل. ولو أطفيته اختفى
+              الزر عن الجميع وثبت شكل واحد.
+            </span>
+          </span>
+        </label>
 
         {value.surface === 'glass' && (
           <div>
