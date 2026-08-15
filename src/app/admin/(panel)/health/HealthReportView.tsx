@@ -7,9 +7,10 @@ import { Alert } from '@/components/ui/Alert';
 import { fetchMigrationSql } from '@/lib/actions/health';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { Card, CardBody } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { arabicDigits } from '@/lib/utils/format';
+import { cn } from '@/lib/utils/cn';
 import type { CheckState, MigrationStatus } from '@/lib/db-health';
 
 export interface MigrationView extends MigrationStatus {
@@ -114,6 +115,46 @@ export function HealthReportView({
         </Alert>
       )}
 
+      {/*
+        فهرس الترحيلات.
+
+        اثنتان وعشرون بطاقة على شاشة جوال تعني أن السؤال «هل وصل ٠٠٢٧؟»
+        يحتاج تمريراً طويلاً وعدّاً بالعين — ومن لم يجده بسرعة استنتج
+        أنه غير موجود، وهو موجود. فنضع أرقامها كلها في شاشة واحدة، كل
+        رقم بلونه، وضغطه ينزل إلى بطاقته.
+      */}
+      <Card>
+        <CardBody className="p-4 sm:p-5">
+          <p className="mb-3 text-sm font-bold text-ink">كل التحديثات على شاشة واحدة</p>
+          <div className="flex flex-wrap gap-1.5">
+            {migrations.map((m) => {
+              const num = m.file.slice(0, 4);
+              return (
+                <a
+                  key={m.file}
+                  href={`#mig-${num}`}
+                  title={m.title}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-bold transition-colors',
+                    m.state === 'ok'
+                      ? 'border-mint-100 bg-mint-50 text-mint-600'
+                      : m.state === 'missing'
+                        ? 'border-coral-100 bg-coral-50 text-coral-700'
+                        : 'border-sunny-100 bg-sunny-50 text-sunny-600',
+                  )}
+                >
+                  <StateDot state={m.state} />
+                  <span dir="ltr">{num}</span>
+                </a>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-xs leading-6 text-ink-faint">
+            أخضر = وصل، أحمر = ناقص، أصفر = غير مؤكّد. اضغط أي رقم ينزّلك لبطاقته.
+          </p>
+        </CardBody>
+      </Card>
+
       <div className="space-y-4">
         {migrations.map((m) => (
           <MigrationCard key={m.file} migration={m} />
@@ -151,7 +192,8 @@ function MigrationCard({ migration }: { migration: MigrationView }) {
   }
 
   return (
-    <Card className="overflow-hidden">
+    /* scroll-mt يترك مكاناً للترويسة الثابتة، وإلا اختفى عنوان البطاقة تحتها */
+    <Card id={`mig-${migration.file.slice(0, 4)}`} className="overflow-hidden scroll-mt-24">
       <div className="flex flex-wrap items-start justify-between gap-3 p-5 sm:p-6">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
