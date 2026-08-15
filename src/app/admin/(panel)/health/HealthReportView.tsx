@@ -42,6 +42,18 @@ export function HealthReportView({
   const missing = migrations.filter((m) => m.state === 'missing');
   const unknown = migrations.filter((m) => m.state === 'unknown');
 
+  /*
+   * بصمة النسخة المنشورة.
+   *
+   * «التحديث الفلاني ما يطلع لي» له سببان لا يفرّق بينهما شيء على
+   * الشاشة: إمّا أن النسخة المنشورة أقدم من التحديث فلا تعرفه أصلاً،
+   * وإمّا أنه معروض بالفعل لكنه أخضر فيُقرأ كأنه غير موجود.
+   *
+   * فنطبع آخر تحديث تعرفه هذه النسخة: إن كان أقدم مما تنتظره فالنشر
+   * لم يصل بعد، وإن كان مطابقاً فالبطاقة موجودة بالأسفل — خضراء.
+   */
+  const newest = migrations.length ? migrations[migrations.length - 1].file : null;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -51,6 +63,17 @@ export function HealthReportView({
             كل تحديث على قاعدة البيانات يُنفَّذ بلصق كوده في Supabase. هذه الصفحة تجرّب
             التحديثات فعلياً على قاعدتك — لا تفترض شيئاً — وتقول أيّها وصل وأيّها لم يصل.
           </p>
+          {newest && (
+            <p className="mt-2 text-xs leading-6 text-ink-faint">
+              هذه النسخة من الموقع تعرف{' '}
+              <span className="font-bold text-ink-soft">{arabicDigits(migrations.length)}</span>{' '}
+              تحديثاً، آخرها{' '}
+              <code dir="ltr" className="font-bold text-ink-soft">
+                {newest}
+              </code>
+              . لو تبحث عن تحديث أحدث من هذا فالنشر ما وصل بعد — انتظر دقيقة وأعد الفحص.
+            </p>
+          )}
         </div>
         <Button
           variant="secondary"
@@ -64,7 +87,9 @@ export function HealthReportView({
 
       {allGood ? (
         <Alert tone="success" title="قاعدة البيانات مكتملة">
-          كل التحديثات المطلوبة موجودة. لا يوجد ما تنفّذه.
+          كل التحديثات المطلوبة موجودة. لا يوجد ما تنفّذه — وإذا قيل لك «نفّذ تحديثاً
+          بعينه» فابحث عن بطاقته بالأسفل: ستجدها خضراء، وفيها زر «اعرض الكود» لو أردت
+          التأكد بنفسك. تنفيذه مرة ثانية لا يضر.
         </Alert>
       ) : (
         <Alert
