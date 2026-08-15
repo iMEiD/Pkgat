@@ -8,6 +8,7 @@ import { SocialProof } from '@/components/site/SocialProof';
 import { Faq, type FaqItem } from '@/components/site/Faq';
 import { StickyCta } from '@/components/site/StickyCta';
 import { Reviews } from '@/components/site/Reviews';
+import { BarcodeShowcase } from '@/components/site/BarcodeShowcase';
 import { getPublishedReviews } from '@/lib/data/reviews';
 import { readSocialProof } from '@/lib/site-settings';
 import { cn } from '@/lib/utils/cn';
@@ -108,18 +109,18 @@ export default async function HomePage() {
           <div className="animate-fade-up">
             <span className="inline-flex items-center gap-2 rounded-full border border-sand-300 bg-surface/80 px-4 py-1.5 text-xs font-bold text-grape-600 shadow-soft">
               <Icon name="sparkle" className="h-3.5 w-3.5" />
-              {text(c, 'home.hero.eyebrow', 'دعوات إلكترونية بباركود دخول')}
+              {text(c, 'home.hero.eyebrow', 'باركود دخول لكل مدعو')}
             </span>
 
             <h1 className="mt-5 font-display text-4xl/[1.3] font-bold text-ink pk-balance sm:text-5xl/[1.26] lg:text-6xl/[1.24]">
-              {text(c, 'home.hero.title', 'مناسبتك تبدأ من دعوة… وتنتهي بتقرير')}
+              {text(c, 'home.hero.title', 'دعوتك زي ما هي… وباركود لكل مدعو')}
             </h1>
 
             <p className="mt-5 max-w-xl text-lg leading-9 text-ink-soft">
               {text(
                 c,
                 'home.hero.subtitle',
-                'صمّم دعوتك، ولّد باركود فريد لكل مدعو، وتحكّم بالدخول من جوالك وقت المناسبة — بدون أي تطبيق.',
+                'ارفع دعوتك الجاهزة، ونضيف عليها باركود دخول فريد لكل مدعو باسمه. وعلى الباب تمسحه من جوالك وتعرف مين دخل ومين ما جاء — بدون أي تطبيق.',
               )}
             </p>
 
@@ -129,7 +130,7 @@ export default async function HomePage() {
                 <Icon name="arrow" className="h-4 w-4" />
               </ButtonLink>
               <ButtonLink href="/gallery" variant="secondary" size="lg">
-                {text(c, 'home.hero.secondary_cta', 'شوف أعمالنا')}
+                {text(c, 'home.hero.secondary_cta', 'شوف كيف تشتغل')}
               </ButtonLink>
             </div>
 
@@ -147,13 +148,26 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ===== قبل وبعد: الفكرة في صورة ===== */}
+      <section className="pk-container pb-4 lg:pb-8">
+        <Reveal>
+          <div className="mx-auto max-w-3xl rounded-3xl border border-sand-200 bg-surface/70 p-6 shadow-soft sm:p-8">
+            <p className="mb-6 text-center text-sm leading-7 text-ink-soft">
+              ما نصمّم لك دعوة جديدة — نضيف على دعوتك اللي عندك باركود دخول فريد لكل مدعو،
+              واسمه مطبوع عليها.
+            </p>
+            <BarcodeShowcase />
+          </div>
+        </Reveal>
+      </section>
+
       {/* ===== المميزات ===== */}
       <section className="pk-container py-16 lg:py-24">
         <Reveal>
           <SectionTitle
             center
             eyebrow={text(c, 'home.features.eyebrow', 'المميزات')}
-            title={text(c, 'home.features.title', 'كل اللي تحتاجه في مكان واحد')}
+            title={text(c, 'home.features.title', 'وش تعطيك بكجات؟')}
           />
         </Reveal>
 

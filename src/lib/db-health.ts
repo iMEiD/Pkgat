@@ -579,6 +579,24 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0028 ----
+  migrations.push({
+    file: '0028_positioning_copy.sql',
+    title: 'رسالة الموقع: باركود لدعوتك',
+    breaks:
+      'الصفحة الرئيسية تقول «صمّم دعوتك» — فيقيسك الزائر بأدوات التصميم ويفوته ' +
+      'أن قيمة المنصة في الباركود على دعوته هو.',
+    checks: await Promise.all([
+      probeContentValue(
+        sb,
+        'home.hero.title',
+        'دعوتك زي ما هي… وباركود لكل مدعو',
+        'عنوان الصفحة الرئيسية محدَّث',
+      ),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {
