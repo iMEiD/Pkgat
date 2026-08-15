@@ -116,6 +116,10 @@ export type EventRow = {
   // مناسبة تجريبية مزروعة تلقائياً للتعرّف على المنصة
   is_demo: boolean;
   reminder_sent_at: string | null;
+  /** أكّد صاحبها صحّة بياناتها — قرار صريح لا حالة مستنبطة */
+  setup_confirmed_at: string | null;
+  /** أول مرة حُمّلت فيها الدعوات */
+  invitations_downloaded_at: string | null;
   created_at: string;
   updated_at: string;
 }

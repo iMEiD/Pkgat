@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { markInvitationsDownloaded } from '@/lib/actions/events';
 
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
@@ -21,12 +22,15 @@ export function DownloadInvitations({
   design,
   guests,
   eventTitle,
+  eventId,
   disabled,
   disabledReason,
 }: {
   design: DesignConfig;
   guests: GuestState[];
   eventTitle: string;
+  /** يُختم به أول تحميل، فتكتمل الخطوة الأخيرة في صفحة المناسبة */
+  eventId?: string;
   disabled?: boolean;
   disabledReason?: string;
 }) {
@@ -62,6 +66,10 @@ export function DownloadInvitations({
         setProgress(Math.round(meta.percent)),
       );
       triggerDownload(archive, `${sanitize(eventTitle)}-الدعوات.zip`);
+
+      // الختم بعد نجاح التوليد لا قبله: خطوة «حمّل الدعوات» تكتمل بما
+      // تمّ فعلاً. وفشل الختم لا يُفشل التحميل — الملف بيد المستخدم أصلاً
+      if (eventId) void markInvitationsDownloaded(eventId);
     } catch {
       setError('تعذّر توليد الملف المضغوط. جرّب عدداً أقل أو أعد المحاولة.');
     } finally {

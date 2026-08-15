@@ -565,6 +565,20 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0027 ----
+  migrations.push({
+    file: '0027_setup_confirmation.sql',
+    title: 'تأكيد التجهيز وختم تحميل الدعوات',
+    breaks:
+      'خطوة «أتمم التجهيز» تبقى ناقصة أبداً مهما ضغط المستخدم حفظ، وخطوة تحميل الدعوات ' +
+      'لا تكتمل — فتقف الخطوات عند الثالثة ولا تتقدّم.',
+    checks: await Promise.all([
+      probeColumn(sb, 'events', 'setup_confirmed_at', 'تأكيد صاحب المناسبة لبياناتها'),
+      probeColumn(sb, 'events', 'invitations_downloaded_at', 'ختم أول تحميل للدعوات'),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {

@@ -182,6 +182,7 @@ export function GuestsManager({
           />
           <CardBody>
             <DownloadInvitations
+              eventId={event.id}
               design={event.design}
               guests={guests}
               eventTitle={event.title}

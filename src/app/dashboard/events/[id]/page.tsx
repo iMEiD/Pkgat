@@ -46,7 +46,8 @@ export default async function EventOverview({ params }: { params: Promise<{ id: 
    * توقيت المناسبة وموقعها قبل أن يوزّع دعواتٍ لا رجعة فيها. وبعدها
    * التحميل والتوزيع — آخر ما يُفعل لأنه أول ما لا يُتراجَع عنه.
    */
-  const settingsDone = Boolean(event.venue) && hasDesign && counts.total > 0 && scanners > 0;
+  const confirmed = Boolean(event.setup_confirmed_at);
+  const downloaded = Boolean(event.invitations_downloaded_at);
 
   const steps: EventStep[] = [
     {
@@ -78,19 +79,19 @@ export default async function EventOverview({ params }: { params: Promise<{ id: 
     },
     {
       label: 'أتمم التجهيز',
-      hint: settingsDone
-        ? 'الموقع والتوقيت مضبوطان'
-        : 'راجع الموقع والتوقيت قبل ما توزّع الدعوات',
-      done: settingsDone,
+      hint: confirmed
+        ? 'راجعت البيانات وأكّدتها'
+        : 'اقرأ بيانات المناسبة قراءة أخيرة وأكّدها',
+      done: confirmed,
       href: `/dashboard/events/${id}/settings`,
-      cta: 'راجع البيانات',
+      cta: 'راجع وأكّد',
     },
     {
       label: 'حمّل الدعوات ووزّعها',
-      hint: settingsDone
-        ? 'نزّلها صوراً وأرسلها لكل مدعو'
-        : 'تُفتح بعد ما تكمل الخطوات السابقة',
-      done: false,
+      hint: downloaded
+        ? 'حمّلت الدعوات — وزّعها على مدعويك'
+        : 'نزّلها صوراً وأرسلها لكل مدعو',
+      done: downloaded,
       href: `/dashboard/events/${id}/guests`,
       cta: 'حمّل الدعوات',
     },

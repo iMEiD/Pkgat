@@ -2890,6 +2890,31 @@ $$;
 do $$ begin
   grant execute on function public.ended_blocks_scanning() to anon, authenticated;
 exception when undefined_object then null; end $$;`,
+  '0027_setup_confirmation.sql': `-- =============================================================
+-- 0027 — تأكيد تجهيز المناسبة وتحميل الدعوات
+--
+-- خطوة «أتمم التجهيز» كانت تُحسب مكتملةً باستنتاج: موقع مكتوب وتصميم
+-- ومدعوون وحسابات مسح. ومن ترك خانة الموقع فارغة تبقى الخطوة ناقصة
+-- أبداً — يفتح صفحة البيانات، يضغط حفظ، ويرجع فلا يتغيّر شيء. فيقف
+-- بلا مخرج، وهو ما وقع فعلاً.
+--
+-- والاستنتاج خطأ في أصله: «إتمام التجهيز» ليس حالةً تُستنبط من الحقول،
+-- بل قرارٌ يتخذه صاحب المناسبة — راجعتُ بياناتي وأقررت أنها صحيحة.
+-- فيلزمه فعل صريح يُسجَّل، لا تخمين.
+--
+-- وتحميل الدعوات كذلك: الخطوة الأخيرة تكتمل حين يُحمّل فعلاً لا حين
+-- نظن أنه حمّل.
+-- =============================================================
+
+alter table public.events
+  add column if not exists setup_confirmed_at     timestamptz,
+  add column if not exists invitations_downloaded_at timestamptz;
+
+comment on column public.events.setup_confirmed_at is
+  'أكّد صاحب المناسبة صحّة بياناتها — قرار صريح لا حالة مستنبطة من الحقول';
+
+comment on column public.events.invitations_downloaded_at is
+  'أول مرة حُمّلت فيها الدعوات — به تكتمل الخطوة الأخيرة';`,
 };
 
 /** نص ترحيل بعينه، أو null إن لم يكن مضمّناً */

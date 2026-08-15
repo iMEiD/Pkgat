@@ -273,3 +273,49 @@ export async function deleteEvent(eventId: string): Promise<ActionResult> {
   revalidatePath('/dashboard');
   redirect('/dashboard');
 }
+
+/**
+ * تأكيد صحّة بيانات المناسبة — الخطوة الرابعة.
+ *
+ * فعل صريح لا استنتاج: كانت الخطوة تُحسب مكتملة إن امتلأت حقول بعينها،
+ * فمن ترك الموقع فارغاً تبقى ناقصة أبداً مهما ضغط «حفظ». وهي أصلاً
+ * قرارٌ لا حالة — «راجعت بياناتي وأقررت أنها صحيحة».
+ */
+export async function confirmEventSetup(eventId: string): Promise<ActionResult> {
+  await requireUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('events')
+    .update({ setup_confirmed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', eventId);
+
+  if (error) return { ok: false, error: 'تعذّر تأكيد البيانات.' };
+
+  revalidatePath(`/dashboard/events/${eventId}`);
+  revalidatePath(`/dashboard/events/${eventId}/settings`);
+  return { ok: true };
+}
+
+/** يُختم أول تحميل للدعوات — به تكتمل الخطوة الأخيرة */
+export async function markInvitationsDownloaded(eventId: string): Promise<ActionResult> {
+  await requireUser();
+  const supabase = await createClient();
+
+  const { data: event } = await supabase
+    .from('events')
+    .select('invitations_downloaded_at')
+    .eq('id', eventId)
+    .maybeSingle();
+
+  // الختم للمرة الأولى فقط: تاريخ أول توزيع أنفع من تاريخ آخر تحميل
+  if (event?.invitations_downloaded_at) return { ok: true };
+
+  await supabase
+    .from('events')
+    .update({ invitations_downloaded_at: new Date().toISOString() })
+    .eq('id', eventId);
+
+  revalidatePath(`/dashboard/events/${eventId}`);
+  return { ok: true };
+}

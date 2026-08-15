@@ -63,7 +63,13 @@ export function DesignEditor({
   const router = useRouter();
   const [design, setDesign] = useState<DesignConfig>(() => mergeDesign(event.design));
   const [templateId, setTemplateId] = useState<string | null>(event.template_id);
-  const [mode, setMode] = useState<Mode>(design.source === 'upload' ? 'upload' : 'template');
+  /*
+   * الافتراضي «ارفع دعوتي» لمن لم يبدأ بعد: هو الطريق الأصلي للمنصة.
+   * ومن اختار قالباً سابقاً يعود إلى قالبه لا إلى الرفع.
+   */
+  const [mode, setMode] = useState<Mode>(
+    design.source === 'template' && design.backgroundUrl ? 'template' : 'upload',
+  );
   const [selected, setSelected] = useState<DragTarget>('name');
   const [saved, setSaved] = useState(false);
   // وضع الإضافة الحرّة: الضغطة التالية على التصميم تضع نصاً في موضعها
@@ -283,13 +289,24 @@ export function DesignEditor({
       <div className="min-w-0 space-y-5 lg:order-1">
         {/* اختيار مصدر التصميم */}
         <Card>
-          <CardHeader title="خلفية الدعوة" description="اختر قالباً جاهزاً أو ارفع تصميمك الخاص." />
+          {/*
+            دعوتك أولاً.
+
+            المنصة تضيف باركود دخول فريد إلى دعوة جاهزة عند صاحبها —
+            هذي قيمتها. والقوالب مخرجٌ لمن لا دعوة عنده، لا الطريق
+            الأصلي. وتقديم «قوالب جاهزة» كان يوحي بعكس ذلك: أن عليه أن
+            يصمّم دعوته هنا من الصفر.
+          */}
+          <CardHeader
+            title="دعوتك"
+            description="ارفع تصميم دعوتك الجاهز ونضيف عليه الباركود — أو ابدأ من قالب لو ما عندك تصميم."
+          />
           <CardBody>
             <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl bg-sand-100 p-1.5">
               {(
                 [
-                  { key: 'template', label: 'قوالب جاهزة', icon: 'palette' },
-                  { key: 'upload', label: 'تصميمي الخاص', icon: 'upload' },
+                  { key: 'upload', label: 'ارفع دعوتي', icon: 'upload' },
+                  { key: 'template', label: 'ابدأ من قالب', icon: 'palette' },
                 ] as const
               ).map((tab) => (
                 <button
