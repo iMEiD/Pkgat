@@ -151,6 +151,14 @@
   --pk-panel-lit: rgb(255 255 255 / 0.10);
   --pk-panel-bg: rgb(255 255 255 / 0.055);
   --pk-panel-shadow: 0 20px 60px rgb(0 0 0 / 0.42);
+  /*
+   * تعبئة أقوى لما يطفو فوق النص: الشريط والقائمة والنافذة المنبثقة.
+   *
+   * البطاقة تجلس على خلفية الصفحة، فتكفيها تعبئة خفيفة. أمّا ما يطفو
+   * فوق فقرة مكتوبة فالضباب وحده لا يكفي: الحروف تبقى مقروءة خلفه
+   * فتشتبك مع حروف اللوح. والمطلوب أن يصير ما خلفه نسيجاً لا نصاً.
+   */
+  --pk-panel-bg-strong: rgb(14 11 20 / 0.74);
 }
 
 /* في النهار ينقلب الزجاج: ألواح بيضاء مصنفرة فوق وشاح ملوّن */
@@ -159,6 +167,7 @@
   --pk-panel-edge: rgb(255 255 255 / 0.85);
   --pk-panel-lit: rgb(255 255 255 / 0.95);
   --pk-panel-shadow: 0 18px 46px rgb(60 40 120 / 0.13);
+  --pk-panel-bg-strong: rgb(255 255 255 / 0.86);
 }
 
 /*
@@ -199,7 +208,10 @@
  * القالب فيصعب إطفاؤه، والقاعدة هنا تُطفأ بسمة واحدة.
  */
 :root[data-surface='glass'] .pk-panel,
-:root[data-surface='glass'] .pk-panel-bar {
+:root[data-surface='glass'] .pk-panel-bar,
+:root[data-surface='glass'] .pk-panel-menu,
+:root[data-surface='glass'] .pk-panel-over,
+:root[data-surface='glass'] .pk-bar-inner {
   background-color: var(--pk-panel-bg);
   border-color: var(--pk-panel-edge);
   -webkit-backdrop-filter: blur(var(--pk-glass-blur, 22px)) saturate(150%);
@@ -208,12 +220,70 @@
 }
 
 /*
+ * الشريط العلوي لوحاً عائماً لا خطّاً عبر الشاشة.
+ *
+ * هذا ما تفعله المراجع كلها: الشريط بطاقة مستديرة تطفو فوق المحتوى
+ * وله هوامش من الجوانب، لا شريطٌ ملتصق بالحواف يقسم الشاشة بخط. فتُجرَّد
+ * الترويسة من خلفيتها وحدّها وظلّها، وتنتقل كلها إلى غلافها الداخلي.
+ */
+:root[data-surface='glass'] .pk-bar,
+:root[data-surface='glass'] .pk-bar.pk-bar-on {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  padding-top: 10px;
+}
+
+/* ما يطفو فوق النص يأخذ التعبئة الأقوى */
+:root[data-surface='glass'] .pk-bar-inner,
+:root[data-surface='glass'] .pk-panel-menu,
+:root[data-surface='glass'] .pk-panel-over,
+:root[data-surface='glass'] .pk-panel-bar {
+  background-color: var(--pk-panel-bg-strong);
+}
+
+:root[data-surface='glass'] .pk-bar-inner {
+  border: 1px solid var(--pk-panel-edge);
+  border-radius: 18px;
+  /* الحاوية تفرض عرضاً وهوامش؛ نُبقيها ونضيف الحشو الداخلي فقط */
+  padding-inline: 16px;
+  height: 62px;
+}
+
+/*
+ * القائمة المنسدلة: لوحٌ منفصل تحت الشريط لا امتداد له.
+ *
+ * وكانت ٩٥٪ عتامة، أي مصمتة عملياً — فما كان يظهر خلفها شيء، وهو
+ * عكس المقصود بالزجاج: أن تبقى الصفحة حاضرة خلف القائمة.
+ */
+:root[data-surface='glass'] .pk-panel-menu {
+  border: 1px solid var(--pk-panel-edge);
+  border-radius: 18px;
+  margin: 8px 16px 12px;
+}
+
+/*
+ * ظلّ الخلفية خلف النافذة المنبثقة: أخفّ مع الزجاج.
+ *
+ * الطبقة المعتمة مصمّمة لتفصل نافذةً مصمتة عن الصفحة. ومع الزجاج
+ * تصير طبقتين من التعتيم فوق بعض، فيسودّ المشهد وتضيع الشفافية.
+ */
+:root[data-surface='glass'] .pk-scrim {
+  background-color: rgb(10 8 14 / 0.45);
+}
+
+/*
  * الضباب أثقل عملية رسم على الجوال، ولوحة فيها عشر بطاقات مضبّبة
  * تُحسّ ثقيلة عند التمرير. فننزل درجة على الشاشات الصغيرة.
  */
 @media (max-width: 767px) {
   :root[data-surface='glass'] .pk-panel,
-  :root[data-surface='glass'] .pk-panel-bar {
+  :root[data-surface='glass'] .pk-panel-bar,
+  :root[data-surface='glass'] .pk-panel-menu,
+  :root[data-surface='glass'] .pk-panel-over,
+  :root[data-surface='glass'] .pk-bar-inner {
     -webkit-backdrop-filter: blur(var(--pk-glass-blur-sm, 15px)) saturate(140%);
     backdrop-filter: blur(var(--pk-glass-blur-sm, 15px)) saturate(140%);
   }
@@ -222,7 +292,10 @@
 /* من يطلب تقليل الحركة والتأثيرات يُعطى واجهة مصمتة بلا ضباب */
 @media (prefers-reduced-transparency: reduce) {
   :root[data-surface='glass'] .pk-panel,
-  :root[data-surface='glass'] .pk-panel-bar {
+  :root[data-surface='glass'] .pk-panel-bar,
+  :root[data-surface='glass'] .pk-panel-menu,
+  :root[data-surface='glass'] .pk-panel-over,
+  :root[data-surface='glass'] .pk-bar-inner {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background-color: rgb(var(--pk-surface) / 0.96);

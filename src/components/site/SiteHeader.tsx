@@ -41,15 +41,18 @@ export function SiteHeader({
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 transition-all duration-300',
-        // الخطّاف عند التمرير فقط: الترويسة قبله شفافة تماماً، ولوحٌ
-        // زجاجي فوق قمة الصفحة يقطعها بخطٍّ بلا داعٍ
+        'pk-bar sticky top-0 z-40 transition-all duration-300',
         scrolled
-          ? 'pk-panel-bar border-b border-sand-200 bg-canvas/85 backdrop-blur-md shadow-soft'
+          ? 'pk-bar-on border-b border-sand-200 bg-canvas/85 backdrop-blur-md shadow-soft'
           : 'border-b border-transparent bg-transparent',
       )}
     >
-      <div className="pk-container flex h-[72px] items-center justify-between gap-4">
+      {/*
+        pk-bar-inner: في الشكل الزجاجي يصير هذا الغلاف لوحاً عائماً
+        بحوافّ مستديرة (كما في المراجع)، وتتخلّى الترويسة نفسها عن
+        خلفيتها وحدّها. وفي الكلاسيكي لا أثر له إطلاقاً.
+      */}
+      <div className="pk-bar-inner pk-container flex h-[72px] items-center justify-between gap-4">
         <Logo />
 
         <nav className="hidden items-center gap-1 md:flex">
@@ -119,8 +122,13 @@ export function SiteHeader({
         </div>
       </div>
 
+      {/*
+        القائمة كانت ٩٥٪ عتامة — أي مصمتة عملياً. وخطّاف pk-panel-menu
+        يجعلها لوحاً شفافاً تبين الصفحة خلفه في الشكل الزجاجي، ويتركها
+        كما هي في الكلاسيكي.
+      */}
       {open && (
-        <div className="border-t border-sand-200 bg-canvas/95 backdrop-blur-md md:hidden">
+        <div className="pk-panel-menu border-t border-sand-200 bg-canvas/95 backdrop-blur-md md:hidden">
           <nav className="pk-container flex flex-col gap-1 py-4">
             {NAV.map((item) => (
               <Link

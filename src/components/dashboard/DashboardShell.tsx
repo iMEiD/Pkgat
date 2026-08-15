@@ -106,7 +106,7 @@ export function DashboardShell({
         </div>
 
         {menuOpen && (
-          <nav className="border-t border-sand-200 bg-canvas px-4 py-3 lg:hidden">
+          <nav className="pk-panel-menu border-t border-sand-200 bg-canvas px-4 py-3 lg:hidden">
             {nav.map((item) => (
               <Link
                 key={item.href}
