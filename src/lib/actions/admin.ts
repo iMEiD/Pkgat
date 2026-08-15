@@ -11,6 +11,7 @@ import type { ActionResult } from '@/lib/actions/events';
 import type { DesignConfig, DiscountCode } from '@/lib/types/database';
 import type { Profile } from '@/lib/types/database';
 import { isValidHex, normalizeHex, type Theme } from '@/lib/design/theme';
+import { parseAppearance, type Appearance } from '@/lib/design/appearance';
 
 const ISSUER = 'PKGAT';
 
@@ -812,6 +813,38 @@ export async function saveTheme(theme: Theme): Promise<ActionResult> {
 
   await logAdminAction('theme.updated', 'site_settings', null, { ...clean });
   // الألوان تُحقن في التخطيط الجذري، فنُحدّث كل الصفحات
+  revalidatePath('/', 'layout');
+  return { ok: true };
+}
+
+/**
+ * يحفظ مظهر الموقع: الوضع الليلي والشكل الزجاجي.
+ *
+ * نمرّ بـ parseAppearance ولا نثق بما وصل: القيم محصورة في قوائم
+ * معلومة، وأي قيمة غريبة ترتدّ إلى الافتراضي بدل أن تُكتب في السمة
+ * data-surface على عنصر html.
+ */
+export async function saveAppearance(appearance: Appearance): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const clean = parseAppearance(appearance);
+
+  const { error } = await supabase
+    .from('site_settings')
+    .upsert(
+      {
+        key: 'appearance',
+        value: clean,
+        label: 'مظهر الموقع (الوضع الليلي والشكل الزجاجي)',
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' },
+    );
+
+  if (error) return { ok: false, error: 'تعذّر حفظ المظهر.' };
+
+  await logAdminAction('appearance.updated', 'site_settings', null, { ...clean });
   revalidatePath('/', 'layout');
   return { ok: true };
 }

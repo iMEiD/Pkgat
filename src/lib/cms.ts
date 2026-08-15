@@ -1,4 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
+import {
+  DEFAULT_APPEARANCE,
+  parseAppearance,
+  type Appearance,
+} from '@/lib/design/appearance';
 import { DEFAULT_THEME, parseTheme, type Theme } from '@/lib/design/theme';
 
 export type ContentMap = Record<string, unknown>;
@@ -62,6 +67,27 @@ export async function getTheme(): Promise<Theme> {
     return parseTheme(data?.value);
   } catch {
     return DEFAULT_THEME;
+  }
+}
+
+/**
+ * مظهر الموقع كما ضبطه الأدمن — أو الافتراضي.
+ *
+ * والافتراضي هنا هو حال الموقع اليوم بالضبط، فالفشل في القراءة (قبل
+ * تنفيذ الترحيل مثلاً) يُبقي الموقع كما هو ولا يقلبه.
+ */
+export async function getAppearance(): Promise<Appearance> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'appearance')
+      .maybeSingle();
+
+    return parseAppearance(data?.value);
+  } catch {
+    return DEFAULT_APPEARANCE;
   }
 }
 

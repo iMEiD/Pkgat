@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 
 import { googleFontsHref } from '@/lib/design/fonts';
+import { appearanceToCssVars, colorModeScript } from '@/lib/design/appearance';
 import { themeToCssVars } from '@/lib/design/theme';
-import { colorModeScript } from '@/components/ui/ThemeToggle';
-import { getTheme } from '@/lib/cms';
+import { getAppearance, getTheme } from '@/lib/cms';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -51,20 +51,37 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // ألوان الهوية تُقرأ من قاعدة البيانات وتُحقن كمتغيرات CSS، فتغييرها من
-  // لوحة الأدمن ينعكس على كل صفحات الموقع بدون إعادة بناء.
-  const theme = await getTheme();
+  // ألوان الهوية والمظهر يُقرآن من قاعدة البيانات ويُحقنان كمتغيرات CSS،
+  // فتغييرهما من لوحة الأدمن ينعكس على كل صفحات الموقع بدون إعادة بناء.
+  const [theme, appearance] = await Promise.all([getTheme(), getAppearance()]);
 
   return (
-    <html lang="ar" dir="rtl" suppressHydrationWarning>
+    <html
+      lang="ar"
+      dir="rtl"
+      /*
+       * سمة الأسطح على العنصر الجذري لا على الجسم: الترويسة الثابتة
+       * والنوافذ المنبثقة تُرسم خارج شجرة الصفحة أحياناً، فوضعها هنا
+       * يضمن أن يصلها الشكل نفسه.
+       */
+      data-surface={appearance.surface}
+      /*
+       * حين يفرض الأدمن وضعاً نُعلمه هنا، فيُخفي زر الشمس/القمر نفسه.
+       * وزرٌ يظهر ولا يغيّر شيئاً أسوأ من غيابه.
+       */
+      data-mode-locked={appearance.mode === 'auto' ? undefined : ''}
+      suppressHydrationWarning
+    >
       <head>
         <style
           id="pk-theme"
-          dangerouslySetInnerHTML={{ __html: themeToCssVars(theme) }}
+          dangerouslySetInnerHTML={{
+            __html: themeToCssVars(theme) + appearanceToCssVars(appearance),
+          }}
         />
 
         {/* يضبط الوضع قبل أول رسم — بدونه تومض الصفحة فاتحة ثم تسودّ */}
-        <script dangerouslySetInnerHTML={{ __html: colorModeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: colorModeScript(appearance.mode) }} />
         {/*
           الخطوط تُحمَّل هنا وليس عبر next/font لأن نفس العائلات تُستخدم
           في الرسم على الكانفس، ونحتاج أسماء عائلات ثابتة نمررها إلى

@@ -10,7 +10,7 @@ const NAV: NavItem[] = [
   { href: '/admin/events', label: 'المناسبات', icon: 'calendar' },
   { href: '/admin/users', label: 'المستخدمون', icon: 'users' },
   { href: '/admin/content', label: 'محتوى الموقع', icon: 'edit' },
-  { href: '/admin/theme', label: 'الألوان والهوية', icon: 'palette' },
+  { href: '/admin/theme', label: 'الألوان والمظهر', icon: 'palette' },
   { href: '/admin/templates', label: 'القوالب الجاهزة', icon: 'sparkle' },
   { href: '/admin/fonts', label: 'الخطوط', icon: 'edit' },
   { href: '/admin/gallery', label: 'معرض الأعمال', icon: 'upload' },

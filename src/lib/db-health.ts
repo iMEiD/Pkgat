@@ -597,6 +597,19 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0029 ----
+  migrations.push({
+    file: '0029_appearance.sql',
+    title: 'مظهر الموقع بيد الأدمن',
+    breaks:
+      'قسم «المظهر» في صفحة الألوان يفتح لكنه لا يحفظ شيئاً: الوضع الليلي يبقى ' +
+      'بيد الزائر وحده، ومفتاح الشكل الزجاجي بلا أثر مهما ضغطته.',
+    checks: await Promise.all([
+      probeKeyRow(sb, 'site_settings', 'appearance', 'إعداد المظهر مسجَّل'),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {

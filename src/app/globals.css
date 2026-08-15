@@ -131,6 +131,109 @@
 /* حدود التنبيهات الملوّنة تستخدم الدرجة ٥٠ أحياناً */
 :root[data-theme='dark'] .border-grape-100 { border-color: rgb(var(--pk-primary-500) / var(--pk-tint-border)); }
 
+/* =============================================================
+ * الشكل الزجاجي — طبقة اختيارية فوق الموقع لا بديل عنه.
+ *
+ * كل قاعدة هنا مشروطة بـ :root[data-surface='glass']. فإطفاء المفتاح
+ * من لوحة الأدمن لا «يستعيد» الشكل القديم، بل يجعل هذه الكتلة كلها
+ * غير منطبقة — والموقع يعود إلى ما كان عليه بالضبط، لأن أنماطه لم
+ * تُمس أصلاً. وهذا شرط تجربة الشكل على موقع حيّ بلا خوف.
+ *
+ * البيج (#E7DAC3) هو لمسة الإبراز: لون sand في هوية بكجات نفسه. وهو
+ * دافئ بلا لمعان — والفرق بينه وبين الذهبي أن الذهبي يلمع فيسحب العين
+ * إلى الإطار، والبيج يهدأ فتبقى العين على الدعوة.
+ * ============================================================= */
+
+:root[data-surface='glass'] {
+  --pk-beige: 231 218 195;
+  /* حافة اللوح: خطّ ضوء رفيع يفصله عمّا خلفه — بدونه يذوب اللوح */
+  --pk-panel-edge: rgb(var(--pk-beige) / 0.18);
+  --pk-panel-lit: rgb(255 255 255 / 0.10);
+  --pk-panel-bg: rgb(255 255 255 / 0.055);
+  --pk-panel-shadow: 0 20px 60px rgb(0 0 0 / 0.42);
+}
+
+/* في النهار ينقلب الزجاج: ألواح بيضاء مصنفرة فوق وشاح ملوّن */
+:root[data-surface='glass'][data-theme='light'] {
+  --pk-panel-bg: rgb(255 255 255 / 0.62);
+  --pk-panel-edge: rgb(255 255 255 / 0.85);
+  --pk-panel-lit: rgb(255 255 255 / 0.95);
+  --pk-panel-shadow: 0 18px 46px rgb(60 40 120 / 0.13);
+}
+
+/*
+ * هالات الضوء خلف كل شيء.
+ *
+ * الزجاج لا يظهر فوق لون مصمت — يضبّب ما خلفه، وخلف الأسود المصمت
+ * لا شيء. فبدون هذه الهالات تخرج الألواح مربعات رمادية ميتة.
+ */
+:root[data-surface='glass'] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(46rem 34rem at 88% -6%, rgb(var(--pk-primary-500) / 0.30), transparent 62%),
+    radial-gradient(30rem 30rem at 6% 34%, rgb(var(--pk-beige) / 0.10), transparent 64%),
+    radial-gradient(50rem 26rem at 20% 96%, rgb(var(--pk-primary-500) / 0.16), transparent 64%);
+}
+
+:root[data-surface='glass'][data-theme='light'] body::before {
+  background-image:
+    radial-gradient(46rem 34rem at 88% -6%, rgb(var(--pk-primary-500) / 0.20), transparent 62%),
+    radial-gradient(30rem 30rem at 6% 34%, rgb(var(--pk-beige) / 0.55), transparent 64%),
+    radial-gradient(50rem 26rem at 20% 96%, rgb(var(--pk-primary-500) / 0.12), transparent 64%);
+}
+
+/* التدرّجات الأصلية على الجسم تتعارك مع الهالات — نُلغيها هنا وحدها */
+:root[data-surface='glass'] body {
+  background-image: none;
+}
+
+/*
+ * الألواح: البطاقات والترويسات.
+ *
+ * pk-panel و pk-panel-bar خطّافان يضعهما مكوّنا Card و SiteHeader.
+ * وضعُ الشكل في CSS لا في أصناف Tailwind مقصود: الصنف يُكتب مرة في
+ * القالب فيصعب إطفاؤه، والقاعدة هنا تُطفأ بسمة واحدة.
+ */
+:root[data-surface='glass'] .pk-panel,
+:root[data-surface='glass'] .pk-panel-bar {
+  background-color: var(--pk-panel-bg);
+  border-color: var(--pk-panel-edge);
+  -webkit-backdrop-filter: blur(var(--pk-glass-blur, 22px)) saturate(150%);
+  backdrop-filter: blur(var(--pk-glass-blur, 22px)) saturate(150%);
+  box-shadow: var(--pk-panel-shadow), inset 0 1px 0 var(--pk-panel-lit);
+}
+
+/*
+ * الضباب أثقل عملية رسم على الجوال، ولوحة فيها عشر بطاقات مضبّبة
+ * تُحسّ ثقيلة عند التمرير. فننزل درجة على الشاشات الصغيرة.
+ */
+@media (max-width: 767px) {
+  :root[data-surface='glass'] .pk-panel,
+  :root[data-surface='glass'] .pk-panel-bar {
+    -webkit-backdrop-filter: blur(var(--pk-glass-blur-sm, 15px)) saturate(140%);
+    backdrop-filter: blur(var(--pk-glass-blur-sm, 15px)) saturate(140%);
+  }
+}
+
+/* من يطلب تقليل الحركة والتأثيرات يُعطى واجهة مصمتة بلا ضباب */
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-surface='glass'] .pk-panel,
+  :root[data-surface='glass'] .pk-panel-bar {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: rgb(var(--pk-surface) / 0.96);
+  }
+}
+
+/* الخطوط الفاصلة والحدود تأخذ مسحة البيج بدل الرمادي الميت */
+:root[data-surface='glass'][data-theme='dark'] .border-sand-200 {
+  border-color: rgb(var(--pk-beige) / 0.14);
+}
+
 @layer base {
 
 

@@ -42,8 +42,10 @@ export function SiteHeader({
     <header
       className={cn(
         'sticky top-0 z-40 transition-all duration-300',
+        // الخطّاف عند التمرير فقط: الترويسة قبله شفافة تماماً، ولوحٌ
+        // زجاجي فوق قمة الصفحة يقطعها بخطٍّ بلا داعٍ
         scrolled
-          ? 'border-b border-sand-200 bg-canvas/85 backdrop-blur-md shadow-soft'
+          ? 'pk-panel-bar border-b border-sand-200 bg-canvas/85 backdrop-blur-md shadow-soft'
           : 'border-b border-transparent bg-transparent',
       )}
     >

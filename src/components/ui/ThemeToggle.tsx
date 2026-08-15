@@ -18,11 +18,16 @@ const STORAGE_KEY = 'pk-color-mode';
  */
 export function ThemeToggle({ className }: { className?: string }) {
   const [mode, setMode] = useState<ColorMode | null>(null);
+  const [locked, setLocked] = useState(false);
 
   useEffect(() => {
-    const current = document.documentElement.dataset.theme;
-    setMode(current === 'dark' ? 'dark' : 'light');
+    const root = document.documentElement;
+    setLocked(root.hasAttribute('data-mode-locked'));
+    setMode(root.dataset.theme === 'dark' ? 'dark' : 'light');
   }, []);
+
+  // الأدمن فرض وضعاً واحداً للموقع — فلا معنى لزرٍّ لا يبدّل شيئاً
+  if (locked) return null;
 
   function toggle() {
     const next: ColorMode = mode === 'dark' ? 'light' : 'dark';
@@ -72,25 +77,10 @@ export function ThemeToggle({ className }: { className?: string }) {
   );
 }
 
-/**
- * سكربت يُحقن في <head> ويعمل قبل رسم الصفحة.
- *
- * الترتيب: اختيار المستخدم المحفوظ، ثم تفضيل نظامه. بدونه ترسم الصفحة
- * بالوضع الفاتح ثم تقفز للداكن بعد ترطيب React — وميض مزعج في كل تنقّل.
+/*
+ * السكربت الذي يضبط الوضع قبل أول رسم انتقل إلى lib/design/appearance.ts،
+ * لأنه صار يعتمد على قرار الأدمن (فرض وضع أم ترك الأمر للزائر).
  */
-export const colorModeScript = `
-(function(){
-  try {
-    var saved = localStorage.getItem('${STORAGE_KEY}');
-    var mode = saved === 'dark' || saved === 'light'
-      ? saved
-      : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.dataset.theme = mode;
-  } catch (e) {
-    document.documentElement.dataset.theme = 'light';
-  }
-})();
-`.trim();
 
 /**
  * نسخة عائمة للصفحات المستقلة التي لا هيكل لها (الحساب الموقوف، تفعيل
