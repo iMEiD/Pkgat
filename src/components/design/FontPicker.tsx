@@ -31,7 +31,9 @@ export function FontPicker({
 }) {
   return (
     <div
-      className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      // w-full مع min-w-0: الحاوية تلتزم بعرض أبيها ولا تتمدّد بمحتواها،
+      // فيبقى التمرير داخلها بدل أن يتجاوز الصفحة كلها
+      className="-mx-1 flex w-full min-w-0 gap-2 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       role="radiogroup"
       aria-label="الخط"
     >
@@ -46,7 +48,8 @@ export function FontPicker({
             aria-checked={on}
             onClick={() => onChange(font.family)}
             className={cn(
-              'shrink-0 rounded-2xl border-2 px-4 py-3 text-center transition-all duration-200',
+              // سقف للعرض: اسم مدعو طويل كان يمدّ البطاقة بلا حد
+              'w-[7.5rem] shrink-0 rounded-2xl border-2 px-3 py-3 text-center transition-all duration-200',
               on
                 ? 'border-grape-500 bg-grape-50'
                 : 'border-sand-200 bg-surface hover:border-sand-400',
@@ -54,7 +57,7 @@ export function FontPicker({
           >
             {/* النموذج بخطّه — وهو الغرض كله */}
             <span
-              className="block whitespace-nowrap text-lg leading-8 text-ink"
+              className="block truncate text-lg leading-8 text-ink"
               style={{ fontFamily: font.family }}
             >
               {sample || 'اسم المدعو'}

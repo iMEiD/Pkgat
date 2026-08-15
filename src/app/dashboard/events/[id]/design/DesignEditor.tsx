@@ -212,7 +212,16 @@ export function DesignEditor({
   return (
     <div className="grid gap-6 pb-24 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:pb-0">
       {/* ===== المعاينة ===== */}
-      <div className="lg:order-2">
+      {/*
+        min-w-0 ضروري لا تجميلي.
+
+        عناصر الشبكة تأخذ min-width: auto افتراضياً، أي أنها ترفض أن
+        تضيق دون عرض محتواها. فيكفي عنصر واحد عريض بالداخل — صفّ خطوط
+        لا يلتفّ مثلاً — ليتمدّد العمود، ويتجاوز عرض الصفحة عرض الشاشة،
+        فيصغّر المتصفح التخطيط كله ليُظهره. النتيجة: الصفحة كاملة تنكمش
+        في شريط ضيّق، وهو ما ظهر على الجوال.
+      */}
+      <div className="min-w-0 lg:order-2">
         <div className="lg:sticky lg:top-[92px]">
           <InvitationPreview
             design={design}
@@ -271,7 +280,7 @@ export function DesignEditor({
       </div>
 
       {/* ===== أدوات التحكم ===== */}
-      <div className="space-y-5 lg:order-1">
+      <div className="min-w-0 space-y-5 lg:order-1">
         {/* اختيار مصدر التصميم */}
         <Card>
           <CardHeader title="خلفية الدعوة" description="اختر قالباً جاهزاً أو ارفع تصميمك الخاص." />

@@ -42,7 +42,7 @@ export function TemplatePicker({
   return (
     <div>
       {visibleCategories.length > 0 && (
-        <div className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1 pk-scrollbar">
+        <div className="-mx-1 mb-4 flex w-full min-w-0 gap-2 overflow-x-auto px-1 pb-1 pk-scrollbar">
           <CategoryChip active={category === 'all'} onClick={() => setCategory('all')}>
             الكل
           </CategoryChip>
