@@ -58,7 +58,7 @@ export default async function GalleryPage() {
         <div className="mt-12 columns-1 gap-5 sm:columns-2 lg:columns-3 [&>*]:mb-5">
           {items.map((item, i) => (
             <Reveal key={item.id} delay={(i % 6) * 70}>
-              <figure className="group relative overflow-hidden rounded-3xl border border-sand-200 bg-surface shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift break-inside-avoid">
+              <figure className="pk-panel group relative overflow-hidden rounded-3xl border border-sand-200 bg-surface shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift break-inside-avoid">
                 <div className="relative aspect-[3/4] w-full overflow-hidden bg-sand-100">
                   <Image
                     src={item.image_url}

@@ -115,7 +115,7 @@ export function SiteHeader({
           aria-expanded={open}
           className="rounded-full p-2 text-ink transition-colors hover:bg-sand-100"
         >
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <svg viewBox="0 0 24 24" className="pk-burger h-6 w-6" data-open={open} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             {open ? <path d="M18 6 6 18M6 6l12 12" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
           </svg>
           </button>
@@ -128,8 +128,8 @@ export function SiteHeader({
         كما هي في الكلاسيكي.
       */}
       {open && (
-        <div className="pk-panel-menu border-t border-sand-200 bg-canvas/95 backdrop-blur-md md:hidden">
-          <nav className="pk-container flex flex-col gap-1 py-4">
+        <div className="pk-panel-menu animate-menu-in border-t border-sand-200 bg-canvas/95 backdrop-blur-md md:hidden">
+          <nav className="pk-menu-stagger pk-container flex flex-col gap-1 py-4">
             {NAV.map((item) => (
               <Link
                 key={item.href}

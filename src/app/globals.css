@@ -302,6 +302,44 @@
   }
 }
 
+/* =====================  حركة القائمة  =====================
+ *
+ * التتابع يُدار من CSS لا من جافاسكربت: العناصر أبناءُ عنصرٍ واحد،
+ * وتأخيرٌ متزايد بـ nth-child أرخص من حالة في React لكل سطر، ولا
+ * يعيد التصيير مرة لكل عنصر.
+ *
+ * وستّة أسطر هو الحدّ: بعده يصير الانتظار محسوساً — والقائمة تُفتح
+ * لتُستعمل بسرعة لا لتُشاهد.
+ */
+.pk-menu-stagger > * {
+  animation: menu-item-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.pk-menu-stagger > *:nth-child(1) { animation-delay: 0.03s; }
+.pk-menu-stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.pk-menu-stagger > *:nth-child(3) { animation-delay: 0.09s; }
+.pk-menu-stagger > *:nth-child(4) { animation-delay: 0.12s; }
+.pk-menu-stagger > *:nth-child(5) { animation-delay: 0.15s; }
+.pk-menu-stagger > *:nth-child(n + 6) { animation-delay: 0.18s; }
+
+/* أيقونة القائمة تدور وهي تتحوّل إلى ×، فيُفهم أنها الزر نفسه */
+.pk-burger {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pk-burger[data-open='true'] {
+  transform: rotate(90deg);
+}
+
+/* من طلب تقليل الحركة لا يُفرض عليه شيء منها */
+@media (prefers-reduced-motion: reduce) {
+  .pk-menu-stagger > *,
+  .animate-menu-in {
+    animation: none;
+  }
+  .pk-burger {
+    transition: none;
+  }
+}
+
 /* الخطوط الفاصلة والحدود تأخذ مسحة البيج بدل الرمادي الميت */
 :root[data-surface='glass'][data-theme='dark'] .border-sand-200 {
   border-color: rgb(var(--pk-beige) / 0.14);

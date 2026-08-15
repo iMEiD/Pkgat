@@ -133,12 +133,30 @@ const config: Config = {
         shimmer: {
           '100%': { transform: 'translateX(-200%)' },
         },
+        /*
+         * نزول القائمة: تنفتح من أعلاها لا تظهر دفعة واحدة.
+         *
+         * scaleY وحده يمطّ النص رأسياً وهو قبيح، فنُبقي المحتوى ثابتاً
+         * ونحرّك اللوح: انزلاق قصير مع تلاشٍ. والمنحنى يخرج سريعاً
+         * ويستقر ببطء (ease-out) — فتُحسّ القائمة خفيفة لا ثقيلة.
+         */
+        'menu-in': {
+          '0%': { opacity: '0', transform: 'translateY(-10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        /* تتابع العناصر: كل سطر يلحق سابقه بفارق يسير */
+        'menu-item-in': {
+          '0%': { opacity: '0', transform: 'translateY(-6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'fade-up': 'fade-up .6s cubic-bezier(.22,1,.36,1) both',
         'fade-in': 'fade-in .5s ease both',
         'pop-in': 'pop-in .35s cubic-bezier(.22,1,.36,1) both',
         float: 'float 6s ease-in-out infinite',
+        'menu-in': 'menu-in .26s cubic-bezier(.22,1,.36,1) both',
+        'menu-item-in': 'menu-item-in .3s cubic-bezier(.22,1,.36,1) both',
       },
     },
   },

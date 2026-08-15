@@ -34,7 +34,7 @@ export function SiteFooter({
   const hasContact = Boolean(contact.whatsapp || contact.email);
 
   return (
-    <footer className="mt-24 border-t border-sand-200 bg-sand-50/70">
+    <footer className="pk-panel mt-24 border-t border-sand-200 bg-sand-50/70">
       <div className="pk-container grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-5">
         <div className="sm:col-span-2 lg:col-span-2">
           <Logo />

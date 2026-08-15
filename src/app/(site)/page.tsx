@@ -151,7 +151,7 @@ export default async function HomePage() {
       {/* ===== قبل وبعد: الفكرة في صورة ===== */}
       <section className="pk-container pb-4 lg:pb-8">
         <Reveal>
-          <div className="mx-auto max-w-3xl rounded-3xl border border-sand-200 bg-surface/70 p-6 shadow-soft sm:p-8">
+          <div className="pk-panel mx-auto max-w-3xl rounded-3xl border border-sand-200 bg-surface/70 p-6 shadow-soft sm:p-8">
             <p className="mb-6 text-center text-sm leading-7 text-ink-soft">
               ما نصمّم لك دعوة جديدة — نضيف على دعوتك اللي عندك باركود دخول فريد لكل مدعو،
               واسمه مطبوع عليها.

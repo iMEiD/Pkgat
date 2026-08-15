@@ -93,20 +93,29 @@ export function DashboardShell({
             </form>
           </div>
 
+          {/*
+            زر الوضع الليلي كان داخل المجموعة sm:flex وحدها — أي يختفي
+            تحت ٦٤٠ بكسل، وهو مقاس كل الجوالات. فمن يفتح لوحته من جواله
+            لا يجد الزر أصلاً. وهذه النسخة تظهر تحت ٦٤٠ فقط، فلا يتكرّر
+            الزرّان في أي مقاس.
+          */}
+          <ThemeToggle className="h-9 w-9 sm:hidden" />
+
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
             className="rounded-full p-2 text-ink transition-colors hover:bg-sand-100 lg:hidden"
             aria-label="القائمة"
+            aria-expanded={menuOpen}
           >
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg viewBox="0 0 24 24" className="pk-burger h-6 w-6" data-open={menuOpen} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               {menuOpen ? <path d="M18 6 6 18M6 6l12 12" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
             </svg>
           </button>
         </div>
 
         {menuOpen && (
-          <nav className="pk-panel-menu border-t border-sand-200 bg-canvas px-4 py-3 lg:hidden">
+          <nav className="pk-panel-menu pk-menu-stagger animate-menu-in border-t border-sand-200 bg-canvas px-4 py-3 lg:hidden">
             {nav.map((item) => (
               <Link
                 key={item.href}

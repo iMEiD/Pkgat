@@ -21,7 +21,7 @@ export function SocialProof({
 
   return (
     <section className={cn('pk-container', className)} aria-label="أرقام بكجات">
-      <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6 rounded-3xl border border-sand-200 bg-sand-50/70 px-6 py-7">
+      <div className="pk-panel flex flex-wrap items-center justify-center gap-x-10 gap-y-6 rounded-3xl border border-sand-200 bg-sand-50/70 px-6 py-7">
         {proof.events && <Figure value={proof.events} label="مناسبة نُظِّمت ببكجات" />}
         {proof.guests && <Figure value={proof.guests} label="مدعو دخل بباركوده" />}
         {proof.rating && (
