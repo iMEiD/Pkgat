@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Field, Input, Select } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
+import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/Misc';
 import { previewCode, startCheckout } from '@/lib/actions/billing';
 import { billingLabel, formatDate, formatDateTime, formatPrice } from '@/lib/utils/format';
@@ -47,40 +48,20 @@ export function BillingClient({
   const [, startTransition] = useTransition();
 
   /*
-   * الكود يُكتب مرة واحدة ويُطبَّق على الباقة التي يشتريها.
+   * كود الخصم يقع داخل الشراء لا في بطاقة منفصلة أعلى الصفحة.
    *
-   * والمعاينة هنا للعرض لا للتسعير: الخادم يعيد التحقق ويحسب السعر عند
-   * الشراء. من يستطيع نداء إجراء المعاينة يستطيع تزوير ردّه — فلا يُبنى
-   * على ما يظهر هنا شيء.
+   * كان حقلاً عاماً يُكتب فيه الكود ثم يُضغط «تحقق» على كل باقة على
+   * حدة — وهو ترتيب مقلوب: الكود لا معنى له إلا مع باقة بعينها ولحظة
+   * شرائها. فصار الضغط على الباقة يفتح تأكيداً يعرض السعر والكود
+   * والمجموع، والدفع من هناك.
    */
-  const [code, setCode] = useState('');
-  const [applied, setApplied] = useState<{ planId: string; discount: number; final: number } | null>(
-    null,
-  );
-  const [codeError, setCodeError] = useState<string | null>(null);
-  const [checkingCode, startCodeCheck] = useTransition();
-
-  function tryCode(plan: Plan) {
-    setCodeError(null);
-    setApplied(null);
-
-    startCodeCheck(async () => {
-      const res = await previewCode(code, plan.id);
-      if (!res.ok) return setCodeError(res.error ?? 'تعذّر التحقق من الكود.');
-
-      setApplied({
-        planId: plan.id,
-        discount: res.discountHalalas ?? 0,
-        final: res.finalHalalas ?? plan.price_halalas,
-      });
-    });
-  }
+  const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
 
   const paidPlans = plans.filter((p) => p.price_halalas > 0);
   const oneTime = paidPlans.filter((p) => p.billing_period === 'one_time');
   const recurring = paidPlans.filter((p) => p.billing_period !== 'one_time');
 
-  function checkout(plan: Plan) {
+  function checkout(plan: Plan, code: string | null) {
     setError(null);
     setBusyPlan(plan.id);
 
@@ -88,7 +69,7 @@ export function BillingClient({
       const res = await startCheckout(
         plan.id,
         plan.billing_period === 'one_time' ? eventId : null,
-        code.trim() || null,
+        code,
       );
 
       if (!res.ok || !res.url) {
@@ -127,57 +108,14 @@ export function BillingClient({
 
       {error && <Alert tone="danger">{error}</Alert>}
 
-      {paidPlans.length > 0 && (
-        <Card className="p-5">
-          <h2 className="text-sm font-bold text-ink">عندك كود خصم؟</h2>
-          <p className="mt-1 text-xs leading-6 text-ink-soft">
-            اكتبه واضغط «تحقق» على الباقة اللي تبيها — يظهر لك السعر بعد الخصم قبل الدفع.
-          </p>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Input
-              dir="ltr"
-              value={code}
-              onChange={(e) => {
-                setCode(e.target.value);
-                setApplied(null);
-                setCodeError(null);
-              }}
-              placeholder="SUMMER25"
-              className="min-w-[10rem] flex-1"
-              aria-label="كود الخصم"
-            />
-          </div>
-
-          {codeError && (
-            <Alert tone="danger" className="mt-3">
-              {codeError}
-            </Alert>
-          )}
-
-          {applied && (
-            <Alert tone="success" className="mt-3">
-              الكود صالح — وفّرت {formatPrice(applied.discount)} على الباقة المختارة.
-            </Alert>
-          )}
-
-          {code.trim() && !applied && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {paidPlans.map((plan) => (
-                <Button
-                  key={plan.id}
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  loading={checkingCode}
-                  onClick={() => tryCode(plan)}
-                >
-                  تحقق على {plan.name}
-                </Button>
-              ))}
-            </div>
-          )}
-        </Card>
+      {checkoutPlan && (
+        <CheckoutModal
+          plan={checkoutPlan}
+          busy={busyPlan === checkoutPlan.id}
+          testMode={testMode}
+          onClose={() => setCheckoutPlan(null)}
+          onPay={(code) => checkout(checkoutPlan, code)}
+        />
       )}
 
       {activeSubscription && (
@@ -223,9 +161,8 @@ export function BillingClient({
                       plan={plan}
                       busy={busyPlan === plan.id}
                       disabled={!gatewayReady || !eventId}
-                      onSelect={() => checkout(plan)}
-                      discounted={applied?.planId === plan.id ? applied : null}
-                    />
+                      onSelect={() => setCheckoutPlan(plan)}
+                                          />
                   ))}
                 </div>
               </>
@@ -249,10 +186,9 @@ export function BillingClient({
                   plan={plan}
                   busy={busyPlan === plan.id}
                   disabled={!gatewayReady}
-                  onSelect={() => checkout(plan)}
+                  onSelect={() => setCheckoutPlan(plan)}
                   ctaLabel={activeSubscription ? 'تجديد / ترقية' : 'اشترك الآن'}
-                  discounted={applied?.planId === plan.id ? applied : null}
-                />
+                                  />
               ))}
             </div>
           </CardBody>
@@ -302,15 +238,12 @@ function PlanCard({
   disabled,
   onSelect,
   ctaLabel,
-  discounted,
 }: {
   plan: Plan;
   busy: boolean;
   disabled: boolean;
   onSelect: () => void;
   ctaLabel?: string;
-  /** السعر بعد كود خصم مُطبَّق على هذه الباقة تحديداً */
-  discounted?: { discount: number; final: number } | null;
 }) {
   return (
     <div
@@ -330,30 +263,12 @@ function PlanCard({
         <p className="mt-1.5 text-xs leading-6 text-ink-soft">{plan.description}</p>
       )}
 
-      {discounted ? (
-        <>
-          <p className="mt-4 flex items-baseline gap-2">
-            <span className="font-display text-2xl font-bold text-ink">
-              {formatPrice(discounted.final, plan.currency)}
-            </span>
-            <span className="text-sm text-ink-faint line-through">
-              {formatPrice(plan.price_halalas, plan.currency)}
-            </span>
-            <span className="text-xs text-ink-faint">{billingLabel(plan.billing_period)}</span>
-          </p>
-          <p className="mt-1 text-xs font-bold text-mint-600">
-            وفّرت {formatPrice(discounted.discount, plan.currency)}
-            {discounted.final === 0 ? ' — مجاناً بالكامل' : ''}
-          </p>
-        </>
-      ) : (
-        <p className="mt-4 flex items-baseline gap-2">
-          <span className="font-display text-2xl font-bold text-ink">
-            {formatPrice(plan.price_halalas, plan.currency)}
-          </span>
-          <span className="text-xs text-ink-faint">{billingLabel(plan.billing_period)}</span>
-        </p>
-      )}
+      <p className="mt-4 flex items-baseline gap-2">
+        <span className="font-display text-2xl font-bold text-ink">
+          {formatPrice(plan.price_halalas, plan.currency)}
+        </span>
+        <span className="text-xs text-ink-faint">{billingLabel(plan.billing_period)}</span>
+      </p>
 
       <ul className="mt-4 flex-1 space-y-2">
         {(plan.features ?? []).map((f) => (
@@ -375,5 +290,149 @@ function PlanCard({
         {ctaLabel ?? 'ادفع الآن'}
       </Button>
     </div>
+  );
+}
+
+
+/**
+ * تأكيد الشراء — الباقة والكود والمجموع في مكان واحد.
+ *
+ * هنا موضع كود الخصم الطبيعي: لحظة الشراء ومع الباقة التي يشتريها، لا
+ * حقلاً عاماً أعلى الصفحة يُضغط بعده «تحقق» على كل باقة. والعميل يرى
+ * المبلغ الذي سيُخصم منه قبل أن يترك الموقع للبوابة.
+ *
+ * والسعر المعروض هنا للعرض لا للتسعير: الخادم يعيد التحقق من الكود
+ * ويحسب المبلغ عند الشراء. من يستطيع نداء إجراء المعاينة يستطيع تزوير
+ * ردّه — فلا يُبنى على ما يظهر هنا ريال واحد.
+ */
+function CheckoutModal({
+  plan,
+  busy,
+  testMode,
+  onClose,
+  onPay,
+}: {
+  plan: Plan;
+  busy: boolean;
+  testMode: boolean;
+  onClose: () => void;
+  onPay: (code: string | null) => void;
+}) {
+  const [code, setCode] = useState('');
+  const [applied, setApplied] = useState<{ discount: number; final: number } | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [checking, startCheck] = useTransition();
+
+  const total = applied?.final ?? plan.price_halalas;
+
+  function apply() {
+    setCodeError(null);
+    setApplied(null);
+
+    startCheck(async () => {
+      const res = await previewCode(code, plan.id);
+      if (!res.ok) return setCodeError(res.error ?? 'تعذّر التحقق من الكود.');
+
+      setApplied({
+        discount: res.discountHalalas ?? 0,
+        final: res.finalHalalas ?? plan.price_halalas,
+      });
+    });
+  }
+
+  return (
+    <Modal open onClose={onClose} title="تأكيد الشراء">
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-sand-200 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-ink-soft">الباقة</span>
+            <span className="text-sm font-bold text-ink">{plan.name}</span>
+          </div>
+          <div className="mt-2.5 flex items-center justify-between gap-3">
+            <span className="text-sm text-ink-soft">{billingLabel(plan.billing_period)}</span>
+            <span className="text-sm font-bold text-ink">
+              {formatPrice(plan.price_halalas, plan.currency)}
+            </span>
+          </div>
+
+          {applied && applied.discount > 0 && (
+            <div className="mt-2.5 flex items-center justify-between gap-3">
+              <span className="text-sm text-mint-600">الخصم</span>
+              <span className="text-sm font-bold text-mint-600">
+                −{formatPrice(applied.discount, plan.currency)}
+              </span>
+            </div>
+          )}
+
+          <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-sand-200 pt-3">
+            <span className="text-sm font-bold text-ink">المجموع</span>
+            <span className="font-display text-2xl font-bold text-ink">
+              {formatPrice(total, plan.currency)}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <span className="mb-1.5 block text-sm font-semibold text-ink">كود خصم (اختياري)</span>
+          <div className="flex gap-2">
+            <Input
+              dir="ltr"
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value);
+                setApplied(null);
+                setCodeError(null);
+              }}
+              placeholder="SUMMER25"
+              className="flex-1"
+              aria-label="كود الخصم"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={apply}
+              loading={checking}
+              disabled={!code.trim() || Boolean(applied)}
+            >
+              تطبيق
+            </Button>
+          </div>
+
+          {codeError && (
+            <Alert tone="danger" className="mt-3">
+              {codeError}
+            </Alert>
+          )}
+          {applied && (
+            <Alert tone="success" className="mt-3">
+              {total === 0
+                ? 'الكود يغطي المبلغ كاملاً — الباقة تنفتح بلا دفع.'
+                : `تم تطبيق الكود — وفّرت ${formatPrice(applied.discount, plan.currency)}.`}
+            </Alert>
+          )}
+        </div>
+
+        {testMode && (
+          <Alert tone="warning">
+            وضع اختبار: ما ينخصم أي مبلغ، والباقة تنفتح فعلاً.
+          </Alert>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          <Button
+            size="lg"
+            className="flex-1"
+            loading={busy}
+            onClick={() => onPay(code.trim() || null)}
+          >
+            {total === 0 ? 'فعّل الباقة' : `ادفع ${formatPrice(total, plan.currency)}`}
+            <Icon name="arrow" className="h-4 w-4" />
+          </Button>
+          <Button type="button" variant="secondary" size="lg" onClick={onClose}>
+            إلغاء
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
