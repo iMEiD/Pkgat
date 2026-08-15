@@ -62,6 +62,13 @@ export function DashboardShell({
           <div className="flex-1" />
 
           <div className="hidden items-center gap-2 sm:flex">
+            {/* الطريق للخارج: اللوحة ليست طريقاً مسدوداً */}
+            <Link
+              href="/"
+              className="rounded-full px-3 py-1.5 text-xs font-bold text-ink-soft transition-colors hover:bg-sand-100 hover:text-ink"
+            >
+              العودة للموقع
+            </Link>
             {isAdmin && (
               <Link
                 href="/admin"
@@ -114,7 +121,35 @@ export function DashboardShell({
                 {item.label}
               </Link>
             ))}
-            <form action="/api/auth/signout" method="post" className="mt-2">
+            {/*
+              رابطا الأدمن والموقع كانا في مجموعة sm:flex وحدها — أي من
+              ٦٤٠ بكسل فما فوق. فعلى الجوال يختفيان، وقائمة الجوال لا
+              تحملهما: لا طريق للوحة الأدمن ولا للموقع إلا بكتابة العنوان
+              يدوياً. وهما هنا الآن.
+            */}
+            <div className="my-2 border-t border-sand-200 pt-2">
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-ink-soft transition-colors hover:bg-sand-100"
+                >
+                  <Icon name="shield" className="h-4.5 w-4.5" />
+                  لوحة الأدمن
+                </Link>
+              )}
+
+              <Link
+                href="/"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-ink-soft transition-colors hover:bg-sand-100"
+              >
+                <Icon name="arrow" className="h-4.5 w-4.5" />
+                العودة للموقع
+              </Link>
+            </div>
+
+            <form action="/api/auth/signout" method="post">
               <button
                 type="submit"
                 className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-coral-600 transition-colors hover:bg-coral-50"
