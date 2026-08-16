@@ -1,3 +1,4 @@
+import { CountUp } from '@/components/ui/CountUp';
 import { Stars } from '@/components/ui/Stars';
 import { arabicDigits } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
@@ -39,16 +40,13 @@ export function SocialProof({
   );
 }
 
-/** آلاف مفصولة ثم أرقام عربية: ١٤٬٢٠٠ أسهل قراءة من ١٤٢٠٠ */
-const groupFmt = new Intl.NumberFormat('en-US');
-
 function Figure({ value, label }: { value: number; label: string }) {
   return (
     <div className="text-center">
       {/* dir=ltr يُبقي علامة الزائد قبل الرقم كوحدة واحدة؛ بدونها
           يقذفها ترتيب الاتجاهين لآخر العدد فتُقرأ متأخرة */}
-      <p dir="ltr" className="font-display text-2xl font-bold text-grape-600">
-        +{arabicDigits(groupFmt.format(value)).replace(/,/g, '٬')}
+      <p dir="ltr" className="font-display text-3xl font-bold text-grape-600 sm:text-4xl">
+        +<CountUp value={value} />
       </p>
       <p className="mt-1.5 text-xs leading-5 text-ink-soft">{label}</p>
     </div>

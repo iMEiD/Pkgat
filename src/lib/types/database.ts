@@ -507,6 +507,11 @@ export interface Database {
       /** حجز ذرّي لاستعمال كود خصم — false حين نفد السقف */
       claim_discount_use: { Args: { p_code_id: string }; Returns: boolean };
       has_active_subscription: { Args: { p_user: string }; Returns: boolean };
+      /** أرقام الإثبات الاجتماعي مجمَّعة — عددان لا صفوف */
+      platform_stats: {
+        Args: Record<string, never>;
+        Returns: { events: number; guests: number };
+      };
     };
     Enums: {
       event_status: EventStatus;

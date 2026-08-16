@@ -818,6 +818,50 @@ export async function saveTheme(theme: Theme): Promise<ActionResult> {
 }
 
 /**
+ * يحفظ مصدر أرقام الإثبات الاجتماعي وحدَّه الأدنى.
+ *
+ * القيم محصورة هنا لا تُقبل كما جاءت: الوضع أحد اثنين، والحدّ عدد
+ * صحيح غير سالب — وهو يُكتب في سمةٍ يقرأها الموقع العام.
+ */
+export async function saveSocialProofMode(
+  mode: 'auto' | 'manual',
+  min: number,
+): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const cleanMode = mode === 'manual' ? 'manual' : 'auto';
+  const cleanMin = Number.isFinite(min) && min >= 0 ? Math.floor(min) : 25;
+
+  const { error } = await supabase.from('site_settings').upsert(
+    [
+      {
+        key: 'social_proof_mode',
+        value: cleanMode,
+        label: 'مصدر أرقام الإثبات: auto = تُحسب من قاعدة البيانات · manual = ما تكتبه أنت',
+        updated_at: new Date().toISOString(),
+      },
+      {
+        key: 'social_proof_min',
+        value: cleanMin,
+        label: 'الحد الأدنى للمناسبات قبل إظهار الشريط (في الوضع التلقائي فقط)',
+        updated_at: new Date().toISOString(),
+      },
+    ],
+    { onConflict: 'key' },
+  );
+
+  if (error) return { ok: false, error: 'تعذّر حفظ الإعداد.' };
+
+  await logAdminAction('social_proof.updated', 'site_settings', null, {
+    mode: cleanMode,
+    min: cleanMin,
+  });
+  revalidatePath('/', 'layout');
+  return { ok: true };
+}
+
+/**
  * يحفظ مظهر الموقع: الوضع الليلي والشكل الزجاجي.
  *
  * نمرّ بـ parseAppearance ولا نثق بما وصل: القيم محصورة في قوائم

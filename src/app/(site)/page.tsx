@@ -12,7 +12,7 @@ import { StickyCta } from '@/components/site/StickyCta';
 import { Reviews } from '@/components/site/Reviews';
 import { BarcodeShowcase } from '@/components/site/BarcodeShowcase';
 import { getPublishedReviews } from '@/lib/data/reviews';
-import { readSocialProof } from '@/lib/site-settings';
+import { getDisplayedProof } from '@/lib/data/platform-stats';
 import { cn } from '@/lib/utils/cn';
 
 export const revalidate = 60;
@@ -98,7 +98,8 @@ export default async function HomePage() {
     getStartingPrice(),
   ]);
 
-  const proof = readSocialProof(settings);
+  // الأرقام: محسوبة من قاعدة البيانات أو مكتوبة يدوياً — حسب إعداد الأدمن
+  const proof = await getDisplayedProof(settings);
 
   const stats = list<StatItem>(c, 'home.stats', [
     { value: 'ارفعها كما هي', label: 'أي تصميم من مصمّمك أو جاهز' },

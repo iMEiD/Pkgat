@@ -679,6 +679,20 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0032 ----
+  migrations.push({
+    file: '0032_social_proof_auto.sql',
+    title: 'أرقام الإثبات محسوبة من قاعدة البيانات',
+    breaks:
+      'شريط الأرقام يبقى على ما تكتبه بيدك فقط، ولا يوجد وضع تلقائي يحسبها ' +
+      'من مناسباتك الحقيقية.',
+    checks: await Promise.all([
+      probeFunction(sb, 'platform_stats', {}, 'دالة حساب الأرقام الحقيقية'),
+      probeKeyRow(sb, 'site_settings', 'social_proof_mode', 'إعداد مصدر الأرقام'),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {

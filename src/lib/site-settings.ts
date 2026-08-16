@@ -43,6 +43,25 @@ export function readSocialProof(settings: Record<string, unknown>): SocialProof 
   };
 }
 
+/** مصدر أرقام الإثبات: محسوبة من قاعدة البيانات، أو مكتوبة بيد الأدمن */
+export type SocialProofMode = 'auto' | 'manual';
+
+export function readSocialProofMode(settings: Record<string, unknown>): SocialProofMode {
+  return settings.social_proof_mode === 'manual' ? 'manual' : 'auto';
+}
+
+/**
+ * الحدّ الأدنى للمناسبات قبل إظهار الشريط في الوضع التلقائي.
+ *
+ * «٣ مناسبات» أسوأ من الصمت: تقول للزائر إن أحداً لم يجرّب هذا بعد.
+ * فيسكت الشريط حتى يصير الرقم مقنعاً بنفسه.
+ */
+export function readSocialProofMin(settings: Record<string, unknown>): number {
+  const raw = settings.social_proof_min;
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : 25;
+}
+
 /** هل يوجد ما يستحق العرض أصلاً؟ */
 export function hasSocialProof(proof: SocialProof): boolean {
   return Boolean(proof.events || proof.guests || proof.rating);
