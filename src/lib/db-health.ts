@@ -706,6 +706,17 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0034 ----
+  migrations.push({
+    file: '0034_hero_price_note.sql',
+    title: 'سطر السعر في البطل قابل للتعديل',
+    breaks: 'سطر «الباقات تبدأ من…» مكتوب في الكود — لا تقدر تغيّر صياغته ولا تخفيه.',
+    checks: await Promise.all([
+      probeKeyRow(sb, 'site_content', 'home.hero.price_note', 'نص سطر السعر قابل للتعديل'),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {

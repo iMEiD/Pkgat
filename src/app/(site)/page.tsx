@@ -3,9 +3,9 @@ import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { Reveal } from '@/components/ui/Reveal';
 import { SectionTitle } from '@/components/ui/Misc';
-import { getPageContent, getSettings, list, text } from '@/lib/cms';
+import { getFreeQuota, getPageContent, getSettings, list, text } from '@/lib/cms';
 import { createClient } from '@/lib/supabase/server';
-import { formatPrice } from '@/lib/utils/format';
+import { arabicDigits, formatPrice } from '@/lib/utils/format';
 import { SocialProof } from '@/components/site/SocialProof';
 import { Faq, type FaqItem } from '@/components/site/Faq';
 import { StickyCta } from '@/components/site/StickyCta';
@@ -91,11 +91,12 @@ const ACCENT: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [c, settings, reviews, startingPrice] = await Promise.all([
+  const [c, settings, reviews, startingPrice, freeQuota] = await Promise.all([
     getPageContent('home'),
     getSettings(),
     getPublishedReviews(),
     getStartingPrice(),
+    getFreeQuota(),
   ]);
 
   // الأرقام: محسوبة من قاعدة البيانات أو مكتوبة يدوياً — حسب إعداد الأدمن
@@ -178,13 +179,15 @@ export default async function HomePage() {
               عالية ويغادر قبل صفحة الأسعار. ويختفي السطر كله إن لم تكن
               هناك باقات — لا نَعِد بسعرٍ لا وجود له.
             */}
-            {startingPrice !== null && (
-              <p className="mt-4 text-sm text-ink-faint">
-                الباقات تبدأ من{' '}
-                <span className="font-bold text-ink-soft">{formatPrice(startingPrice)}</span>
-                {' '}— وأول ١٠ دعوات مجاناً قبلها.
-              </p>
-            )}
+            <PriceNote
+              template={text(
+                c,
+                'home.hero.price_note',
+                'الباقات تبدأ من {price} — وأول {free} دعوات مجاناً قبلها.',
+              )}
+              price={startingPrice}
+              free={freeQuota}
+            />
 
             <dl className="mt-12 grid max-w-xl grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4">
               {heroStats.map((s, i) => (
@@ -433,5 +436,52 @@ function FakeQr() {
         <span key={i} className={cn('h-1.5 w-1.5 rounded-[1px]', on ? 'bg-[#141019]' : 'bg-transparent')} />
       ))}
     </div>
+  );
+}
+
+/**
+ * سطر السعر تحت أزرار البطل.
+ *
+ * نصّه من لوحة الأدمن، ورقماه من قاعدة البيانات: {price} سعر أرخص باقة
+ * فعّالة، و{free} عدد الدعوات المجانية. فتبقى الأرقام صادقة مهما غُيّرت
+ * الباقة أو الحصة، ويبقى الكلام حولها بيد صاحب الموقع.
+ *
+ * ويختفي السطر في حالتين: أن يُفرغ الأدمن النص، أو ألّا تكون هناك باقة
+ * أصلاً — فوعدٌ بسعرٍ لا وجود له أسوأ من السكوت عنه.
+ */
+function PriceNote({
+  template,
+  price,
+  free,
+}: {
+  template: string;
+  price: number | null;
+  free: number;
+}) {
+  if (!template.trim()) return null;
+
+  const withFree = template.replace(/\{free\}/g, arabicDigits(free));
+
+  // لا سعر: نُخفي السطر إن كان يَعِد بسعر، ونعرضه إن كان لا يذكره
+  if (price === null) {
+    return withFree.includes('{price}') ? null : (
+      <p className="mt-4 text-sm text-ink-faint">{withFree}</p>
+    );
+  }
+
+  // السعر يُبرز داخل الجملة، فيُقسم النص عنده بدل استبداله نصّياً
+  const parts = withFree.split('{price}');
+
+  return (
+    <p className="mt-4 text-sm text-ink-faint">
+      {parts.map((part, i) => (
+        <span key={i}>
+          {part}
+          {i < parts.length - 1 && (
+            <span className="font-bold text-ink-soft">{formatPrice(price)}</span>
+          )}
+        </span>
+      ))}
+    </p>
   );
 }
