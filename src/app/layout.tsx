@@ -88,6 +88,29 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           في الرسم على الكانفس، ونحتاج أسماء عائلات ثابتة نمررها إلى
           document.fonts.load قبل رسم أي نص.
         */}
+        {/*
+          تحميل مسبق لخطّي الواجهة.
+          
+          هما في CSS داخل @font-face، والمتصفح لا يكتشفهما إلا بعد
+          تحليل ورقة الأنماط ثم مطابقة عنصرٍ يستعملهما — أي متأخراً.
+          والتحميل المسبق يبدأهما مع الصفحة، فلا يُرى النص بخطٍّ
+          احتياطي ثم يقفز.
+        */}
+        <link
+          rel="preload"
+          as="font"
+          type="font/woff2"
+          href="/fonts/thmanyah/thmanyah-sans-Regular.woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          as="font"
+          type="font/woff2"
+          href="/fonts/thmanyah/thmanyah-serif-display-Bold.woff2"
+          crossOrigin="anonymous"
+        />
+
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="stylesheet" href={googleFontsHref()} />

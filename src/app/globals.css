@@ -2,6 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =============================================================
+ * خط ثمانية — مستضاف عندنا لا من شبكة غيرنا.
+ *
+ * الحزمة المجتمعية للخط تسحب الملفات من CDN يشير إلى مستودع شخص
+ * ثالث. وربطُ خطّ الموقع بمستودعٍ لا نملكه مخاطرة: يُحذف أو يُعاد
+ * تسميته فيفقد الموقع خطّه في لحظة، ونحن لا نعلم. فنُنزّل الملفات
+ * ونضعها في public — لا طلب خارجي ولا طرف ثالث.
+ *
+ * وخمسة أوزان لا خمسة عشر: الخط ثلاث عائلات في خمسة أوزان (١٫٢
+ * ميغابايت كاملةً)، ولا تستعمل الواجهة إلا خمسة منها. وما لا يُستعمل
+ * لا يُنزَّل — لا سيما على شبكة جوال.
+ * ============================================================= */
+
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('/fonts/thmanyah/thmanyah-sans-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('/fonts/thmanyah/thmanyah-sans-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+/*
+ * وزن ٧٠٠ يغطي ٦٠٠ أيضاً: المتصفح يختار أقرب وزن متاح، فيأخذ العريض
+ * لطلب شبه العريض. وإنزال ملفٍ سادس لفرقٍ لا تكاد العين تراه على
+ * نصوصٍ صغيرة ثمنُه ثمانون كيلوبايت.
+ */
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('/fonts/thmanyah/thmanyah-sans-Bold.woff2') format('woff2');
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Display';
+  src: url('/fonts/thmanyah/thmanyah-serif-display-Regular.woff2') format('woff2');
+  font-weight: 400 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Thmanyah Display';
+  src: url('/fonts/thmanyah/thmanyah-serif-display-Bold.woff2') format('woff2');
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /*
  * الخطوط تُحمَّل عبر <link> في الـ layout (وليس next/font) لأن نفس القائمة
  * تُستخدم في رسم النصوص على الكانفس، ونحتاج أسماء عائلات ثابتة ومعروفة
@@ -12,9 +67,9 @@
  */
 :root {
   /* النصوص العادية والفقرات وكل عناصر الواجهة */
-  --font-ui: 'IBM Plex Sans Arabic';
+  --font-ui: 'Thmanyah Sans';
   /* العناوين والشعار وعناوين الأقسام البارزة */
-  --font-display: 'El Messiri';
+  --font-display: 'Thmanyah Display';
 
   /*
    * ألوان الهوية الافتراضية (قنوات RGB مفصولة بمسافات).
