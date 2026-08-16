@@ -4,6 +4,8 @@ import { Icon } from '@/components/ui/Icon';
 import { Reveal } from '@/components/ui/Reveal';
 import { SectionTitle } from '@/components/ui/Misc';
 import { getPageContent, getSettings, list, text } from '@/lib/cms';
+import { createClient } from '@/lib/supabase/server';
+import { formatPrice } from '@/lib/utils/format';
 import { SocialProof } from '@/components/site/SocialProof';
 import { Faq, type FaqItem } from '@/components/site/Faq';
 import { StickyCta } from '@/components/site/StickyCta';
@@ -15,17 +17,45 @@ import { cn } from '@/lib/utils/cn';
 
 export const revalidate = 60;
 
+/**
+ * أرخص باقة فعّالة — لسطر السعر في البطل.
+ *
+ * السعر يقلّل التردّد: من لا يعرف كم يكلّفه الشيء يفترض أنه غالٍ ويغادر
+ * قبل أن يصل لصفحة الأسعار. ولذلك يُقرأ من الباقات نفسها لا يُكتب في
+ * النصوص — فلا يتناقض مع صفحة الأسعار إن غُيّرت الباقة يوماً.
+ *
+ * وإن لم تكن هناك باقات (أو تعذّرت القراءة) يختفي السطر كله: سعرٌ
+ * مُختلَق في موضع وعدٍ أسوأ من لا شيء.
+ */
+async function getStartingPrice(): Promise<number | null> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('plans')
+      .select('price_halalas')
+      .eq('is_active', true)
+      .gt('price_halalas', 0)
+      .order('price_halalas', { ascending: true })
+      .limit(1);
+
+    const halalas = (data as { price_halalas: number }[] | null)?.[0]?.price_halalas;
+    return typeof halalas === 'number' && halalas > 0 ? halalas : null;
+  } catch {
+    return null;
+  }
+}
+
 interface StatItem { value: string; label: string }
 interface FeatureItem { icon: string; color: string; title: string; body: string }
 interface StepItem { title: string; body: string }
 
 const FALLBACK_FEATURES: FeatureItem[] = [
-  { icon: 'palette', color: 'grape', title: 'تصميم على ذوقك', body: 'اختر من قوالب جاهزة أو ارفع تصميمك الخاص.' },
-  { icon: 'qr', color: 'coral', title: 'باركود فريد لكل مدعو', body: 'معرّف عشوائي غير قابل للتخمين.' },
-  { icon: 'users', color: 'mint', title: 'إضافة مدعوين بثلاث طرق', body: 'يدوي، لصق قائمة، أو استيراد ملف.' },
-  { icon: 'scan', color: 'sky', title: 'مسح من الجوال مباشرة', body: 'بدون تحميل أي تطبيق.' },
-  { icon: 'shield', color: 'rose', title: 'منع دخول مكرر', body: 'الباركود يُستهلك بعد أول مسح.' },
-  { icon: 'chart', color: 'sunny', title: 'تقرير بعد المناسبة', body: 'نسبة الحضور وتفصيل حسب الفئة.' },
+  { icon: 'qr', color: 'grape', title: 'باركود فريد لكل مدعو', body: 'معرّف عشوائي غير قابل للتخمين أو النسخ — تحدد مكانه ولونه وحجمه بنفسك.' },
+  { icon: 'upload', color: 'coral', title: 'يشتغل مع أي تصميم', body: 'دعوة من مصمم خاص، أو جاهزة، أو من قوالبنا — النظام يتكيف مع تصميمك، مو العكس.' },
+  { icon: 'shield', color: 'rose', title: 'منع الدخول المكرر تلقائياً', body: 'الباركود يُستهلك بعد أول مسح، مع زر تجاوز مسجَّل باسم المسؤول للحالات الاستثنائية.' },
+  { icon: 'users', color: 'mint', title: 'فريق استقبال بلا تعقيد', body: 'كل مسؤول دخول يفتح رابط المسح من جواله مباشرة، وكل عملية تُسجَّل باسمه.' },
+  { icon: 'chart', color: 'sunny', title: 'تقرير حضور جاهز فور انتهاء المناسبة', body: 'نسبة الحضور، تفصيل حسب الفئة، جاهز للطباعة أو حفظ PDF.' },
+  { icon: 'edit', color: 'sky', title: 'تعديلات خفيفة وقت الحاجة', body: 'غيّرت اسم مدعو أو أضفت تفصيل؟ تعديل بسيط على دعوتك، مو مشروع تصميم من الصفر.' },
 ];
 
 /**
@@ -34,20 +64,20 @@ const FALLBACK_FEATURES: FeatureItem[] = [
  */
 const HOME_FAQ: FaqItem[] = [
   {
-    q: 'هل الباركود يشتغل بدون إنترنت؟',
-    a: 'لوحة المسح تحتاج اتصال إنترنت خفيف للتحقق الفوري ومنع التكرار، وهي مصممة لتعمل بسلاسة حتى مع شبكة ضعيفة.',
+    q: 'هل الباركود يحتاج إنترنت؟',
+    a: 'نعم، لوحة المسح تحتاج اتصال خفيف للتحقق الفوري ومنع التكرار — وهي مصممة تشتغل حتى مع شبكة ضعيفة.',
   },
   {
     q: 'وش معنى الدعوات المجانية؟',
-    a: 'تقدر تضيف أول ١٠ مدعوين وتولّد دعواتهم فعلياً بدون دفع — تجرّب المنصة كاملة قبل أي ريال. بعدها تختار الباقة اللي تناسبك.',
+    a: 'أول ١٠ مدعوين مجاناً بالكامل — تولد دعواتهم وتجرب النظام فعلياً قبل أي دفع.',
   },
   {
     q: 'أقدر أضيف أكثر من مسؤول استقبال؟',
-    a: 'نعم، تقدر تنشئ حساب مسح مستقل لكل مدخل، وكل عملية مسح تُسجَّل باسم المسؤول اللي نفّذها.',
+    a: 'نعم، حساب مسح مستقل لكل مدخل، وكل عملية مسح مسجّلة باسم المسؤول.',
   },
   {
-    q: 'هل المدعو يحتاج يحمّل تطبيق؟',
-    a: 'لا. المدعو يستلم دعوته كصورة، ومسؤول الاستقبال يمسح الباركود من متصفح جواله مباشرة — بدون أي تطبيق على الطرفين.',
+    q: 'هل المدعو يحمّل تطبيق؟',
+    a: 'لا. يستلم دعوته كصورة عادية، ومسؤول الاستقبال يمسحها من متصفح جواله — بدون تطبيق على الطرفين.',
   },
 ];
 
@@ -61,18 +91,19 @@ const ACCENT: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const [c, settings, reviews] = await Promise.all([
+  const [c, settings, reviews, startingPrice] = await Promise.all([
     getPageContent('home'),
     getSettings(),
     getPublishedReviews(),
+    getStartingPrice(),
   ]);
 
   const proof = readSocialProof(settings);
 
   const stats = list<StatItem>(c, 'home.stats', [
-    { value: '٣ دقائق', label: 'من التسجيل لأول دعوة' },
-    { value: 'بدون تطبيق', label: 'المسح من متصفح الجوال' },
-    { value: 'باركود فريد', label: 'لكل مدعو على حدة' },
+    { value: 'ارفعها كما هي', label: 'أي تصميم من مصمّمك أو جاهز' },
+    { value: 'باركود لكل مدعو', label: 'فريد وغير قابل للتخمين' },
+    { value: 'بدون تطبيق', label: 'المسح من متصفح الجوال مباشرة' },
   ]);
 
   // السعر كان غائباً عن الصفحة الرئيسية كلها — والزائر يسأل عنه أولاً.
@@ -86,7 +117,7 @@ export default async function HomePage() {
           {
             // تُصاغ بإيجاز أشقائها («٣ دقائق»، «بدون تطبيق») فلا تنكسر سطرين
             value: text(c, 'home.stats.free_value', '١٠ دعوات'),
-            label: text(c, 'home.stats.free_label', 'مجاناً قبل أي دفع'),
+            label: text(c, 'home.stats.free_label', 'قبل أي التزام مالي'),
           },
         ];
   // مختارات من أسئلة صفحة الأسعار — أكثر ما يسأل عنه الزائر يسبق وصوله لها
@@ -94,10 +125,10 @@ export default async function HomePage() {
 
   const features = list<FeatureItem>(c, 'home.features.items', FALLBACK_FEATURES);
   const steps = list<StepItem>(c, 'home.steps.items', [
-    { title: 'أنشئ مناسبتك', body: 'اسم المناسبة، نوعها، التاريخ والموقع.' },
-    { title: 'صمّم الدعوة', body: 'قالب جاهز أو تصميمك الخاص.' },
-    { title: 'أضف المدعوين', body: 'يدوي أو لصق قائمة أو استيراد ملف.' },
-    { title: 'وزّع وامسح', body: 'حمّل الدعوات وامسح الباركودات.' },
+    { title: 'ارفع دعوتك', body: 'جاهزة عندك، أو ابدأ من قالب.' },
+    { title: 'حدد مكان الباركود', body: 'اسحبه بإصبعك، مع اسم المدعو.' },
+    { title: 'أضف قائمة المدعوين', body: 'اكتبها، الصقها، أو استورد ملف.' },
+    { title: 'وزّع وامسح', body: 'حمّل الدعوات وأرسلها، وامسح على الباب.' },
   ]);
 
   return (
@@ -113,14 +144,14 @@ export default async function HomePage() {
             </span>
 
             <h1 className="mt-5 font-display text-4xl/[1.3] font-bold text-ink pk-balance sm:text-5xl/[1.26] lg:text-6xl/[1.24]">
-              {text(c, 'home.hero.title', 'دعوتك زي ما هي… وباركود لكل مدعو')}
+              {text(c, 'home.hero.title', 'كل مدعو يدخل بباركوده… وأنت تعرف مين حضر لحظة بلحظة')}
             </h1>
 
             <p className="mt-5 max-w-xl text-lg leading-9 text-ink-soft">
               {text(
                 c,
                 'home.hero.subtitle',
-                'ارفع دعوتك الجاهزة، ونضيف عليها باركود دخول فريد لكل مدعو باسمه. وعلى الباب تمسحه من جوالك وتعرف مين دخل ومين ما جاء — بدون أي تطبيق.',
+                'ارفع دعوتك الحالية بأي تصميم، ونولّد باركود دخول فريد لكل مدعو باسمه. على الباب تمسحه من جوالك وبس — بدون طابعة، بدون تطبيق، بدون فوضى.',
               )}
             </p>
 
@@ -129,10 +160,30 @@ export default async function HomePage() {
                 {text(c, 'home.hero.primary_cta', 'ابدأ مجاناً')}
                 <Icon name="arrow" className="h-4 w-4" />
               </ButtonLink>
-              <ButtonLink href="/gallery" variant="secondary" size="lg">
-                {text(c, 'home.hero.secondary_cta', 'شوف كيف تشتغل')}
+              {/*
+                ينزل لقسم الخطوات في الصفحة نفسها لا يغادرها.
+                
+                كان يذهب إلى /gallery — أي يخرج الزائر من صفحة البيع قبل
+                أن يفهم كيف تشتغل، وهو أوّل ما يسأل عنه. والتمرير الناعم
+                مضبوط في globals.css فلا يحتاج جافاسكربت.
+              */}
+              <ButtonLink href="#how" variant="secondary" size="lg">
+                {text(c, 'home.hero.secondary_cta', 'شاهد كيف تشتغل')}
               </ButtonLink>
             </div>
+
+            {/*
+              سطر السعر تحت الأزرار مباشرة: من لا يعرف الكلفة يفترض أنها
+              عالية ويغادر قبل صفحة الأسعار. ويختفي السطر كله إن لم تكن
+              هناك باقات — لا نَعِد بسعرٍ لا وجود له.
+            */}
+            {startingPrice !== null && (
+              <p className="mt-4 text-sm text-ink-faint">
+                الباقات تبدأ من{' '}
+                <span className="font-bold text-ink-soft">{formatPrice(startingPrice)}</span>
+                {' '}— وأول ١٠ دعوات مجاناً قبلها.
+              </p>
+            )}
 
             <dl className="mt-12 grid max-w-xl grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4">
               {heroStats.map((s, i) => (
@@ -151,12 +202,19 @@ export default async function HomePage() {
       {/* ===== قبل وبعد: الفكرة في صورة ===== */}
       <section className="pk-container pb-4 lg:pb-8">
         <Reveal>
-          <div className="pk-panel mx-auto max-w-3xl rounded-3xl border border-sand-200 bg-surface/70 p-6 shadow-soft sm:p-8">
-            <p className="mb-6 text-center text-sm leading-7 text-ink-soft">
-              ما نصمّم لك دعوة جديدة — نضيف على دعوتك اللي عندك باركود دخول فريد لكل مدعو،
-              واسمه مطبوع عليها.
+          <div className="pk-panel mx-auto max-w-4xl rounded-3xl border border-sand-200 bg-surface/70 p-6 shadow-soft sm:p-9">
+            <p className="mb-2 text-center text-xs font-bold text-grape-600">
+              {text(c, 'home.showcase.eyebrow', 'نفس التصميم، بإضافة واحدة بسيطة')}
             </p>
             <BarcodeShowcase />
+            {/* الشرح تحت الصورة لا فوقها: العين تقرأ الصورة أولاً ثم تسأل عنها */}
+            <p className="mx-auto mt-6 max-w-2xl text-center text-sm leading-7 text-ink-soft">
+              {text(
+                c,
+                'home.showcase.body',
+                'ما نعيد تصميم دعوتك. نضيف عليها طبقة ذكية: باركود مربوط باسم المدعو، تتحكم بمكانه وحجمه ولونه بنفسك.',
+              )}
+            </p>
           </div>
         </Reveal>
       </section>
@@ -167,7 +225,7 @@ export default async function HomePage() {
           <SectionTitle
             center
             eyebrow={text(c, 'home.features.eyebrow', 'المميزات')}
-            title={text(c, 'home.features.title', 'وش تعطيك بكجات؟')}
+            title={text(c, 'home.features.title', 'مصمم عشان يحل مشكلة حقيقية، مو بس يبهرك')}
           />
         </Reveal>
 
@@ -192,13 +250,13 @@ export default async function HomePage() {
       </section>
 
       {/* ===== الخطوات ===== */}
-      <section className="border-y border-sand-200 bg-sand-50/60 py-16 lg:py-24">
+      <section id="how" className="scroll-mt-24 border-y border-sand-200 bg-sand-50/60 py-16 lg:py-24">
         <div className="pk-container">
           <Reveal>
             <SectionTitle
               center
               eyebrow={text(c, 'home.steps.eyebrow', 'كيف تشتغل')}
-              title={text(c, 'home.steps.title', 'كيف تشتغل بكجات؟')}
+              title={text(c, 'home.steps.title', 'من الرفع للباب، أربع خطوات وخلصت')}
             />
           </Reveal>
 
@@ -279,10 +337,10 @@ export default async function HomePage() {
             />
             <div className="relative">
               <h2 className="font-display text-3xl/snug font-bold pk-balance sm:text-4xl/snug">
-                {text(c, 'home.cta.title', 'جرّب بكجات على أول ١٠ دعوات مجاناً')}
+                {text(c, 'home.cta.title', 'جرّبها الآن بلا مخاطرة')}
               </h2>
               <p className="mx-auto mt-4 max-w-lg text-base leading-8 text-white/95">
-                {text(c, 'home.cta.body', 'سجّل، صمّم، وولّد دعواتك فعلياً قبل ما تدفع أي ريال.')}
+                {text(c, 'home.cta.body', 'ارفع دعوتك وولّد أول ١٠ باركودات فعلياً — قبل ما تدفع ريال واحد.')}
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
                 <ButtonLink
@@ -290,14 +348,14 @@ export default async function HomePage() {
                   size="lg"
                   className="bg-surface text-grape-600 shadow-none hover:bg-sand-50"
                 >
-                  {text(c, 'home.cta.primary', 'أنشئ حسابك الآن')}
+                  {text(c, 'home.cta.primary', 'أنشئ حسابك')}
                 </ButtonLink>
                 <ButtonLink
                   href="/pricing"
                   size="lg"
                   className="border-2 border-white/40 bg-transparent text-white shadow-none hover:bg-white/10"
                 >
-                  {text(c, 'home.cta.secondary', 'شوف الباقات')}
+                  {text(c, 'home.cta.secondary', 'شاهد الباقات')}
                 </ButtonLink>
               </div>
             </div>

@@ -610,6 +610,25 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0030 ----
+  migrations.push({
+    file: '0030_home_copy_rewrite.sql',
+    title: 'نصوص الصفحة الرئيسية الجديدة',
+    breaks:
+      'الرئيسية تعرض النصّ القديم، وقسم «قبل/بعد» يظهر بلا عنوان مصغّر ' +
+      'ولا شرح — لأن نصّيهما لم يُنشآ في قاعدة البيانات بعد.',
+    checks: await Promise.all([
+      probeContentValue(
+        sb,
+        'home.hero.title',
+        'كل مدعو يدخل بباركوده… وأنت تعرف مين حضر لحظة بلحظة',
+        'عنوان الرئيسية محدَّث',
+      ),
+      probeKeyRow(sb, 'site_content', 'home.showcase.body', 'نصّ قسم «قبل/بعد» قابل للتعديل'),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {
