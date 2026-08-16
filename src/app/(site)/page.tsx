@@ -144,14 +144,14 @@ export default async function HomePage() {
             </span>
 
             <h1 className="mt-5 font-display text-4xl/[1.3] font-bold text-ink pk-balance sm:text-5xl/[1.26] lg:text-6xl/[1.24]">
-              {text(c, 'home.hero.title', 'كل مدعو يدخل بباركوده… وأنت تعرف مين حضر لحظة بلحظة')}
+              {text(c, 'home.hero.title', 'كل مدعو بباركوده، وتعرف مين حضر')}
             </h1>
 
             <p className="mt-5 max-w-xl text-lg leading-9 text-ink-soft">
               {text(
                 c,
                 'home.hero.subtitle',
-                'ارفع دعوتك الحالية بأي تصميم، ونولّد باركود دخول فريد لكل مدعو باسمه. على الباب تمسحه من جوالك وبس — بدون طابعة، بدون تطبيق، بدون فوضى.',
+                'ارفع دعوتك الحالية بأي تصميم، ونولّد باركود دخول فريد لكل مدعو باسمه. على الباب تمسحه من جوالك وبس، وتشوف الحضور لحظة بلحظة — بدون طابعة، بدون تطبيق، بدون فوضى.',
               )}
             </p>
 

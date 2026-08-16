@@ -621,7 +621,7 @@ export async function runHealthCheck(): Promise<HealthReport> {
       probeContentValue(
         sb,
         'home.hero.title',
-        'كل مدعو يدخل بباركوده… وأنت تعرف مين حضر لحظة بلحظة',
+        'كل مدعو بباركوده، وتعرف مين حضر',
         'عنوان الرئيسية محدَّث',
       ),
       probeKeyRow(sb, 'site_content', 'home.showcase.body', 'نصّ قسم «قبل/بعد» قابل للتعديل'),
