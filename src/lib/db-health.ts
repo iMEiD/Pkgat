@@ -270,6 +270,30 @@ async function probeBooleanFunction(
     : { label, state: 'missing', detail: 'الترحيل نُفِّذ جزئياً — الحارس غير مركّب' };
 }
 
+/**
+ * أثر الترحيل داخل قيمة مركّبة (قائمة أسئلة مثلاً).
+ *
+ * فحصُ المطابقة التامة لا يصلح هنا: القيمة مصفوفة يضيف إليها الأدمن
+ * ويحذف، فأي تعديل مشروع منه يجعل الفحص يقول «ناقص». والذي يثبت أن
+ * الترحيل وصل هو وجود الجملة التي زرعها، لا تطابق القائمة كلها.
+ */
+async function probeContentContains(
+  sb: ProbeClient,
+  key: string,
+  needle: string,
+  label: string,
+): Promise<CheckResult> {
+  const { data, error } = await sb.from('site_content').select('value').eq('key', key).maybeSingle();
+
+  if (error) return { label, state: 'unknown', detail: error.message ?? 'خطأ غير متوقّع' };
+  if (!data) return { label, state: 'ok', detail: 'يعمل بالقيمة الاحتياطية' };
+
+  const value = (data as { value?: unknown }).value;
+  return JSON.stringify(value ?? '').includes(needle)
+    ? { label, state: 'ok' }
+    : { label, state: 'missing', detail: 'النص المحفوظ ما زال النسخة القديمة' };
+}
+
 /** نص محفوظ في site_content يطابق ما يتوقعه الترحيل */
 async function probeContentValue(
   sb: ProbeClient,
@@ -469,12 +493,22 @@ export async function runHealthCheck(): Promise<HealthReport> {
     file: '0020_free_quota_copy.sql',
     title: 'نصوص الحصة المجانية محدَّثة',
     breaks: 'الموقع يَعِد بـ«١٠ دعوات لكل مناسبة» بينما النظام يمنحها للحساب كله — وعدٌ يخالف السلوك.',
+    /*
+      نفحص أثره الباقي وحده.
+
+      كان يفحص home.stats.free_label بمطابقة نصّية — ثم أعاد ٠٠٣٠ كتابة
+      ذلك النص، فصار الفحص يقارن بنصٍّ باطل ويقول «ناقص» أبداً مهما
+      نُفِّذ الترحيل. وهذا ما وقع فعلاً.
+
+      وجواب سؤال «وش معنى الدعوات المجانية؟» في صفحة الأسعار وضعه ٠٠٢٠
+      ولم يمسسه ترحيلٌ بعده — فهو الأثر الذي يثبت وصوله.
+    */
     checks: await Promise.all([
-      probeContentValue(
+      probeContentContains(
         sb,
-        'home.stats.free_label',
-        'مجاناً قبل أي دفع',
-        'نص بطاقة الحصة في الرئيسية',
+        'pricing.faq',
+        'تجرّب المنصة كاملة قبل أي ريال',
+        'جواب سؤال الدعوات المجانية في صفحة الأسعار',
       ),
     ]),
     state: 'ok',
@@ -587,11 +621,16 @@ export async function runHealthCheck(): Promise<HealthReport> {
       'الصفحة الرئيسية تقول «صمّم دعوتك» — فيقيسك الزائر بأدوات التصميم ويفوته ' +
       'أن قيمة المنصة في الباركود على دعوته هو.',
     checks: await Promise.all([
+      /*
+        نفحص نصّ صفحة الأسعار لا عنوان الرئيسية: العنوان أعاد ٠٠٣٠
+        كتابته، فمقارنته بنصّ ٠٠٢٨ تقول «ناقص» أبداً. ونصّ الأسعار
+        وضعه ٠٠٢٨ ولم يمسسه ترحيلٌ بعده.
+      */
       probeContentValue(
         sb,
-        'home.hero.title',
-        'دعوتك زي ما هي… وباركود لكل مدعو',
-        'عنوان الصفحة الرئيسية محدَّث',
+        'pricing.subtitle',
+        'ارفع دعوتك وجرّب أول ١٠ باركودات مجاناً، وادفع فقط لما تحتاج أكثر.',
+        'نص صفحة الأسعار محدَّث',
       ),
     ]),
     state: 'ok',
