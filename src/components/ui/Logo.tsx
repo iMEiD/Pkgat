@@ -3,25 +3,39 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils/cn';
 
 /**
- * الشعار النصي (Logotype) لبكجات.
- * علامة QR مبسّطة + الاسم بالإنجليزي كشعار رئيسي والعربي كسطر مساند.
+ * شعار بكجات: إطار مسح — أربع زوايا تحيط بمربع.
+ *
+ * الشكل نفسه الذي تراه في كاميرا أي قارئ باركود، فيُفهم بلا شرح ويصف
+ * المنتج حرفياً: إطارٌ تمسح فيه.
+ *
+ * ولا صندوق حوله: العلامة وحدها أهدأ وأقرب لروح الهوية، والصندوق
+ * يبقى للأيقونة (public/icon.svg) حيث يلزم سطحٌ يفصلها عن شريط
+ * المتصفح.
+ *
+ * ومركزها مفرَّغ هنا ومصمت في الأيقونة: قيس الاثنان على ١٦ بكسل،
+ * فالفراغ يذوب في ذلك المقاس والمصمت يبقى. وحلٌّ واحد للمقاسين
+ * يخسر أحدهما دائماً.
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <span
-      className={cn(
-        'relative grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-grape-500 text-white shadow-pop',
-        className,
-      )}
+    <svg
+      viewBox="0 0 24 24"
+      className={cn('h-10 w-10 shrink-0 text-grape-500', className)}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
     >
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-        <path d="M3 3h7v7H3V3Zm2 2v3h3V5H5Z" />
-        <path d="M14 3h7v7h-7V3Zm2 2v3h3V5h-3Z" />
-        <path d="M3 14h7v7H3v-7Zm2 2v3h3v-3H5Z" />
-        <path d="M14 14h3v3h-3v-3Zm5 0h2v2h-2v-2Zm-5 5h3v2h-3v-2Zm5 1h2v1h-2v-1Zm-2-1h2v2h-2v-2Z" />
-      </svg>
-    </span>
+      {/* أربع زوايا تحيط بفراغ — إطار المسح كما تراه في أي كاميرا */}
+      <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+      <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+      <path d="M21 16v3a2 2 0 0 1-2 2h-3" />
+      <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
+      {/* المربع الممسوح في المنتصف */}
+      <rect x="9.2" y="9.2" width="5.6" height="5.6" rx="1.4" />
+    </svg>
   );
 }
 
