@@ -68,10 +68,13 @@ export function SiteFooter({
           )}
 
           {/* حسابات التواصل — كل حساب يظهر متى ضُبط رابطه */}
-          {(contact.instagram || contact.x) && (
+          {(contact.instagram || contact.x || contact.tiktok) && (
             <div className="mt-4 flex items-center gap-2">
               {contact.instagram && (
                 <SocialIcon href={contact.instagram} label="انستقرام" icon="instagram" />
+              )}
+              {contact.tiktok && (
+                <SocialIcon href={contact.tiktok} label="تيك توك" icon="tiktok" />
               )}
               {contact.x && <SocialIcon href={contact.x} label="حساب X" icon="x" />}
             </div>

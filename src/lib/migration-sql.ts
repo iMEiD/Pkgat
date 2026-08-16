@@ -3119,6 +3119,32 @@ update public.site_content set value = '"أنشئ حسابك"'::jsonb
 
 update public.site_content set value = '"شاهد الباقات"'::jsonb
  where key = 'home.cta.secondary';`,
+  '0031_tiktok_and_social_labels.sql': `-- =============================================================
+-- 0031 — حساب تيك توك، ووصفٌ يمنع كسر الروابط
+--
+-- علّتان:
+--
+-- ١) تيك توك لم يكن له حقل أصلاً، فلا سبيل لعرضه مهما أراد الأدمن.
+--
+-- ٢) حقول التواصل موصوفة بـ«رابط انستقرام»، والذي يُكتب فيها غالباً
+--    معرّف: pkgat أو @pkgat. وكانت القيمة تُوضع في الرابط كما هي،
+--    والمتصفح يقرأ ما لا يبدأ ببروتوكول عنواناً نسبياً — فيفتح
+--    pkgat.com/pkgat ويعطي صفحة غير موجودة. صار الكود يصحّح ذلك،
+--    ويبقى الوصف هنا ليقول للأدمن أن الاثنين مقبولان فلا يتردّد.
+-- =============================================================
+
+insert into public.site_settings (key, value, label) values
+  ('tiktok_url', '""'::jsonb,
+   'تيك توك — الرابط الكامل أو المعرّف فقط (مثال: pkgat)')
+on conflict (key) do nothing;
+
+update public.site_settings
+   set label = 'انستقرام — الرابط الكامل أو المعرّف فقط (مثال: pkgat)'
+ where key = 'instagram_url';
+
+update public.site_settings
+   set label = 'حساب X — الرابط الكامل أو المعرّف فقط (مثال: pkgat)'
+ where key = 'x_url';`,
 };
 
 /** نص ترحيل بعينه، أو null إن لم يكن مضمّناً */

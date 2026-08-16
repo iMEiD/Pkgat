@@ -668,6 +668,17 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0031 ----
+  migrations.push({
+    file: '0031_tiktok_and_social_labels.sql',
+    title: 'حساب تيك توك',
+    breaks: 'لا يوجد حقل لتيك توك في لوحة الأدمن، فلا يظهر الحساب في ذيل الموقع مهما أردت.',
+    checks: await Promise.all([
+      probeKeyRow(sb, 'site_settings', 'tiktok_url', 'حقل تيك توك في لوحة الأدمن'),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {

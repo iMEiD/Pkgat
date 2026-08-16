@@ -128,6 +128,14 @@ const PATHS: Record<string, React.ReactNode> = {
       <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none" />
     </>
   ),
+  /* تيك توك — المسار الرسمي المبسّط، يُرسم بلون النص كبقية أيقونات التواصل */
+  tiktok: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M16.5 3h-2.6v12.1a2.6 2.6 0 1 1-2.6-2.6c.2 0 .4 0 .6.1V9.9a5.7 5.7 0 1 0 4.9 5.6V9.2a6.6 6.6 0 0 0 3.8 1.2V7.7a3.9 3.9 0 0 1-4.1-3.9V3Z"
+    />
+  ),
   x: (
     <path
       fill="currentColor"

@@ -17,8 +17,10 @@ export interface ContactLinks {
   /** رقم واتساب بصيغة دولية بلا رموز — مثال 966512345678 */
   whatsapp: string | null;
   email: string | null;
+  /** روابط كاملة جاهزة للـ href — انظر normalizeSocial */
   instagram: string | null;
   x: string | null;
+  tiktok: string | null;
 }
 
 function num(settings: Record<string, unknown>, key: string): number | null {
@@ -80,12 +82,39 @@ function normalizePhone(value: string | null): string | null {
   return digits.length >= 11 ? digits : null;
 }
 
+/**
+ * يحوّل ما يكتبه الأدمن إلى رابط كامل صالح للنقر.
+ *
+ * الحقل اسمه «رابط»، لكن الذي يُكتب فيه غالباً معرّف: pkgat أو @pkgat
+ * أو instagram.com/pkgat. وكان يُوضع في href كما هو — والمتصفح يقرأ
+ * ما لا يبدأ ببروتوكول عنواناً نسبياً، فيفتح pkgat.com/pkgat ويعطي
+ * صفحة غير موجودة. فيبدو الحساب معطوباً وسببه سطرٌ في حقل.
+ *
+ *   https://instagram.com/pkgat  →  كما هو
+ *   instagram.com/pkgat          →  https://instagram.com/pkgat
+ *   @pkgat  أو  pkgat            →  <القاعدة>pkgat
+ */
+function normalizeSocial(value: string | null, base: string): string | null {
+  if (!value) return null;
+  const raw = value.trim();
+  if (!raw) return null;
+
+  if (/^https?:\/\//i.test(raw)) return raw;
+  // نطاق مكتوب بلا بروتوكول — نضيفه ولا نعامله كمعرّف
+  if (/^(www\.)?[a-z0-9-]+\.[a-z]{2,}(\/|$)/i.test(raw)) return `https://${raw}`;
+
+  const handle = raw.replace(/^@+/, '').replace(/^\/+/, '');
+  return handle ? `${base}${handle}` : null;
+}
+
 export function readContactLinks(settings: Record<string, unknown>): ContactLinks {
   return {
     whatsapp: normalizePhone(str(settings, 'support_whatsapp')),
     email: str(settings, 'support_email'),
-    instagram: str(settings, 'instagram_url'),
-    x: str(settings, 'x_url'),
+    instagram: normalizeSocial(str(settings, 'instagram_url'), 'https://instagram.com/'),
+    x: normalizeSocial(str(settings, 'x_url'), 'https://x.com/'),
+    // تيك توك يسبق المعرّف بعلامة @ في مسار الحساب، بخلاف الاثنين قبله
+    tiktok: normalizeSocial(str(settings, 'tiktok_url'), 'https://www.tiktok.com/@'),
   };
 }
 
