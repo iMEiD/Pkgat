@@ -43,6 +43,16 @@ export function readSocialProof(settings: Record<string, unknown>): SocialProof 
   };
 }
 
+/**
+ * هل تُعرض صفحة «أعمالنا»؟
+ *
+ * الافتراضي إخفاء: منصة قبل إطلاقها لا أعمال لها، وصفحة فارغة اسمها
+ * «أعمالنا» أسوأ من غيابها. وتُشغَّل حين يصير فيها ما يُعرض.
+ */
+export function readGalleryEnabled(settings: Record<string, unknown>): boolean {
+  return settings.gallery_enabled === true;
+}
+
 /** مصدر أرقام الإثبات: محسوبة من قاعدة البيانات، أو مكتوبة بيد الأدمن */
 export type SocialProofMode = 'auto' | 'manual';
 

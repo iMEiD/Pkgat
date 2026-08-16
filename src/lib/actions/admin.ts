@@ -817,6 +817,28 @@ export async function saveTheme(theme: Theme): Promise<ActionResult> {
   return { ok: true };
 }
 
+/** يشغّل صفحة «أعمالنا» أو يطفئها — وروابطها تختفي معها */
+export async function saveGalleryEnabled(enabled: boolean): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = createServiceClient();
+
+  const { error } = await supabase.from('site_settings').upsert(
+    {
+      key: 'gallery_enabled',
+      value: enabled === true,
+      label: 'إظهار صفحة «أعمالنا» — أطفئها حتى تجمع أعمال عملاء تعرضها',
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'key' },
+  );
+
+  if (error) return { ok: false, error: 'تعذّر حفظ الإعداد.' };
+
+  await logAdminAction('gallery.toggled', 'site_settings', null, { enabled });
+  revalidatePath('/', 'layout');
+  return { ok: true };
+}
+
 /**
  * يحفظ مصدر أرقام الإثبات الاجتماعي وحدَّه الأدنى.
  *
@@ -826,12 +848,14 @@ export async function saveTheme(theme: Theme): Promise<ActionResult> {
 export async function saveSocialProofMode(
   mode: 'auto' | 'manual',
   min: number,
+  manual: { events: number; guests: number },
 ): Promise<ActionResult> {
   await requireAdmin();
   const supabase = createServiceClient();
 
   const cleanMode = mode === 'manual' ? 'manual' : 'auto';
   const cleanMin = Number.isFinite(min) && min >= 0 ? Math.floor(min) : 25;
+  const num = (v: number) => (Number.isFinite(v) && v > 0 ? Math.floor(v) : 0);
 
   const { error } = await supabase.from('site_settings').upsert(
     [
@@ -845,6 +869,19 @@ export async function saveSocialProofMode(
         key: 'social_proof_min',
         value: cleanMin,
         label: 'الحد الأدنى للمناسبات قبل إظهار الشريط (في الوضع التلقائي فقط)',
+        updated_at: new Date().toISOString(),
+      },
+      // الأرقام اليدوية تُحفظ دائماً — فلا تضيع حين يبدّل للتلقائي ويرجع
+      {
+        key: 'social_proof_events',
+        value: num(manual.events),
+        label: 'عدد المناسبات (الوضع اليدوي)',
+        updated_at: new Date().toISOString(),
+      },
+      {
+        key: 'social_proof_guests',
+        value: num(manual.guests),
+        label: 'عدد المدعوين (الوضع اليدوي)',
         updated_at: new Date().toISOString(),
       },
     ],

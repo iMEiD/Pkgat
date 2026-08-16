@@ -26,10 +26,13 @@ export function SiteFooter({
   tagline,
   note,
   contact,
+  showGallery,
 }: {
   tagline: string;
   note: string;
   contact: ContactLinks;
+  /** صفحة «أعمالنا» مطفأة — فلا رابط لها */
+  showGallery: boolean;
 }) {
   const hasContact = Boolean(contact.whatsapp || contact.email);
 
@@ -84,7 +87,9 @@ export function SiteFooter({
         <div>
           <h4 className="text-sm font-bold text-ink">المنصة</h4>
           <ul className="mt-1 text-sm text-ink-soft">
-            <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/gallery">معرض الأعمال</Link></li>
+            {showGallery && (
+              <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/gallery">أعمال عملائنا</Link></li>
+            )}
             <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/pricing">الأسعار والباقات</Link></li>
             <li><Link className="inline-flex min-h-11 items-center transition-colors hover:text-grape-600" href="/about">من نحن</Link></li>
           </ul>

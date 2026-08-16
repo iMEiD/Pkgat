@@ -693,6 +693,19 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0033 ----
+  migrations.push({
+    file: '0033_gallery_toggle_and_customer_work.sql',
+    title: 'صفحة «أعمالنا»: أعمال عملاء ومفتاح إطفاء',
+    breaks:
+      'صفحة «أعمالنا» تعرض القوالب الجاهزة على أنها أعمال أُنجزت، ولا يوجد ' +
+      'مفتاح يطفئها في لوحة الأدمن.',
+    checks: await Promise.all([
+      probeKeyRow(sb, 'site_settings', 'gallery_enabled', 'مفتاح إظهار صفحة أعمالنا'),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {

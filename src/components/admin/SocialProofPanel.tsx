@@ -23,27 +23,39 @@ import { cn } from '@/lib/utils/cn';
 export function SocialProofPanel({
   mode: initialMode,
   min: initialMin,
+  manual: initialManual,
   real,
 }: {
   mode: SocialProofMode;
   min: number;
+  /** الأرقام اليدوية المحفوظة */
+  manual: { events: number; guests: number };
   /** الأرقام كما تحسبها قاعدة البيانات الآن — للعرض لا للحفظ */
   real: { events: number; guests: number } | null;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<SocialProofMode>(initialMode);
   const [min, setMin] = useState(String(initialMin));
+  const [mEvents, setMEvents] = useState(String(initialManual.events || ''));
+  const [mGuests, setMGuests] = useState(String(initialManual.guests || ''));
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const dirty = mode !== initialMode || Number(min) !== initialMin;
+  const dirty =
+    mode !== initialMode ||
+    Number(min) !== initialMin ||
+    Number(mEvents || 0) !== initialManual.events ||
+    Number(mGuests || 0) !== initialManual.guests;
   const hidden = real !== null && mode === 'auto' && real.events < Number(min || 0);
 
   function submit() {
     setError(null);
     startTransition(async () => {
-      const res = await saveSocialProofMode(mode, Number(min) || 0);
+      const res = await saveSocialProofMode(mode, Number(min) || 0, {
+        events: Number(mEvents) || 0,
+        guests: Number(mGuests) || 0,
+      });
       if (!res.ok) {
         setError(res.error ?? 'تعذّر الحفظ.');
         return;
@@ -135,6 +147,44 @@ export function SocialProofPanel({
                 نزّل الحد أو بدّل للوضع اليدوي عشان تشوفه.
               </Alert>
             )}
+          </div>
+        )}
+
+        {mode === 'manual' && (
+          <div>
+            <p className="mb-2 text-sm font-bold text-ink">الأرقام اللي تظهر للزوار</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Input
+                  type="number"
+                  min={0}
+                  value={mEvents}
+                  onChange={(e) => {
+                    setSaved(false);
+                    setMEvents(e.target.value);
+                  }}
+                  placeholder="مثال: 120"
+                />
+                <p className="mt-1 text-xs text-ink-faint">عدد المناسبات</p>
+              </div>
+              <div>
+                <Input
+                  type="number"
+                  min={0}
+                  value={mGuests}
+                  onChange={(e) => {
+                    setSaved(false);
+                    setMGuests(e.target.value);
+                  }}
+                  placeholder="مثال: 4500"
+                />
+                <p className="mt-1 text-xs text-ink-faint">عدد المدعوين</p>
+              </div>
+            </div>
+            <p className="mt-2 text-xs leading-6 text-ink-faint">
+              اترك الحقل فارغاً أو صفراً عشان تخفي الرقم. ولو الاثنان فارغان يختفي
+              الشريط كله من الرئيسية.
+            </p>
           </div>
         )}
 

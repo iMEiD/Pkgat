@@ -20,11 +20,11 @@ const NAV = [
 
 export function SiteHeader({
   signedIn,
-  instagram,
+  showGallery,
 }: {
   signedIn: boolean;
-  /** رابط انستقرام — يُخفى إن لم يُضبط في لوحة الأدمن */
-  instagram?: string | null;
+  /** صفحة «أعمالنا» مطفأة من لوحة الأدمن — فلا رابط لها */
+  showGallery: boolean;
 }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -38,6 +38,8 @@ export function SiteHeader({
   }, []);
 
   useEffect(() => setOpen(false), [pathname]);
+
+  const nav = showGallery ? NAV : NAV.filter((i) => i.href !== '/gallery');
 
   return (
     <header
@@ -57,7 +59,7 @@ export function SiteHeader({
         <Logo />
 
         <nav className="hidden items-center gap-1 md:flex">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const active = pathname === item.href;
             return (
               <Link
@@ -78,18 +80,13 @@ export function SiteHeader({
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          {instagram && (
-            <a
-              href={instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="انستقرام"
-              title="انستقرام"
-              className="grid h-10 w-10 place-items-center rounded-full text-ink-soft transition-colors hover:bg-sand-100 hover:text-grape-600"
-            >
-              <Icon name="instagram" className="h-5 w-5" />
-            </a>
-          )}
+          {/*
+            حسابات التواصل نزلت للذيل وحدها.
+
+            موضعها في الترويسة يزاحم زر «ابدأ مجاناً» على انتباه الزائر،
+            ويخرجه من الموقع قبل أن يفهمه. ومن أراد الحساب وجده أسفل
+            الصفحة حيث يبحث عنه أصلاً.
+          */}
           <SurfaceToggle />
           <ThemeToggle />
           {signedIn ? (
@@ -133,7 +130,7 @@ export function SiteHeader({
       {open && (
         <div className="pk-panel-menu animate-menu-in border-t border-sand-200 bg-canvas/95 backdrop-blur-md md:hidden">
           <nav className="pk-menu-stagger pk-container flex flex-col gap-1 py-4">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

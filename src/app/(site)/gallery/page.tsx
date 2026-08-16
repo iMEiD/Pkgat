@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import Image from 'next/image';
 
 import { Reveal } from '@/components/ui/Reveal';
 import { SectionTitle, EmptyState } from '@/components/ui/Misc';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
-import { getPageContent, text } from '@/lib/cms';
+import { getPageContent, getSettings, text } from '@/lib/cms';
+import { readGalleryEnabled } from '@/lib/site-settings';
 import { createClient } from '@/lib/supabase/server';
 import { EVENT_TYPE_LABELS } from '@/lib/utils/format';
 import type { GalleryItem } from '@/lib/types/database';
@@ -14,7 +16,7 @@ export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'معرض الأعمال',
-  description: 'نماذج من دعوات صُمّمت وأُنجزت فعلياً عبر بكجات.',
+  description: 'دعوات حقيقية أُنجزت على بكجات بتصاميم أصحابها.',
 };
 
 async function getItems(): Promise<GalleryItem[]> {
@@ -33,7 +35,19 @@ async function getItems(): Promise<GalleryItem[]> {
 }
 
 export default async function GalleryPage() {
-  const [c, items] = await Promise.all([getPageContent('gallery'), getItems()]);
+  const [c, items, settings] = await Promise.all([
+    getPageContent('gallery'),
+    getItems(),
+    getSettings(),
+  ]);
+
+  /*
+   * الصفحة مطفأة من لوحة الأدمن.
+   *
+   * ولا يكفي إخفاء روابطها: من حفظ العنوان أو وجده في محرك بحث يصل
+   * إليها مباشرة، فيرى صفحة قرّر صاحب الموقع ألّا تُرى. فتُردّ ٤٠٤.
+   */
+  if (!readGalleryEnabled(settings)) notFound();
 
   return (
     <div className="pk-container py-16 lg:py-24">
@@ -41,8 +55,12 @@ export default async function GalleryPage() {
         <SectionTitle
           center
           eyebrow="أعمالنا"
-          title={text(c, 'gallery.title', 'أعمالنا')}
-          subtitle={text(c, 'gallery.subtitle', 'نماذج من دعوات صُمّمت وأُنجزت فعلياً عبر بكجات.')}
+          title={text(c, 'gallery.title', 'أعمال عملائنا')}
+          subtitle={text(
+            c,
+            'gallery.subtitle',
+            'دعوات حقيقية أُنجزت على بكجات — بتصاميم أصحابها وباركود دخول لكل مدعو.',
+          )}
         />
       </Reveal>
 
@@ -51,8 +69,8 @@ export default async function GalleryPage() {
           className="mt-12"
           icon="🖼️"
           title="لا توجد أعمال معروضة بعد"
-          description="سيضيف فريق بكجات نماذج التصاميم هنا قريباً."
-          action={<ButtonLink href="/signup">ابدأ تصميم دعوتك</ButtonLink>}
+          description="نضيف هنا دعوات عملائنا بإذنهم. كن أول من يظهر."
+          action={<ButtonLink href="/signup">ابدأ مجاناً</ButtonLink>}
         />
       ) : (
         <div className="mt-12 columns-1 gap-5 sm:columns-2 lg:columns-3 [&>*]:mb-5">
