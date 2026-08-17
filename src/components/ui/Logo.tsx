@@ -54,12 +54,22 @@ export function Logo({
       className={cn('group inline-flex items-center gap-2.5 transition-opacity hover:opacity-90', className)}
     >
       <LogoMark className="transition-transform duration-300 group-hover:rotate-[-6deg]" />
+      {/*
+        العربي هو الاسم، والإنجليزي سطر مساند تحته.
+
+        كان معكوساً: PKGAT كبيراً و«بكجات» صغيراً. والموقع عربي وزوّاره
+        عرب، فاسمُه الذي يُقرأ ويُنطق ويُبحث به هو العربي — واللاتيني
+        يخدم النطق للأجنبي ولا يُقدَّم عليه.
+      */}
       <span className="flex flex-col leading-none">
-        <span className="font-display text-xl font-bold tracking-[0.14em] text-ink" dir="ltr">
-          PKGAT
-        </span>
+        <span className="font-display text-xl font-bold text-ink sm:text-[22px]">بكجات</span>
         {showTagline && (
-          <span className="mt-1 text-[11px] font-semibold text-ink-faint">بكجات</span>
+          <span
+            className="mt-1 text-[10px] font-semibold tracking-[0.16em] text-ink-faint"
+            dir="ltr"
+          >
+            PKGAT
+          </span>
         )}
       </span>
     </Link>

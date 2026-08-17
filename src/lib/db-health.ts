@@ -717,6 +717,20 @@ export async function runHealthCheck(): Promise<HealthReport> {
     state: 'ok',
   });
 
+  // ---- 0035 ----
+  migrations.push({
+    file: '0035_site_title_editable.sql',
+    title: 'عنوان الموقع ووصفه قابلان للتعديل',
+    breaks:
+      'عنوان تبويب المتصفح ووصف نتائج البحث وبطاقة واتساب مكتوبة في الكود — ' +
+      'ما تقدر تغيّرها من لوحتك.',
+    checks: await Promise.all([
+      probeKeyRow(sb, 'site_content', 'common.site_title', 'عنوان الموقع قابل للتعديل'),
+      probeKeyRow(sb, 'site_content', 'common.site_description', 'وصف الموقع قابل للتعديل'),
+    ]),
+    state: 'ok',
+  });
+
   for (const m of migrations) m.state = rollUp(m.checks);
 
   return {

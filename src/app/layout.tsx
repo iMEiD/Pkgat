@@ -3,45 +3,58 @@ import type { Metadata, Viewport } from 'next';
 import { googleFontsHref } from '@/lib/design/fonts';
 import { appearanceScript, appearanceToCssVars } from '@/lib/design/appearance';
 import { themeToCssVars } from '@/lib/design/theme';
-import { getAppearance, getTheme } from '@/lib/cms';
+import { getAppearance, getPageContent, getTheme, text } from '@/lib/cms';
 import './globals.css';
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://pkgat.com'),
-  title: {
-    default: 'بكجات — دعوات إلكترونية بباركود دخول',
-    template: '%s · بكجات',
-  },
-  description:
-    'صمّم دعوتك الإلكترونية، ولّد باركود فريد لكل مدعو، وتحكّم بالدخول من جوالك وقت المناسبة — بدون أي تطبيق.',
-  keywords: ['دعوات إلكترونية', 'باركود دخول', 'دعوة عرس', 'تنظيم مناسبات', 'PKGAT', 'بكجات'],
-  icons: {
-    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
-    apple: '/icon.svg',
-  },
-  openGraph: {
-    type: 'website',
-    locale: 'ar_SA',
-    siteName: 'بكجات',
-    title: 'بكجات — دعوات إلكترونية بباركود دخول',
-    description: 'من تصميم الدعوة إلى تقرير الحضور — كل شيء من المتصفح.',
-    // معظم مشاركات الموقع تمرّ بواتساب، وبطاقته بلا صورة تبدو رابطاً مهملاً
-    images: [
-      {
-        url: '/og.png',
-        width: 1200,
-        height: 630,
-        alt: 'بكجات — دعوات إلكترونية بباركود دخول',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'بكجات — دعوات إلكترونية بباركود دخول',
-    description: 'من تصميم الدعوة إلى تقرير الحضور — كل شيء من المتصفح.',
-    images: ['/og.png'],
-  },
-};
+/**
+ * البيانات الوصفية تُقرأ من قاعدة البيانات لا من الكود.
+ *
+ * عنوان التبويب ووصف نتائج البحث وبطاقة واتساب أكثرُ نصٍّ يُرى: يقرؤه
+ * من لم يفتح الموقع بعد. فوجب أن يكون بيد صاحبه لا بيد من كتب الصفحة.
+ *
+ * وهي دالة لا ثابت، لأن الثابت يُحسب مرة عند البناء فلا يتغيّر إلا
+ * بإعادة نشر — والغرض أن يتغيّر من اللوحة فوراً.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await getPageContent('common');
+
+  const title = text(c, 'common.site_title', 'بكجات — لإدارة الفعاليات');
+  const suffix = text(c, 'common.title_suffix', 'بكجات');
+  const description = text(
+    c,
+    'common.site_description',
+    'ارفع دعوتك بأي تصميم، ونولّد باركود دخول فريد لكل مدعو. امسحه على الباب من جوالك واعرف مين حضر لحظة بلحظة.',
+  );
+
+  return {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://pkgat.com'),
+    title: {
+      default: title,
+      template: `%s · ${suffix}`,
+    },
+    description,
+    keywords: ['دعوات إلكترونية', 'باركود دخول', 'إدارة فعاليات', 'تنظيم مناسبات', 'PKGAT', 'بكجات'],
+    icons: {
+      icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+      apple: '/icon.svg',
+    },
+    openGraph: {
+      type: 'website',
+      locale: 'ar_SA',
+      siteName: suffix,
+      title,
+      description,
+      // معظم مشاركات الموقع تمرّ بواتساب، وبطاقته بلا صورة تبدو رابطاً مهملاً
+      images: [{ url: '/og.png', width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['/og.png'],
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: '#FFFDF9',
