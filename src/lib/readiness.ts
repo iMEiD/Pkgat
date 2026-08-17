@@ -242,6 +242,23 @@ export async function runReadinessCheck(): Promise<ReadinessReport> {
     );
   }
 
+  // عنوان الردّ — عطلٌ صامت لا يشتكي منه إلا من ضاع سؤاله
+  if (env('RESEND_API_KEY') && emailFrom) {
+    const replyTo = env('EMAIL_REPLY_TO');
+    emailItems.push(
+      replyTo
+        ? { label: 'عنوان الردّ', level: 'ok', detail: replyTo }
+        : {
+            label: 'عنوان الردّ',
+            level: 'warning',
+            breaks:
+              'العميل يستلم رسالة تفعيل ويردّ عليها بسؤال — وهذا يقع كثيراً. وردُّه ' +
+              'يذهب إلى العنوان الآليّ فلا يُقرأ، أو يرتدّ. ولا تعرف أنك خسرت السؤال.',
+            fix: 'أضف EMAIL_REPLY_TO في Vercel بعنوان صندوق تقرؤه فعلاً، مثل hello@pkgat.com',
+          },
+    );
+  }
+
   groups.push({
     title: 'البريد والعناوين',
     description: 'ما يصل العميل خارج الموقع — وأكثر ما ينكسر بصمت.',

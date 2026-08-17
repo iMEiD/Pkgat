@@ -5,6 +5,16 @@ import 'server-only';
  *
  * المنصة تعمل بدونه: إن لم يُضبط RESEND_API_KEY نُرجع 'skipped' بدل أن
  * نرمي استثناء — تعطُّل التذكير لا يجوز أن يُسقط أي مسار آخر.
+ *
+ * وعنوانان لا واحد:
+ *
+ *   EMAIL_FROM      المرسِل — عنوان آليّ لا يقرؤه أحد (no-reply@…)
+ *   EMAIL_REPLY_TO  عنوان الردّ — صندوق يقرؤه بشر (hello@…)
+ *
+ * والفصل بينهما ضروري: العميل يستلم رسالة تفعيل ويردّ عليها بسؤال —
+ * وهذا يقع كثيراً. فإن لم يكن للردّ عنوان ذهب الردّ إلى صندوق آليّ لا
+ * يُفتح، أو ارتدّ. وهو عطل صامت: لا يظهر في سجلّ، ولا يشتكي منه أحد
+ * لأن الشاكي هو من ضاع سؤاله.
  */
 
 const API = 'https://api.resend.com/emails';
@@ -22,6 +32,8 @@ export async function sendEmail(input: {
 }): Promise<SendResult> {
   if (!isEmailConfigured()) return 'skipped';
 
+  const replyTo = (process.env.EMAIL_REPLY_TO ?? '').trim();
+
   try {
     const res = await fetch(API, {
       method: 'POST',
@@ -34,6 +46,8 @@ export async function sendEmail(input: {
         to: [input.to],
         subject: input.subject,
         html: input.html,
+        // يُحقن فقط إن ضُبط — Resend يرفض حقلاً فارغاً
+        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
 
