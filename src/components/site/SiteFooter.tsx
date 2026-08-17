@@ -39,7 +39,15 @@ export function SiteFooter({
   return (
     <footer className="pk-panel mt-24 border-t border-sand-200 bg-sand-50/70">
       <div className="pk-container grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="sm:col-span-2 lg:col-span-2">
+        {/*
+          كتلة العلامة آخر الذيل على الجوال، وأوّله على الشاشة الواسعة.
+
+          الشبكة تصفّ الأعمدة جنباً إلى جنب على الحاسب فترتيبها هناك
+          يمينٌ ويسار لا أوّل وآخر. أمّا على الجوال فتتكدّس، فيصير أول
+          ما يبلغه من نزل إلى الذيل هو الشعار وحسابات التواصل — وهو
+          نزل يبحث عن رابط. فتؤخَّر الكتلة هناك وحدها.
+        */}
+        <div className="order-last sm:col-span-2 lg:order-first lg:col-span-2">
           <Logo />
           <p className="mt-4 max-w-sm text-sm leading-7 text-ink-soft">{tagline}</p>
 
