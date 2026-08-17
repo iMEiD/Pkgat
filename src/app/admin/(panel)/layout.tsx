@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { href: '/admin/suggestions', label: 'الاقتراحات', icon: 'edit' },
   { href: '/admin/logs', label: 'السجلات', icon: 'shield' },
   { href: '/admin/health', label: 'فحص قاعدة البيانات', icon: 'pulse' },
+  { href: '/admin/readiness', label: 'جاهزية الإطلاق', icon: 'shield' },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
