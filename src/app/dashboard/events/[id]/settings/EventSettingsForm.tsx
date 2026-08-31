@@ -117,9 +117,40 @@ export function EventSettingsForm({
               <Input id="venue" name="venue" defaultValue={event.venue ?? ''} />
             </Field>
 
+            <Field
+              label="رابط الموقع على الخريطة"
+              htmlFor="map_url"
+              hint="اختياري — انسخه من خرائط جوجل. يظهر للمدعو كزر يفتح الخريطة."
+            >
+              <Input
+                id="map_url"
+                name="map_url"
+                type="url"
+                dir="ltr"
+                placeholder="https://maps.app.goo.gl/…"
+                defaultValue={event.map_url ?? ''}
+              />
+            </Field>
+
             <Field label="ملاحظات داخلية" htmlFor="notes" hint="تظهر لك فقط">
               <Textarea id="notes" name="notes" defaultValue={event.notes ?? ''} rows={3} />
             </Field>
+
+            <Field
+              label="ملاحظة تظهر للمدعوين"
+              htmlFor="guest_note"
+              hint="تظهر في صفحة الدعوة — زي: يُرجى الحضور قبل الموعد بنصف ساعة"
+            >
+              <Textarea
+                id="guest_note"
+                name="guest_note"
+                defaultValue={event.guest_note ?? ''}
+                maxLength={400}
+                rows={2}
+              />
+            </Field>
+
+            <RsvpSwitch defaultOn={event.rsvp_enabled} />
 
             <div className="border-t border-sand-200 pt-5">
               <h3 className="text-sm font-bold text-ink">نافذة صلاحية الباركودات</h3>
@@ -202,6 +233,80 @@ export function EventSettingsForm({
           </Button>
         </CardBody>
       </Card>
+    </div>
+  );
+}
+
+/**
+ * مفتاح تأكيد الحضور.
+ *
+ * والفرق بين وضعيه ليس في الشكل بل في مكان الباركود، ومكان الباركود
+ * يقرّر ما يُرسَل:
+ *
+ *   مطفأ    باركود كل مدعو محروق داخل صورته. أي أن لكل مدعوٍّ صورة —
+ *           وهذا ما يجعل الدعوة تُطبع وتُرسل يدوياً، ويجعل الإرسال
+ *           الآليّ لخمسمئة مدعو خمسمئة رفعٍ للصور.
+ *
+ *   مفعّل   صورة واحدة للجميع بلا باركود، ولكل مدعوٍّ رابط. والباركود
+ *           لا يُولَّد له إلا بعد أن يؤكّد.
+ *
+ * ومكتوبٌ هنا صراحةً لأن اللافتة وحدها («تأكيد الحضور») لا تُفهم منها
+ * هذه التبعات، فيُفعّله صاحب مناسبةٍ طبع دعواته أمس.
+ */
+function RsvpSwitch({ defaultOn }: { defaultOn: boolean }) {
+  const [on, setOn] = useState(defaultOn);
+
+  return (
+    <div className="border-t border-sand-200 pt-5">
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          name="rsvp_enabled"
+          checked={on}
+          onChange={(e) => setOn(e.target.checked)}
+          className="mt-1 h-5 w-5 shrink-0 accent-grape-500"
+        />
+        <span>
+          <span className="block text-sm font-bold text-ink">
+            تأكيد الحضور (RSVP)
+          </span>
+          <span className="mt-1 block text-xs leading-6 text-ink-soft">
+            المدعو يفتح رابطه، يشوف الدعوة، ويرد: أحضر أو أعتذر. وباركوده ما يطلع
+            له إلا بعد ما يأكّد.
+          </span>
+        </span>
+      </label>
+
+      <div className="mt-3 rounded-2xl bg-sand-50 p-4 text-xs leading-6 text-ink-soft">
+        {on ? (
+          <>
+            <p className="font-bold text-ink">وش يتغيّر لما تفعّله:</p>
+            <ul className="mt-1 list-disc space-y-1 pe-4">
+              <li>الباركود ينتقل من داخل الصورة إلى صفحة الدعوة.</li>
+              <li>الصورة تصير وحدة للكل — تقدر ترسلها لأي عدد بدون تكرار.</li>
+              <li>لكل مدعو رابط خاص فيه، تنسخه أو ترسله من صفحة المدعوين.</li>
+              <li>تعرف مين بيحضر ومين اعتذر قبل المناسبة بأيام.</li>
+            </ul>
+          </>
+        ) : (
+          <>
+            <p className="font-bold text-ink">الوضع الحالي (بدون تأكيد):</p>
+            <ul className="mt-1 list-disc space-y-1 pe-4">
+              <li>باركود كل مدعو داخل صورته، وتنزّلها كلها ملف واحد.</li>
+              <li>مناسب للدعوات المطبوعة، وللي يرسل بنفسه من جواله.</li>
+              <li>ما فيه صفحة رد، فما تعرف مين بيحضر إلا يوم المناسبة.</li>
+            </ul>
+          </>
+        )}
+      </div>
+
+      {on !== defaultOn && (
+        <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-800">
+          {on
+            ? 'انتبه: لو كنت نزّلت الدعوات قبل شوي، الباركودات اللي فيها بتبقى شغّالة — بس المدعوين اللي ما استلموها لازم يمرّون على صفحة التأكيد.'
+            : 'انتبه: بإطفائه تُهمل ردود المدعوين، ويرجع الباركود داخل الصورة — ولازم تنزّل الدعوات من جديد.'}
+        </p>
+      )}
     </div>
   );
 }

@@ -13,11 +13,12 @@ import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState, ProgressBar, Stat } from '@/components/ui/Misc';
 import { DownloadInvitations, DownloadSingle } from '@/components/design/DownloadInvitations';
+import { GuestLinkActions, InviteDistribution } from '@/components/design/InviteLinks';
 import { AddGuestsPanel } from './AddGuestsPanel';
 import { TagManager } from './TagManager';
 import { assignTag, deleteGuests, resetGuestCheckin, updateGuest } from '@/lib/actions/guests';
 import { CODE_STATE_LABELS, formatDateTime, formatNumber } from '@/lib/utils/format';
-import type { EventRow, EventTag, GuestState } from '@/lib/types/database';
+import type { EventRow, EventTag, GuestState, RsvpStatus } from '@/lib/types/database';
 import { cn } from '@/lib/utils/cn';
 
 export function GuestsManager({
@@ -35,6 +36,7 @@ export function GuestsManager({
   const [query, setQuery] = useState('');
   const [tagFilter, setTagFilter] = useState<string>('all');
   const [stateFilter, setStateFilter] = useState<string>('all');
+  const [rsvpFilter, setRsvpFilter] = useState<string>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
@@ -59,11 +61,20 @@ export function GuestsManager({
       if (tagFilter === 'none' && g.tag_id) return false;
       if (tagFilter !== 'all' && tagFilter !== 'none' && g.tag_id !== tagFilter) return false;
       if (stateFilter !== 'all' && g.code_state !== stateFilter) return false;
+      if (rsvpFilter !== 'all' && g.rsvp_status !== rsvpFilter) return false;
       return true;
     });
-  }, [guests, query, tagFilter, stateFilter]);
+  }, [guests, query, tagFilter, stateFilter, rsvpFilter]);
 
   const attended = guests.filter((g) => g.checked_in_at).length;
+  const rsvp = useMemo(
+    () => ({
+      confirmed: guests.filter((g) => g.rsvp_status === 'confirmed').length,
+      declined: guests.filter((g) => g.rsvp_status === 'declined').length,
+      pending: guests.filter((g) => g.rsvp_status === 'pending').length,
+    }),
+    [guests],
+  );
   const remaining = limit === null ? null : Math.max(0, limit - guests.length);
   const atLimit = remaining === 0;
   const hasDesign = Boolean(event.design?.backgroundUrl);
@@ -133,6 +144,18 @@ export function GuestsManager({
         </div>
       )}
 
+      {/*
+        عدّادات الرد لا تظهر إلا في وضع التأكيد: بدونه كل المدعوين
+        «ما ردّوا» — ثلاثة أرقام لا تعني شيئاً وتُقلق صاحب المناسبة.
+      */}
+      {event.rsvp_enabled && guests.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Stat label="أكّدوا الحضور" value={formatNumber(rsvp.confirmed)} tone="mint" />
+          <Stat label="اعتذروا" value={formatNumber(rsvp.declined)} tone="coral" />
+          <Stat label="ما ردّوا بعد" value={formatNumber(rsvp.pending)} tone="sunny" />
+        </div>
+      )}
+
       {paymentNotice && (
         <Alert
           tone="warning"
@@ -178,17 +201,31 @@ export function GuestsManager({
         <Card>
           <CardHeader
             title="توزيع الدعوات"
-            description="حمّل صور الدعوات وأرسلها للمدعوين عبر واتساب."
+            description={
+              event.rsvp_enabled
+                ? 'صورة وحدة للكل، ورابط خاص لكل مدعو يرد فيه ويستلم باركوده.'
+                : 'حمّل صور الدعوات وأرسلها للمدعوين عبر واتساب.'
+            }
           />
           <CardBody>
-            <DownloadInvitations
-              eventId={event.id}
-              design={event.design}
-              guests={guests}
-              eventTitle={event.title}
-              disabled={!hasDesign}
-              disabledReason="أكمل تصميم الدعوة أولاً حتى نقدر نولّد الصور."
-            />
+            {event.rsvp_enabled ? (
+              <InviteDistribution
+                design={event.design}
+                guests={guests}
+                eventTitle={event.title}
+                disabled={!hasDesign}
+                disabledReason="أكمل تصميم الدعوة أولاً حتى نقدر نولّد الصورة."
+              />
+            ) : (
+              <DownloadInvitations
+                eventId={event.id}
+                design={event.design}
+                guests={guests}
+                eventTitle={event.title}
+                disabled={!hasDesign}
+                disabledReason="أكمل تصميم الدعوة أولاً حتى نقدر نولّد الصور."
+              />
+            )}
           </CardBody>
         </Card>
       )}
@@ -222,6 +259,14 @@ export function GuestsManager({
               <option value="used">مستخدم (حضر)</option>
               <option value="expired">منتهي</option>
             </Select>
+            {event.rsvp_enabled && (
+              <Select value={rsvpFilter} onChange={(e) => setRsvpFilter(e.target.value)}>
+                <option value="all">كل الردود</option>
+                <option value="confirmed">أكّد الحضور</option>
+                <option value="declined">اعتذر</option>
+                <option value="pending">ما رد بعد</option>
+              </Select>
+            )}
           </div>
 
           {selected.size > 0 && (
@@ -308,11 +353,19 @@ export function GuestsManager({
                           )}
                         </button>
 
-                        <DownloadSingle
-                          design={event.design}
-                          guest={guest}
-                          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-ink-faint transition-colors hover:bg-sand-100 hover:text-grape-600 disabled:opacity-40"
-                        />
+                        {event.rsvp_enabled ? (
+                          <GuestLinkActions
+                            guest={guest}
+                            eventTitle={event.title}
+                            className="flex shrink-0 items-center gap-1"
+                          />
+                        ) : (
+                          <DownloadSingle
+                            design={event.design}
+                            guest={guest}
+                            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-ink-faint transition-colors hover:bg-sand-100 hover:text-grape-600 disabled:opacity-40"
+                          />
+                        )}
                       </div>
 
                       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-sand-100 pt-3">
@@ -320,6 +373,7 @@ export function GuestsManager({
                           status={guest.code_state}
                           label={CODE_STATE_LABELS[guest.code_state] ?? guest.code_state}
                         />
+                        {event.rsvp_enabled && <RsvpBadge status={guest.rsvp_status} />}
                         {tag && <Badge tone={tag.color}>{tag.name}</Badge>}
                         {guest.checked_in_at && (
                           <span className="text-xs text-ink-soft">
@@ -327,6 +381,12 @@ export function GuestsManager({
                           </span>
                         )}
                       </div>
+
+                      {guest.rsvp_note && (
+                        <p className="mt-2 border-s-2 border-grape-200 ps-3 text-xs leading-6 text-ink-soft">
+                          {guest.rsvp_note}
+                        </p>
+                      )}
                     </li>
                   );
                 })}
@@ -349,6 +409,7 @@ export function GuestsManager({
                     <th className="py-2.5 font-semibold">الاسم</th>
                     <th className="py-2.5 font-semibold">الفئة</th>
                     <th className="py-2.5 font-semibold">حالة الباركود</th>
+                    {event.rsvp_enabled && <th className="py-2.5 font-semibold">الرد</th>}
                     <th className="py-2.5 font-semibold">وقت الدخول</th>
                     <th className="w-20 py-2.5" />
                   </tr>
@@ -391,6 +452,11 @@ export function GuestsManager({
                               {guest.phone}
                             </span>
                           )}
+                          {guest.rsvp_note && (
+                            <span className="mt-1 block border-s-2 border-grape-200 ps-2 text-xs text-ink-soft">
+                              {guest.rsvp_note}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3">
                           {tag ? (
@@ -405,16 +471,29 @@ export function GuestsManager({
                             label={CODE_STATE_LABELS[guest.code_state] ?? guest.code_state}
                           />
                         </td>
+                        {event.rsvp_enabled && (
+                          <td className="py-3">
+                            <RsvpBadge status={guest.rsvp_status} />
+                          </td>
+                        )}
                         <td className="py-3 text-xs text-ink-soft">
                           {guest.checked_in_at ? formatDateTime(guest.checked_in_at) : '—'}
                         </td>
                         <td className="py-3">
                           <div className="flex items-center justify-end gap-1">
-                            <DownloadSingle
-                              design={event.design}
-                              guest={guest}
-                              className="rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-sand-100 hover:text-grape-600 disabled:opacity-40"
-                            />
+                            {event.rsvp_enabled ? (
+                              <GuestLinkActions
+                                guest={guest}
+                                eventTitle={event.title}
+                                className="flex items-center gap-1"
+                              />
+                            ) : (
+                              <DownloadSingle
+                                design={event.design}
+                                guest={guest}
+                                className="rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-sand-100 hover:text-grape-600 disabled:opacity-40"
+                              />
+                            )}
                             <button
                               type="button"
                               onClick={() => setEditing(guest)}
@@ -437,7 +516,9 @@ export function GuestsManager({
       </Card>
 
       <p className="text-center text-xs text-ink-faint">
-        الإرسال التلقائي عبر واتساب ميزة قادمة — حالياً حمّل الصور وأرسلها بنفسك.{' '}
+        {event.rsvp_enabled
+          ? 'الإرسال الجماعي الآلي ميزة قادمة — حالياً أرسل رابط كل مدعو من زر واتساب.'
+          : 'الإرسال التلقائي عبر واتساب ميزة قادمة — حالياً حمّل الصور وأرسلها بنفسك.'}{' '}
         <Link href={`/dashboard/events/${event.id}/scanners`} className="font-bold text-grape-600">
           جهّز مسؤولي المسح ←
         </Link>
@@ -609,4 +690,16 @@ function EditGuestModal({
       </div>
     </Modal>
   );
+}
+
+/**
+ * حالة رد المدعو.
+ *
+ * و«ما رد بعد» رماديّ لا أصفر: الصمت قبل المناسبة هو الأصل لا خلل،
+ * ولونُ تحذيرٍ على نصف القائمة يجعل الصفحة كلها تبدو معطوبة.
+ */
+function RsvpBadge({ status }: { status: RsvpStatus }) {
+  if (status === 'confirmed') return <Badge tone="mint">أكّد الحضور</Badge>;
+  if (status === 'declined') return <Badge tone="coral">اعتذر</Badge>;
+  return <Badge tone="sand">ما رد بعد</Badge>;
 }

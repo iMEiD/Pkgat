@@ -37,8 +37,11 @@ export const config = {
   matcher: [
     /*
      * كل المسارات عدا: الملفات الثابتة، الصور، والأيقونات،
-     * ولوحة المسح (/scan) التي لا تعتمد على جلسة Supabase.
+     * ولوحة المسح (/scan) التي لا تعتمد على جلسة Supabase،
+     * وصفحة الدعوة (/i) — يفتحها من لا حساب له، وتحديثُ جلسةٍ
+     * غير موجودة رحلةٌ زائدة إلى Supabase عن كل مدعو. وهي الصفحة
+     * الوحيدة التي قد تُفتح خمسمئة مرة في دقيقة واحدة.
      */
-    '/((?!_next/static|_next/image|favicon.ico|icon.svg|scan|api/scan|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|icon.svg|scan|i/|api/scan|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

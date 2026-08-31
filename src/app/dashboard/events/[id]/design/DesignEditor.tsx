@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -754,7 +755,29 @@ export function DesignEditor({
           </CardBody>
         </Card>
 
-        {/* الباركود */}
+        {/*
+          في وضع تأكيد الحضور لا باركود في الصورة أصلاً — يُعرض للمدعو
+          في صفحته بعد أن يؤكّد. وإبقاء ضبطه هنا يعني ساعةً يقضيها
+          صاحب المناسبة في تلوين شيءٍ لن يُطبع.
+        */}
+        {event.rsvp_enabled ? (
+          <Card>
+            <CardHeader title="الباركود" description="مكانه تغيّر مع تفعيل تأكيد الحضور." />
+            <CardBody>
+              <p className="rounded-2xl bg-sand-50 px-4 py-3 text-sm leading-7 text-ink-soft">
+                تأكيد الحضور مفعّل لهذي المناسبة، فالباركود ما يُرسم داخل الصورة —
+                يطلع للمدعو في صفحة دعوته بعد ما يأكّد حضوره. صمّم الدعوة بدون ما
+                تحسب له مكان.
+              </p>
+              <Link
+                href={`/dashboard/events/${event.id}/settings`}
+                className="mt-3 inline-block text-sm font-bold text-grape-600"
+              >
+                إطفاء تأكيد الحضور من الإعدادات ←
+              </Link>
+            </CardBody>
+          </Card>
+        ) : (
         <Card>
           <CardHeader
             title="شكل الباركود"
@@ -870,6 +893,7 @@ export function DesignEditor({
             )}
           </CardBody>
         </Card>
+        )}
       </div>
 
       {/*

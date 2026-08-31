@@ -115,7 +115,10 @@ export async function updateEventDetails(
   const startsAt = String(formData.get('starts_at') ?? '');
   const endsAt = String(formData.get('ends_at') ?? '');
   const venue = String(formData.get('venue') ?? '').trim();
+  const mapUrl = String(formData.get('map_url') ?? '').trim();
   const notes = String(formData.get('notes') ?? '').trim();
+  const guestNote = String(formData.get('guest_note') ?? '').trim();
+  const rsvpEnabled = formData.get('rsvp_enabled') === 'on';
   const lead = Number(formData.get('activation_lead_minutes') ?? 15);
   const grace = Number(formData.get('expiry_grace_minutes') ?? 1440);
 
@@ -132,6 +135,15 @@ export async function updateEventDetails(
     return { ok: false, error: 'وقت الانتهاء يجب أن يكون بعد وقت البداية.' };
   }
 
+  /*
+   * الرابط يُفتح في جهاز المدعو، فلا يجوز أن يكون javascript: أو data:.
+   * وقبولُ نصٍّ حرٍّ هنا لأن العميل ينسخ من خرائط جوجل أو آبل أو مختصِر
+   * روابط — والتحقق يقتصر على البروتوكول لا على النطاق.
+   */
+  if (mapUrl && !/^https?:\/\//i.test(mapUrl)) {
+    return { ok: false, error: 'رابط الخريطة لازم يبدأ بـ https://' };
+  }
+
   const { error } = await supabase
     .from('events')
     .update({
@@ -140,7 +152,10 @@ export async function updateEventDetails(
       starts_at: startDate.toISOString(),
       ends_at: endDate ? endDate.toISOString() : null,
       venue: venue || null,
+      map_url: mapUrl || null,
       notes: notes || null,
+      guest_note: guestNote.slice(0, 400) || null,
+      rsvp_enabled: rsvpEnabled,
       activation_lead_minutes: Number.isFinite(lead) ? Math.max(0, Math.min(10080, lead)) : 15,
       expiry_grace_minutes: Number.isFinite(grace) ? Math.max(0, Math.min(20160, grace)) : 1440,
       updated_at: new Date().toISOString(),

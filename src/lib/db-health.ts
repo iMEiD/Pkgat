@@ -81,6 +81,9 @@ const MISSING_TABLE = new Set(['42P01', 'PGRST205']);
 const MISSING_COLUMN = new Set(['42703', 'PGRST204']);
 const MISSING_FUNCTION = new Set(['42883', 'PGRST202']);
 
+/** رمز لا يطابق أي صفّ — نفحص به الدوال التي تأخذ معرّفاً بلا أن نمسّ بيانات */
+const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
+
 /** يقرأ عموداً واحداً: نجاحه يثبت وجود الجدول والعمود معاً */
 async function probeColumn(
   sb: ProbeClient,
@@ -727,6 +730,24 @@ export async function runHealthCheck(): Promise<HealthReport> {
     checks: await Promise.all([
       probeKeyRow(sb, 'site_content', 'common.site_title', 'عنوان الموقع قابل للتعديل'),
       probeKeyRow(sb, 'site_content', 'common.site_description', 'وصف الموقع قابل للتعديل'),
+    ]),
+    state: 'ok',
+  });
+
+  // ---- 0036 ----
+  migrations.push({
+    file: '0036_rsvp.sql',
+    title: 'تأكيد الحضور: صفحة للمدعو وباركود بعد التأكيد',
+    breaks:
+      'ما فيه صفحة يفتحها المدعو ليؤكّد حضوره أو يعتذر، ولا مفتاح يفعّلها ' +
+      'لمناسبة بعينها — والباركود يبقى محروقاً داخل صورة كل مدعو.',
+    checks: await Promise.all([
+      probeColumn(sb, 'events', 'rsvp_enabled', 'مفتاح تأكيد الحضور في المناسبة'),
+      probeColumn(sb, 'guests', 'invite_token', 'رمز رابط الدعوة (منفصل عن الباركود)'),
+      probeColumn(sb, 'guests', 'rsvp_status', 'حالة رد المدعو'),
+      probeColumn(sb, 'guest_rsvp_log', 'to_status', 'سجلّ تغيّر الردود'),
+      probeFunction(sb, 'invite_view', { p_token: ZERO_UUID }, 'دالة قراءة صفحة الدعوة'),
+      probeKeyRow(sb, 'site_settings', 'invite_footer_text', 'نص تذييل صفحة الدعوة'),
     ]),
     state: 'ok',
   });

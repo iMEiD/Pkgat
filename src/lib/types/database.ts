@@ -101,8 +101,15 @@ export type EventRow = {
   starts_at: string;
   ends_at: string | null;
   venue: string | null;
+  /** رابط الموقع على الخريطة — يفتحه المدعو بضغطة */
+  map_url: string | null;
+  /** ملاحظات صاحب المناسبة لنفسه — لا تُعرض لأحد غيره */
   notes: string | null;
+  /** ملاحظة تُقرأ في صفحة الدعوة (زي: يُرجى الحضور قبل الموعد بنصف ساعة) */
+  guest_note: string | null;
   status: EventStatus;
+  /** الباركود لا يظهر إلا بعد أن يؤكّد المدعو حضوره */
+  rsvp_enabled: boolean;
   design: DesignConfig;
   template_id: string | null;
   activation_lead_minutes: number;
@@ -208,8 +215,46 @@ export type Guest = {
   entries_count: number;
   // رقم هذا المدعو في دفتر الحساب المجاني — فارغ في المدفوعة والتجريبية
   free_seq: number | null;
+  /** مفتاح الرابط العام — منفصل عن code حتى يُدوَّر وحده إن تسرّب */
+  invite_token: string;
+  rsvp_status: RsvpStatus;
+  rsvp_responded_at: string | null;
+  /** تهنئة يكتبها المدعو لصاحب المناسبة، أو عذره حين يعتذر */
+  rsvp_note: string | null;
   created_at: string;
 }
+
+export type RsvpStatus = 'pending' | 'confirmed' | 'declined';
+
+/** ما تُعيده invite_view — الشكل مضبوط في الترحيل 0036 */
+export type InviteViewPayload = {
+  state: 'ok' | 'closed';
+  guest_name?: string;
+  seats?: number;
+  rsvp_status?: RsvpStatus;
+  rsvp_note?: string | null;
+  responded_at?: string | null;
+  /** فارغ ما لم يؤكّد المدعو حضوره */
+  code?: string | null;
+  checked_in?: boolean;
+  event?: {
+    title: string;
+    type: EventType;
+    starts_at: string;
+    ends_at: string | null;
+    venue: string | null;
+    map_url: string | null;
+    note: string | null;
+    design: Partial<DesignConfig> | null;
+  };
+};
+
+export type RsvpRespondPayload = {
+  ok: boolean;
+  reason?: string;
+  status?: RsvpStatus;
+  code?: string | null;
+};
 
 export type GuestState = Guest & {
   code_state: CodeState;
@@ -511,6 +556,12 @@ export interface Database {
       platform_stats: {
         Args: Record<string, never>;
         Returns: { events: number; guests: number };
+      };
+      /** بيانات صفحة الدعوة العامة — بلا هاتف ولا مالك، والباركود بعد التأكيد فقط */
+      invite_view: { Args: { p_token: string }; Returns: InviteViewPayload | null };
+      rsvp_respond: {
+        Args: { p_token: string; p_status: string; p_note?: string | null };
+        Returns: RsvpRespondPayload;
       };
     };
     Enums: {
