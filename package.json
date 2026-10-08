@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "domains": "node tools/domain-checker/check.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
