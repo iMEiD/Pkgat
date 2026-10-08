@@ -22,6 +22,7 @@ import { promises as dns } from 'node:dns';
 import { readFileSync, existsSync, appendFileSync, writeFileSync } from 'node:fs';
 
 const RDAP = 'https://rdap.verisign.com/com/v1/domain/';
+const WORDS_FILE = new URL('./words.txt', import.meta.url);
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 const VOWELS = 'aeiou';
@@ -49,6 +50,9 @@ function parseArgs(argv) {
     pattern: null,
     file: null,
     out: 'domains-results.csv',
+    txt: 'available.txt',
+    words: false,
+    all: false,
     limit: Infinity,
     shuffle: false,
     dnsConcurrency: 40,
@@ -72,6 +76,9 @@ function parseArgs(argv) {
       case '--pattern': case '-p': opts.pattern = next(); break;
       case '--shape': case '-s': opts.shape = next(); break;
       case '--repeated': case '-r': opts.repeated = true; break;
+      case '--words': case '-w': opts.words = true; break;
+      case '--all': case '-a': opts.all = true; break;
+      case '--txt': case '-t': opts.txt = next(); break;
       case '--file': case '-f': opts.file = next(); break;
       case '--out': case '-o': opts.out = next(); break;
       case '--limit': opts.limit = Number(next()); break;
@@ -85,7 +92,8 @@ function parseArgs(argv) {
       default: die(`Unknown option: ${a} (see --help)`);
     }
   }
-  if (!opts.pattern && !opts.file && !opts.shape && !opts.length) opts.length = 3;
+  // بلا مصدر محدد = البحث الشامل
+  if (!opts.pattern && !opts.file && !opts.shape && !opts.length && !opts.words) opts.all = true;
   if (opts.length && ![3, 4].includes(opts.length)) {
     console.warn(`Warning: length ${opts.length} — this tool is meant for 3 and 4 characters; the list may be huge.`);
   }
@@ -96,7 +104,12 @@ function parseArgs(argv) {
 function usage() {
   console.log(`Short .com domain availability checker
 
-  --length, -l <3|4>        name length (default 3)
+  (no options)              same as --all
+  --all, -a                 everything in one run: meaningful words (3-4 letters),
+                            then all 4-letter names with a repeated letter,
+                            then all 3-letter names (letters only)
+  --words, -w               common English words of 3-4 letters (words.txt)
+  --length, -l <3|4>        name length
   --charset, -c <name>      letters | digits | alnum | all  (all includes hyphen)
   --repeated, -r            only names where some character appears twice or more
                             (e.g. aabc, abca, aaaa)
@@ -108,6 +121,7 @@ function usage() {
                             * = --charset, anything else is literal.
                             e.g. CVCV | LLLD | ai**
   --file, -f <path>         check names from a file (one per line)
+  --txt, -t <path>          available domains, one per line (default available.txt)
   --out, -o <path>          results CSV (default domains-results.csv).
                             Re-running resumes: checked names are skipped.
   --limit <n>               max names to check this run
@@ -160,21 +174,33 @@ function isValidLabel(name) {
   return /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(name) && name.slice(2, 4) !== '--';
 }
 
+/** أسماء من ملف: اسم في كل سطر، والأسطر التي تبدأ بـ # تعليقات */
+function readList(path) {
+  return readFileSync(path, 'utf8')
+    .split(/\r?\n/)
+    .map((s) => s.trim().toLowerCase().replace(/\.com$/, ''))
+    .filter((s) => s && !s.startsWith('#'));
+}
+
+const hasRepeat = (n) => new Set(n).size < n.length;
+
 function buildCandidates(opts) {
-  let names;
-  if (opts.file) {
-    names = readFileSync(opts.file, 'utf8')
-      .split(/\r?\n/)
-      .map((s) => s.trim().toLowerCase().replace(/\.com$/, ''))
-      .filter(Boolean);
-  } else if (opts.shape) {
-    names = [...fromShape(opts.shape.toLowerCase(), CLASSES[CHARSETS[opts.charset]])];
-  } else {
-    const pattern = opts.pattern ?? '*'.repeat(opts.length);
-    names = [...product(patternToSlots(pattern, opts.charset))];
+  // المصادر تُجمع بالترتيب: الأثمن أولاً، والتكرار يُحذف
+  const lists = [];
+  if (opts.all || opts.words) lists.push(readList(WORDS_FILE));
+  if (opts.file) lists.push(readList(opts.file));
+  if (opts.all) {
+    lists.push([...product(patternToSlots('LLLL', 'letters'))].filter(hasRepeat));
+    lists.push([...product(patternToSlots('LLL', 'letters'))]);
   }
-  names = [...new Set(names)].filter(isValidLabel);
-  if (opts.repeated) names = names.filter((n) => new Set(n).size < n.length);
+  if (opts.shape || opts.pattern || opts.length) {
+    let gen = opts.shape
+      ? [...fromShape(opts.shape.toLowerCase(), CLASSES[CHARSETS[opts.charset]])]
+      : [...product(patternToSlots(opts.pattern ?? '*'.repeat(opts.length), opts.charset))];
+    if (opts.repeated) gen = gen.filter(hasRepeat);
+    lists.push(gen);
+  }
+  const names = [...new Set(lists.flat())].filter(isValidLabel);
   if (opts.shuffle) {
     for (let i = names.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -270,7 +296,10 @@ async function main() {
   const record = (domain, status, detail = '') => {
     stats[status === 'likely-available' ? 'likely' : status]++;
     appendFileSync(opts.out, [domain, status, csv(detail), new Date().toISOString()].join(',') + '\n');
-    if (status === 'available') console.log(`AVAILABLE: ${domain}`);
+    if (status === 'available') {
+      console.log(`AVAILABLE: ${domain}`);
+      appendFileSync(opts.txt, domain + '\n');
+    }
     else if (status === 'likely-available') console.log(`likely available (DNS only): ${domain}`);
     else if (!opts.quiet && status === 'error') console.log(`  error ${domain}: ${detail}`);
   };
@@ -303,7 +332,8 @@ async function main() {
     `\nDone: taken ${stats.taken} | available ${stats.available}` +
       (stats.likely ? ` | likely ${stats.likely}` : '') +
       (stats.error ? ` | errors ${stats.error} (retried on the next run)` : '') +
-      `\nResults: ${opts.out}`,
+      `\nResults: ${opts.out}` +
+      (stats.available ? `\nAvailable list: ${opts.txt}` : ''),
   );
 }
 
