@@ -42,6 +42,13 @@ const CLASSES = {
 
 const CHARSETS = { letters: 'L', digits: 'D', alnum: 'A', all: 'X' };
 
+/** الأشكال الرباعية المميزة: حروف مكررة، وحرف واحد مع رقم واحد مكررين */
+const PREMIUM_SHAPES = [
+  'aaaa', 'aaab', 'aaba', 'abaa', 'abbb', 'aabb', 'abab', 'abba',
+  'aaa1', 'aa1a', 'a1aa', '1aaa', 'a111', '1a11', '11a1', '111a',
+  'aa11', '11aa', 'a1a1', '1a1a', 'a11a', '1aa1',
+];
+
 // ───────────────────────── الخيارات ─────────────────────────
 
 function parseArgs(argv) {
@@ -78,6 +85,7 @@ function parseArgs(argv) {
       case '--charset': case '-c': opts.charset = next(); break;
       case '--pattern': case '-p': opts.pattern = next(); break;
       case '--shape': case '-s': opts.shape = next(); break;
+      case '--premium': opts.shape = PREMIUM_SHAPES.join(','); break;
       case '--repeated': case '-r': opts.repeated = true; break;
       case '--words': case '-w': opts.words = true; break;
       case '--words5': case '--words6': case '--words7': opts.wordLens.push(Number(a.slice(-1))); break;
@@ -123,6 +131,10 @@ function usage() {
   --shape, -s <shape>       repetition shape: same letter = same character,
                             different letters = different characters.
                             e.g. aabb (ccdd) | abab (titi) | abba (otto) | aaaa
+                            digits in the shape mean a digit: a1a1 (x7x7),
+                            aaa1 (zzz9), aa11 (kk55). Several: --shape a1a1,aaa1
+  --premium                 all premium 4-character shapes at once: aaaa, aaab,
+                            abab, aabb... plus letter/digit mixes like x7x7, zzz9
   --pattern, -p <pattern>   per-position pattern: L letter, V vowel, C consonant,
                             D digit, A letter/digit, X letter/digit/hyphen,
                             * = --charset, anything else is literal.
@@ -164,13 +176,16 @@ function* product(slots, i = 0, prefix = '') {
   for (const ch of slots[i]) yield* product(slots, i + 1, prefix + ch);
 }
 
-/** الشكل: الحرف نفسه في الشكل = الحرف نفسه في الاسم، والمختلف = مختلف (aabb → ccdd) */
+/**
+ * الشكل: الرمز نفسه = الحرف نفسه، والمختلف = مختلف (aabb → ccdd).
+ * رمز الحرف يأخذ من charset، ورمز الرقم يأخذ رقماً (a1a1 → x7x7، aaa1 → zzz9).
+ */
 function* fromShape(shape, chars, i = 0, map = new Map(), prefix = '') {
   if (i === shape.length) { yield prefix; return; }
   const sym = shape[i];
   if (map.has(sym)) { yield* fromShape(shape, chars, i + 1, map, prefix + map.get(sym)); return; }
   const used = new Set(map.values());
-  for (const ch of chars) {
+  for (const ch of /\d/.test(sym) ? DIGITS : chars) {
     if (used.has(ch)) continue;
     map.set(sym, ch);
     yield* fromShape(shape, chars, i + 1, map, prefix + ch);
@@ -206,7 +221,7 @@ function buildCandidates(opts) {
   }
   if (opts.shape || opts.pattern || opts.length) {
     let gen = opts.shape
-      ? [...fromShape(opts.shape.toLowerCase(), CLASSES[CHARSETS[opts.charset]])]
+      ? opts.shape.toLowerCase().split(',').flatMap((sh) => [...fromShape(sh.trim(), CLASSES[CHARSETS[opts.charset]])])
       : [...product(patternToSlots(opts.pattern ?? '*'.repeat(opts.length), opts.charset))];
     if (opts.repeated) gen = gen.filter(hasRepeat);
     lists.push(gen);
