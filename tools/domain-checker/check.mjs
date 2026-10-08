@@ -56,18 +56,22 @@ function parseArgs(argv) {
     rdapDelay: 400,
     rdap: true,
     quiet: false,
+    repeated: false,
+    shape: null,
   };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     const next = () => {
       const v = argv[++i];
-      if (v === undefined) die(`الخيار ${a} يحتاج قيمة`);
+      if (v === undefined) die(`Option ${a} needs a value`);
       return v;
     };
     switch (a) {
       case '--length': case '-l': opts.length = Number(next()); break;
       case '--charset': case '-c': opts.charset = next(); break;
       case '--pattern': case '-p': opts.pattern = next(); break;
+      case '--shape': case '-s': opts.shape = next(); break;
+      case '--repeated': case '-r': opts.repeated = true; break;
       case '--file': case '-f': opts.file = next(); break;
       case '--out': case '-o': opts.out = next(); break;
       case '--limit': opts.limit = Number(next()); break;
@@ -78,35 +82,41 @@ function parseArgs(argv) {
       case '--no-rdap': opts.rdap = false; break;
       case '--quiet': case '-q': opts.quiet = true; break;
       case '--help': case '-h': usage(); process.exit(0);
-      default: die(`خيار غير معروف: ${a}`);
+      default: die(`Unknown option: ${a} (see --help)`);
     }
   }
-  if (!opts.pattern && !opts.file && !opts.length) opts.length = 3;
+  if (!opts.pattern && !opts.file && !opts.shape && !opts.length) opts.length = 3;
   if (opts.length && ![3, 4].includes(opts.length)) {
-    console.warn(`تنبيه: الطول ${opts.length} — الأداة مصمّمة للثلاثي والرباعي، والعدد قد يكون ضخماً.`);
+    console.warn(`Warning: length ${opts.length} — this tool is meant for 3 and 4 characters; the list may be huge.`);
   }
-  if (!CHARSETS[opts.charset]) die(`charset غير معروف: ${opts.charset} (المتاح: ${Object.keys(CHARSETS).join(', ')})`);
+  if (!CHARSETS[opts.charset]) die(`Unknown charset: ${opts.charset} (use: ${Object.keys(CHARSETS).join(', ')})`);
   return opts;
 }
 
 function usage() {
-  console.log(`فاحص توفّر دومينات .com القصيرة
+  console.log(`Short .com domain availability checker
 
-  --length, -l <3|4>        طول الاسم (الافتراضي 3)
-  --charset, -c <name>      letters | digits | alnum | all  (all تشمل الشرطة)
-  --pattern, -p <pattern>   نمط بدل الطول: L حرف، V حرف علة، C ساكن، D رقم،
-                            A حرف/رقم، X حرف/رقم/شرطة، وغيرها حرفي.
-                            أمثلة: CVCV  |  LLLD  |  ai**  ← * = فئة charset
-  --file, -f <path>         افحص أسماء من ملف (اسم في كل سطر)
-  --out, -o <path>          ملف النتائج CSV (الافتراضي domains-results.csv)
-                            يُستأنف منه تلقائياً: ما فُحص سابقاً لا يُعاد
-  --limit <n>               أقصى عدد يُفحص في هذه الجولة
-  --shuffle                 ترتيب عشوائي (مفيد مع --limit)
-  --dns-concurrency <n>     طلبات DNS المتوازية (40)
-  --rdap-concurrency <n>    طلبات RDAP المتوازية (2)
-  --rdap-delay <ms>         مهلة بين طلبات RDAP لكل عامل (400)
-  --no-rdap                 DNS فقط — النتيجة "محتمل" لا "مؤكد"
-  --quiet, -q               لا تطبع إلا المتاح`);
+  --length, -l <3|4>        name length (default 3)
+  --charset, -c <name>      letters | digits | alnum | all  (all includes hyphen)
+  --repeated, -r            only names where some character appears twice or more
+                            (e.g. aabc, abca, aaaa)
+  --shape, -s <shape>       repetition shape: same letter = same character,
+                            different letters = different characters.
+                            e.g. aabb (ccdd) | abab (titi) | abba (otto) | aaaa
+  --pattern, -p <pattern>   per-position pattern: L letter, V vowel, C consonant,
+                            D digit, A letter/digit, X letter/digit/hyphen,
+                            * = --charset, anything else is literal.
+                            e.g. CVCV | LLLD | ai**
+  --file, -f <path>         check names from a file (one per line)
+  --out, -o <path>          results CSV (default domains-results.csv).
+                            Re-running resumes: checked names are skipped.
+  --limit <n>               max names to check this run
+  --shuffle                 random order (useful with --limit)
+  --dns-concurrency <n>     parallel DNS lookups (40)
+  --rdap-concurrency <n>    parallel RDAP requests (2)
+  --rdap-delay <ms>         pause between RDAP requests per worker (400)
+  --no-rdap                 DNS only: results are "likely", not confirmed
+  --quiet, -q               print available domains only`);
 }
 
 function die(msg) {
@@ -122,13 +132,27 @@ function patternToSlots(pattern, charset) {
     if (ch === '*') return any;
     if (CLASSES[ch]) return CLASSES[ch];
     if (/[a-z0-9-]/.test(ch)) return ch;
-    die(`رمز غير صالح في النمط: "${ch}"`);
+    die(`Invalid pattern character: "${ch}"`);
   });
 }
 
 function* product(slots, i = 0, prefix = '') {
   if (i === slots.length) { yield prefix; return; }
   for (const ch of slots[i]) yield* product(slots, i + 1, prefix + ch);
+}
+
+/** الشكل: الحرف نفسه في الشكل = الحرف نفسه في الاسم، والمختلف = مختلف (aabb → ccdd) */
+function* fromShape(shape, chars, i = 0, map = new Map(), prefix = '') {
+  if (i === shape.length) { yield prefix; return; }
+  const sym = shape[i];
+  if (map.has(sym)) { yield* fromShape(shape, chars, i + 1, map, prefix + map.get(sym)); return; }
+  const used = new Set(map.values());
+  for (const ch of chars) {
+    if (used.has(ch)) continue;
+    map.set(sym, ch);
+    yield* fromShape(shape, chars, i + 1, map, prefix + ch);
+    map.delete(sym);
+  }
 }
 
 /** قواعد .com: حروف/أرقام/شرطة، لا شرطة في البداية أو النهاية، ولا "--" في الموضع 3-4 */
@@ -143,11 +167,14 @@ function buildCandidates(opts) {
       .split(/\r?\n/)
       .map((s) => s.trim().toLowerCase().replace(/\.com$/, ''))
       .filter(Boolean);
+  } else if (opts.shape) {
+    names = [...fromShape(opts.shape.toLowerCase(), CLASSES[CHARSETS[opts.charset]])];
   } else {
     const pattern = opts.pattern ?? '*'.repeat(opts.length);
     names = [...product(patternToSlots(pattern, opts.charset))];
   }
   names = [...new Set(names)].filter(isValidLabel);
+  if (opts.repeated) names = names.filter((n) => new Set(n).size < n.length);
   if (opts.shuffle) {
     for (let i = names.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -199,7 +226,7 @@ async function rdapCheck(domain) {
     }
     return { status: 'error', detail: `HTTP ${res.status}` };
   }
-  return { status: 'error', detail: 'تعذّر الوصول لـ RDAP بعد عدة محاولات' };
+  return { status: 'error', detail: 'RDAP unreachable after several retries' };
 }
 
 /** يشغّل fn على العناصر بعدد عمّال ثابت */
@@ -236,16 +263,16 @@ async function main() {
   const queue = all.filter((d) => !done.has(d)).slice(0, opts.limit);
 
   const skipped = all.filter((d) => done.has(d)).length;
-  console.log(`المرشّحون: ${all.length} — فُحص سابقاً: ${skipped} — في هذه الجولة: ${queue.length}`);
+  console.log(`Candidates: ${all.length} | already checked: ${skipped} | this run: ${queue.length}`);
   if (!queue.length) return;
 
   const stats = { taken: 0, available: 0, likely: 0, error: 0 };
   const record = (domain, status, detail = '') => {
     stats[status === 'likely-available' ? 'likely' : status]++;
     appendFileSync(opts.out, [domain, status, csv(detail), new Date().toISOString()].join(',') + '\n');
-    if (status === 'available') console.log(`✅ متاح: ${domain}`);
-    else if (status === 'likely-available') console.log(`🟡 محتمل (DNS فقط): ${domain}`);
-    else if (!opts.quiet && status === 'error') console.log(`⚠️  ${domain}: ${detail}`);
+    if (status === 'available') console.log(`AVAILABLE: ${domain}`);
+    else if (status === 'likely-available') console.log(`likely available (DNS only): ${domain}`);
+    else if (!opts.quiet && status === 'error') console.log(`  error ${domain}: ${detail}`);
   };
 
   // المرحلة ١: DNS
@@ -264,7 +291,7 @@ async function main() {
 
   // المرحلة ٢: RDAP — بطيئة عمداً احتراماً لحدود Verisign
   if (opts.rdap && toRdap.length) {
-    console.log(`بلا NS: ${toRdap.length} — تأكيدها من سجلّ Verisign…`);
+    console.log(`No NS: ${toRdap.length} — confirming with the Verisign registry...`);
     await pool(toRdap, opts.rdapConcurrency, async (domain) => {
       const r = await rdapCheck(domain);
       record(domain, r.status, r.detail);
@@ -273,10 +300,10 @@ async function main() {
   }
 
   console.log(
-    `\nانتهى: محجوز ${stats.taken} · متاح ${stats.available}` +
-      (stats.likely ? ` · محتمل ${stats.likely}` : '') +
-      (stats.error ? ` · أخطاء ${stats.error} (تُعاد في الجولة القادمة)` : '') +
-      `\nالنتائج في: ${opts.out}`,
+    `\nDone: taken ${stats.taken} | available ${stats.available}` +
+      (stats.likely ? ` | likely ${stats.likely}` : '') +
+      (stats.error ? ` | errors ${stats.error} (retried on the next run)` : '') +
+      `\nResults: ${opts.out}`,
   );
 }
 

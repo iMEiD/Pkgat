@@ -1,6 +1,6 @@
 # فاحص دومينات .com القصيرة
 
-أداة سطر أوامر تبحث عن توفّر دومينات `.com` الثلاثية والرباعية — Node 18+ فقط، بدون أي مكتبة.
+أداة سطر أوامر (رسائلها بالإنجليزية) تبحث عن توفّر دومينات `.com` الثلاثية والرباعية — Node 18+ فقط، بدون أي مكتبة.
 
 ## كيف تفحص
 
@@ -23,6 +23,22 @@ npm run domains -- --length 4 --charset alnum --shuffle --limit 5000
 # أسماء من ملف (اسم في كل سطر)
 npm run domains -- --file names.txt
 ```
+
+## الحروف المكررة
+
+```bash
+# كل رباعي حروف فيه حرف مكرر مرتين أو أكثر (98,176 اسم)
+npm run domains -- --length 4 --repeated
+
+# بشكل تكرار محدد: الحرف نفسه في الشكل = الحرف نفسه في الاسم
+npm run domains -- --shape aabb   # ccdd, mmxx  (650 اسم)
+npm run domains -- --shape abab   # titi, koko  (650)
+npm run domains -- --shape abba   # otto, anna  (650)
+npm run domains -- --shape aaab   # zzzq        (650)
+npm run domains -- --shape aaaa   # aaaa..zzzz  (26)
+```
+
+`--shape` يستخدم `--charset` (الافتراضي حروف فقط).
 
 ## رموز النمط
 
