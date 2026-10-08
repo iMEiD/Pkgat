@@ -24,6 +24,7 @@ import { readFileSync, existsSync, appendFileSync, writeFileSync } from 'node:fs
 
 const RDAP = 'https://rdap.verisign.com/com/v1/domain/';
 const WORDS_FILE = new URL('./words.txt', import.meta.url);
+const WORDS5_FILE = new URL('./words5.txt', import.meta.url);
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 const VOWELS = 'aeiou';
@@ -53,6 +54,7 @@ function parseArgs(argv) {
     out: 'domains-results.csv',
     txt: 'available.txt',
     words: false,
+    words5: false,
     all: false,
     limit: Infinity,
     shuffle: false,
@@ -79,6 +81,7 @@ function parseArgs(argv) {
       case '--shape': case '-s': opts.shape = next(); break;
       case '--repeated': case '-r': opts.repeated = true; break;
       case '--words': case '-w': opts.words = true; break;
+      case '--words5': opts.words5 = true; break;
       case '--all': case '-a': opts.all = true; break;
       case '--txt': case '-t': opts.txt = next(); break;
       case '--file': case '-f': opts.file = next(); break;
@@ -96,7 +99,7 @@ function parseArgs(argv) {
     }
   }
   // بلا مصدر محدد = البحث الشامل
-  if (!opts.pattern && !opts.file && !opts.shape && !opts.length && !opts.words) opts.all = true;
+  if (!opts.pattern && !opts.file && !opts.shape && !opts.length && !opts.words && !opts.words5) opts.all = true;
   if (opts.length && ![3, 4].includes(opts.length)) {
     console.warn(`Warning: length ${opts.length} — this tool is meant for 3 and 4 characters; the list may be huge.`);
   }
@@ -108,10 +111,11 @@ function usage() {
   console.log(`Short .com domain availability checker
 
   (no options)              same as --all
-  --all, -a                 everything in one run: meaningful words (3-4 letters),
+  --all, -a                 everything in one run: meaningful words (3-5 letters),
                             then all 4-letter names with a repeated letter,
                             then all 3-letter names (letters only)
-  --words, -w               common English words of 3-4 letters (words.txt)
+  --words, -w               English words of 3-5 letters (words.txt + words5.txt)
+  --words5                  5-letter English words only (words5.txt)
   --length, -l <3|4>        name length
   --charset, -c <name>      letters | digits | alnum | all  (all includes hyphen)
   --repeated, -r            only names where some character appears twice or more
@@ -193,6 +197,7 @@ function buildCandidates(opts) {
   // المصادر تُجمع بالترتيب: الأثمن أولاً، والتكرار يُحذف
   const lists = [];
   if (opts.all || opts.words) lists.push(readList(WORDS_FILE));
+  if (opts.all || opts.words || opts.words5) lists.push(readList(WORDS5_FILE));
   if (opts.file) lists.push(readList(opts.file));
   if (opts.all) {
     lists.push([...product(patternToSlots('LLLL', 'letters'))].filter(hasRepeat));
