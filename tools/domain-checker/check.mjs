@@ -18,7 +18,8 @@
  * انظر README.md بجانب هذا الملف لكل الخيارات.
  */
 
-import { promises as dns } from 'node:dns';
+import { promises as dnsPromises } from 'node:dns';
+import { createSocket } from 'node:dgram';
 import { readFileSync, existsSync, appendFileSync, writeFileSync } from 'node:fs';
 
 const RDAP = 'https://rdap.verisign.com/com/v1/domain/';
@@ -60,6 +61,7 @@ function parseArgs(argv) {
     rdapDelay: 400,
     rdap: true,
     quiet: false,
+    dnsMode: null,
     repeated: false,
     shape: null,
   };
@@ -86,6 +88,7 @@ function parseArgs(argv) {
       case '--dns-concurrency': opts.dnsConcurrency = Number(next()); break;
       case '--rdap-concurrency': opts.rdapConcurrency = Number(next()); break;
       case '--rdap-delay': opts.rdapDelay = Number(next()); break;
+      case '--system-dns': opts.dnsMode = 'system'; break;
       case '--no-rdap': opts.rdap = false; break;
       case '--quiet': case '-q': opts.quiet = true; break;
       case '--help': case '-h': usage(); process.exit(0);
@@ -129,6 +132,8 @@ function usage() {
   --dns-concurrency <n>     parallel DNS lookups (40)
   --rdap-concurrency <n>    parallel RDAP requests (2)
   --rdap-delay <ms>         pause between RDAP requests per worker (400)
+  --system-dns              use the computer's DNS instead of querying the
+                            .com registry servers directly
   --no-rdap                 DNS only: results are "likely", not confirmed
   --quiet, -q               print available domains only`);
 }
@@ -214,15 +219,111 @@ function buildCandidates(opts) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** 'taken' إن وُجدت NS، 'nxdomain' إن لم يكن في المنطقة، وإلا 'unknown' */
-async function dnsCheck(domain) {
+/**
+ * نسأل خوادم سجلّ .com نفسها (a-m.gtld-servers.net) مباشرة لا خادماً وسيطاً:
+ * الخادم الوسيط يلاحق خوادم أسماء كل دومين فيتأخر ويفشل تحت الضغط — ثلث
+ * الطلبات انتهت مهلتها في التجربة، وكل فاشل يُحال إلى RDAP البطيء.
+ * خادم السجلّ يجيب فوراً من ملف المنطقة: NXDOMAIN = غير موجود فيها،
+ * وإحالة إلى خوادم أسماء = محجوز. ويكفينا ترويسة الرد، فلا يهم إن جاء مقتطعاً.
+ */
+const GTLD_FALLBACK = [
+  '192.5.6.30', '192.33.14.30', '192.26.92.30', '192.31.80.30', '192.12.94.30',
+  '192.35.51.30', '192.42.93.30', '192.54.112.30', '192.43.172.30', '192.48.79.30',
+  '192.52.178.30', '192.41.162.30', '192.55.83.30',
+];
+
+class ZoneClient {
+  constructor(servers) {
+    this.servers = servers;
+    this.next = 0;
+    this.pending = new Map();
+    this.sock = createSocket('udp4');
+    this.sock.on('message', (msg) => this.onMessage(msg));
+    this.sock.on('error', () => {});
+    this.sock.unref();
+  }
+
+  packet(id, name) {
+    const qname = Buffer.concat([
+      ...name.split('.').map((l) => Buffer.concat([Buffer.from([l.length]), Buffer.from(l, 'ascii')])),
+      Buffer.from([0]),
+    ]);
+    const header = Buffer.alloc(12);
+    header.writeUInt16BE(id, 0);
+    header.writeUInt16BE(1, 4); // سؤال واحد
+    header.writeUInt16BE(1, 10); // سجل EDNS
+    const tail = Buffer.from([0, 2, 0, 1, 0, 0, 41, 0x10, 0, 0, 0, 0, 0, 0, 0]); // NS IN + OPT(4096)
+    return Buffer.concat([header, qname, tail]);
+  }
+
+  onMessage(msg) {
+    if (msg.length < 12) return;
+    const p = this.pending.get(msg.readUInt16BE(0));
+    if (!p) return;
+    this.pending.delete(msg.readUInt16BE(0));
+    clearTimeout(p.timer);
+    const rcode = msg.readUInt16BE(2) & 0xf;
+    const records = msg.readUInt16BE(6) + msg.readUInt16BE(8);
+    p.resolve(rcode === 3 ? 'nxdomain' : rcode === 0 && records > 0 ? 'taken' : 'unknown');
+  }
+
+  once(domain, timeout) {
+    return new Promise((resolve) => {
+      let id;
+      do id = (Math.random() * 65536) | 0; while (this.pending.has(id));
+      const server = this.servers[this.next++ % this.servers.length];
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        resolve('unknown');
+      }, timeout);
+      this.pending.set(id, { resolve, timer });
+      this.sock.send(this.packet(id, domain), 53, server);
+    });
+  }
+
+  async check(domain) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const r = await this.once(domain, 2000 + attempt * 1500);
+      if (r !== 'unknown') return r;
+    }
+    return 'unknown';
+  }
+}
+
+/**
+ * خادم وسيط — احتياط فقط إن حجبت الشبكة الوصول المباشر لخوادم السجلّ.
+ * مهلة قصيرة: الافتراضية تصل لعشرين ثانية للطلب الواحد.
+ * وSERVFAIL يعني أن الدومين مُحال لخوادم أسماء لا تجيب — أي محجوز.
+ */
+const sysResolver = new dnsPromises.Resolver({ timeout: 2500, tries: 2 });
+
+async function resolverCheck(domain) {
   try {
-    const ns = await dns.resolveNs(domain);
+    const ns = await sysResolver.resolveNs(domain);
     return ns.length ? 'taken' : 'unknown';
   } catch (e) {
     if (e.code === 'ENOTFOUND') return 'nxdomain';
-    return 'unknown'; // ENODATA, SERVFAIL, مهلة… نترك الحكم لـ RDAP
+    if (e.code === 'ESERVFAIL') return 'taken';
+    return 'unknown';
   }
+}
+
+let dnsCheck = resolverCheck;
+
+async function pickDns(opts) {
+  if (opts.dnsMode === 'system') return 'system resolver';
+  let servers = (
+    await Promise.all(
+      'abcdefghijklm'.split('').map((c) => dnsPromises.resolve4(`${c}.gtld-servers.net`).then((a) => a[0], () => null)),
+    )
+  ).filter(Boolean);
+  if (servers.length < 3) servers = GTLD_FALLBACK;
+  const zone = new ZoneClient(servers);
+  if ((await zone.check('google.com')) === 'taken' && (await zone.check('zz-not-registered-x9q7.com')) === 'nxdomain') {
+    dnsCheck = (d) => zone.check(d);
+    return `.com registry servers directly (${servers.length})`;
+  }
+  return 'system resolver (registry servers unreachable on this network)';
 }
 
 /** يعيد { status: 'available'|'taken'|'error', detail } */
@@ -304,26 +405,53 @@ async function main() {
     else if (!opts.quiet && status === 'error') console.log(`  error ${domain}: ${detail}`);
   };
 
-  // المرحلة ١: DNS
+  console.log(`DNS: ${await pickDns(opts)}`);
+
+  // المرحلة ١: DNS — والفاشل يُعاد بتوازٍ أقل قبل إحالته لـ RDAP
   const toRdap = [];
+  let unknown = [];
   let n = 0;
   const t0 = Date.now();
   await pool(queue, opts.dnsConcurrency, async (domain) => {
     const r = await dnsCheck(domain);
     if (r === 'taken') record(domain, 'taken', 'has NS');
-    else if (opts.rdap) toRdap.push(domain);
-    else record(domain, r === 'nxdomain' ? 'likely-available' : 'error', r === 'nxdomain' ? 'no NS' : 'dns unknown');
+    else if (r === 'nxdomain') toRdap.push(domain);
+    else unknown.push(domain);
     if (!opts.quiet && ++n % 500 === 0) {
       process.stdout.write(`  DNS: ${n}/${queue.length} (${((Date.now() - t0) / 1000).toFixed(0)}s)\n`);
     }
   });
+  for (let round = 1; round <= 2 && unknown.length; round++) {
+    const retry = unknown;
+    unknown = [];
+    console.log(`  DNS retry ${round}: ${retry.length} failed lookups...`);
+    await pool(retry, Math.max(4, Math.floor(opts.dnsConcurrency / (3 * round))), async (domain) => {
+      const r = await dnsCheck(domain);
+      if (r === 'taken') record(domain, 'taken', 'has NS');
+      else if (r === 'nxdomain') toRdap.push(domain);
+      else unknown.push(domain);
+    });
+  }
+  if (!opts.rdap) {
+    for (const d of toRdap) record(d, 'likely-available', 'no NS');
+    for (const d of unknown) record(d, 'error', 'dns failed');
+    toRdap.length = 0;
+  } else {
+    toRdap.push(...unknown);
+  }
 
   // المرحلة ٢: RDAP — بطيئة عمداً احتراماً لحدود Verisign
   if (opts.rdap && toRdap.length) {
     console.log(`No NS: ${toRdap.length} — confirming with the Verisign registry...`);
+    let m = 0;
+    const t1 = Date.now();
     await pool(toRdap, opts.rdapConcurrency, async (domain) => {
       const r = await rdapCheck(domain);
       record(domain, r.status, r.detail);
+      if (!opts.quiet && ++m % 50 === 0) {
+        const left = ((Date.now() - t1) / m) * (toRdap.length - m) / 60000;
+        process.stdout.write(`  RDAP: ${m}/${toRdap.length} (~${Math.ceil(left)} min left)\n`);
+      }
       await sleep(opts.rdapDelay);
     });
   }
