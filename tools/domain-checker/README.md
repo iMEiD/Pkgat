@@ -22,7 +22,7 @@ npm run domains
 3. **الثلاثي بالحروف** — 17,576 اسم
 
 المتاح يُحفظ في `available.txt` (دومين في كل سطر)، والتفاصيل كاملة في `domains-results.csv`.
-للكلمات فقط: `npm run domains -- --words`، وللخماسية فقط: `npm run domains -- --words5`
+للكلمات فقط: `npm run domains -- --words`، وللخماسية فقط: `npm run domains -- --words5`، وللأطول: `--words6` (5,352) و`--words7` (5,923) — تُجمع: `--words6 --words7`
 
 ## أمثلة
 
