@@ -1,0 +1,48 @@
+# السوق الإسلامي العالمي (قرابة ملياري مستهلك): التمويل الحلال، العمرة والحج، الأزياء المحتشمة
+
+# ── halal
+halalpay
+halalbank
+halalinvest
+halalfund
+halalfood
+halaleats
+halaltrip
+halaltravel
+halalstays
+halalmarket
+halalcheck
+halalwallet
+halalloans
+halalhome
+halalsave
+halalwealth
+
+# ── umrah / hajj
+umrahtrip
+umrahtrips
+umrahtours
+umrahguide
+umrahplan
+umrahgo
+umrahhub
+umrahstay
+umrahvisa
+umrahtravel
+hajjtrip
+hajjtrips
+hajjtours
+hajjguide
+hajjplan
+hajjgo
+hajjhub
+hajjstay
+hajjvisa
+hajjtravel
+
+# ── modest
+modestwear
+modestfashion
+modestswim
+modeststyle
+modestshop
