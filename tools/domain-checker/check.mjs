@@ -22,7 +22,17 @@ import { promises as dnsPromises } from 'node:dns';
 import { createSocket } from 'node:dgram';
 import { readFileSync, existsSync, appendFileSync, writeFileSync } from 'node:fs';
 
-const RDAP = 'https://rdap.verisign.com/com/v1/domain/';
+/** عنوان RDAP لكل امتداد: com/net من Verisign مباشرة، والباقي من قائمة IANA الرسمية */
+const IANA_RDAP = 'https://data.iana.org/rdap/dns.json';
+
+async function rdapBase(tld) {
+  if (tld === 'com' || tld === 'net') return `https://rdap.verisign.com/${tld}/v1/domain/`;
+  const res = await fetch(IANA_RDAP, { signal: AbortSignal.timeout(20000) });
+  const { services } = await res.json();
+  const svc = services.find(([tlds]) => tlds.includes(tld));
+  if (!svc) die(`No RDAP server is listed for .${tld}`);
+  return svc[1][0].replace(/\/?$/, '/') + 'domain/';
+}
 const wordsFile = (n) => new URL(`./words${n}.txt`, import.meta.url);
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
@@ -70,6 +80,8 @@ function parseArgs(argv) {
     rdap: true,
     quiet: false,
     dnsMode: null,
+    tld: 'com',
+    watch: false,
     repeated: false,
     shape: null,
   };
@@ -98,6 +110,8 @@ function parseArgs(argv) {
       case '--dns-concurrency': opts.dnsConcurrency = Number(next()); break;
       case '--rdap-concurrency': opts.rdapConcurrency = Number(next()); break;
       case '--rdap-delay': opts.rdapDelay = Number(next()); break;
+      case '--tld': opts.tld = next().toLowerCase().replace(/^\./, ''); break;
+      case '--watch': opts.watch = true; break;
       case '--system-dns': opts.dnsMode = 'system'; break;
       case '--no-rdap': opts.rdap = false; break;
       case '--quiet': case '-q': opts.quiet = true; break;
@@ -139,6 +153,11 @@ function usage() {
                             D digit, A letter/digit, X letter/digit/hyphen,
                             * = --charset, anything else is literal.
                             e.g. CVCV | LLLD | ai**
+  --tld <tld>               extension to check (default com), e.g. ai, io, app
+  --watch                   watch-list mode for catching drops: re-checks every
+                            name each run (no resume) straight from the registry,
+                            then reports what is available, dropping (pending
+                            delete), in redemption, or expiring within 45 days
   --file, -f <path>         check names from a file (one per line)
   --txt, -t <path>          available domains, one per line (default available.txt)
   --out, -o <path>          results CSV (default domains-results.csv).
@@ -333,6 +352,8 @@ let dnsCheck = resolverCheck;
 
 async function pickDns(opts) {
   if (opts.dnsMode === 'system') return 'system resolver';
+  // خوادم gtld-servers.net تخدم com وnet فقط
+  if (opts.tld !== 'com' && opts.tld !== 'net') return 'system resolver';
   let servers = (
     await Promise.all(
       'abcdefghijklm'.split('').map((c) => dnsPromises.resolve4(`${c}.gtld-servers.net`).then((a) => a[0], () => null)),
@@ -340,19 +361,19 @@ async function pickDns(opts) {
   ).filter(Boolean);
   if (servers.length < 3) servers = GTLD_FALLBACK;
   const zone = new ZoneClient(servers);
-  if ((await zone.check('google.com')) === 'taken' && (await zone.check('zz-not-registered-x9q7.com')) === 'nxdomain') {
+  if ((await zone.check(`google.${opts.tld}`)) === 'taken' && (await zone.check(`zz-not-registered-x9q7.${opts.tld}`)) === 'nxdomain') {
     dnsCheck = (d) => zone.check(d);
-    return `.com registry servers directly (${servers.length})`;
+    return `.${opts.tld} registry servers directly (${servers.length})`;
   }
   return 'system resolver (registry servers unreachable on this network)';
 }
 
 /** يعيد { status: 'available'|'taken'|'error', detail } */
-async function rdapCheck(domain) {
+async function rdapCheck(domain, base) {
   for (let attempt = 0; attempt < 6; attempt++) {
     let res;
     try {
-      res = await fetch(RDAP + domain, {
+      res = await fetch(base + domain, {
         headers: { accept: 'application/rdap+json' },
         signal: AbortSignal.timeout(15000),
       });
@@ -388,9 +409,9 @@ async function pool(items, concurrency, fn) {
 
 // ───────────────────────── التشغيل ─────────────────────────
 
-function loadDone(out) {
+function loadDone(out, fresh) {
   const done = new Set();
-  if (!existsSync(out)) {
+  if (fresh || !existsSync(out)) {
     writeFileSync(out, 'domain,status,detail,checked_at\n');
     return done;
   }
@@ -406,8 +427,10 @@ const csv = (s) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
 
 async function main() {
   const opts = parseArgs(process.argv);
-  const done = loadDone(opts.out);
-  const all = buildCandidates(opts).map((n) => `${n}.com`);
+  // المراقبة تعيد فحص كل شيء كل مرة: الحالة هي المطلوبة لا التوفّر فقط
+  const done = loadDone(opts.out, opts.watch);
+  const all = buildCandidates(opts).map((n) => `${n}.${opts.tld}`);
+  const base = opts.rdap || opts.watch ? await rdapBase(opts.tld) : null;
   const queue = all.filter((d) => !done.has(d)).slice(0, opts.limit);
 
   const skipped = all.filter((d) => done.has(d)).length;
@@ -415,16 +438,20 @@ async function main() {
   if (!queue.length) return;
 
   const stats = { taken: 0, available: 0, likely: 0, error: 0 };
+  const results = [];
   const record = (domain, status, detail = '') => {
     stats[status === 'likely-available' ? 'likely' : status]++;
+    results.push({ domain, status, detail });
     appendFileSync(opts.out, [domain, status, csv(detail), new Date().toISOString()].join(',') + '\n');
     if (status === 'available') {
       console.log(`AVAILABLE: ${domain}`);
-      appendFileSync(opts.txt, domain + '\n');
+      if (!opts.watch) appendFileSync(opts.txt, domain + '\n'); // المراقبة تكتب في watch-alerts.txt
     }
     else if (status === 'likely-available') console.log(`likely available (DNS only): ${domain}`);
     else if (!opts.quiet && status === 'error') console.log(`  error ${domain}: ${detail}`);
   };
+
+  if (opts.watch) return watchRun(opts, queue, base, record, results);
 
   console.log(`DNS: ${await pickDns(opts)}`);
 
@@ -463,11 +490,11 @@ async function main() {
 
   // المرحلة ٢: RDAP — بطيئة عمداً احتراماً لحدود Verisign
   if (opts.rdap && toRdap.length) {
-    console.log(`No NS: ${toRdap.length} — confirming with the Verisign registry...`);
+    console.log(`No NS: ${toRdap.length} — confirming with the .${opts.tld} registry...`);
     let m = 0;
     const t1 = Date.now();
     await pool(toRdap, opts.rdapConcurrency, async (domain) => {
-      const r = await rdapCheck(domain);
+      const r = await rdapCheck(domain, base);
       record(domain, r.status, r.detail);
       if (!opts.quiet && ++m % 50 === 0) {
         const left = ((Date.now() - t1) / m) * (toRdap.length - m) / 60000;
@@ -484,6 +511,53 @@ async function main() {
       `\nResults: ${opts.out}` +
       (stats.available ? `\nAvailable list: ${opts.txt}` : ''),
   );
+}
+
+/**
+ * المراقبة: قائمة صغيرة من الأسماء المرغوبة تُسأل عن كل واحد منها السجلَّ مباشرة
+ * (بلا تصفية DNS، لأن المطلوب تاريخ الانتهاء والحالة حتى للمحجوز)، ثم تقرير
+ * بما يستحق التحرك: متاح الآن، قيد الحذف، في الاسترداد، أو ينتهي قريباً.
+ */
+async function watchRun(opts, queue, base, record, results) {
+  console.log(`Watching ${queue.length} names on .${opts.tld} (registry lookup for each)...`);
+  let m = 0;
+  await pool(queue, opts.rdapConcurrency, async (domain) => {
+    const r = await rdapCheck(domain, base);
+    record(domain, r.status, r.detail);
+    if (!opts.quiet && ++m % 50 === 0) process.stdout.write(`  ${m}/${queue.length}\n`);
+    await sleep(opts.rdapDelay);
+  });
+
+  const soon = Date.now() + 45 * 864e5;
+  const expiry = (d) => d.match(/expires (\d{4}-\d{2}-\d{2})/)?.[1] ?? '';
+  const groups = { available: [], 'pending delete': [], redemption: [], 'expires soon': [] };
+  for (const r of results) {
+    if (r.status === 'available') groups.available.push(r);
+    else if (/pending delete/.test(r.detail)) groups['pending delete'].push(r);
+    else if (/redemption/.test(r.detail)) groups.redemption.push(r);
+    else if (expiry(r.detail) && Date.parse(expiry(r.detail)) < soon) groups['expires soon'].push(r);
+  }
+  const notes = {
+    available: 'register it now',
+    'pending delete': 'drops within ~5 days — backorder it',
+    redemption: 'may drop in ~1-5 weeks unless the owner restores it',
+    'expires soon': 'expires within 45 days — watch it',
+  };
+  const lines = [];
+  for (const [g, list] of Object.entries(groups)) {
+    if (!list.length) continue;
+    lines.push(`\n${g.toUpperCase()} (${list.length}) — ${notes[g]}`);
+    for (const r of list.sort((a, b) => expiry(a.detail).localeCompare(expiry(b.detail)))) {
+      lines.push(`  ${r.domain}${expiry(r.detail) ? `  (expires ${expiry(r.detail)})` : ''}`);
+    }
+  }
+  if (!lines.length) lines.push('\nNothing to act on yet — run again tomorrow.');
+  console.log(lines.join('\n'));
+  if (lines.length > 1) {
+    appendFileSync('watch-alerts.txt', `\n=== ${new Date().toISOString().slice(0, 10)} .${opts.tld}${lines.join('\n')}\n`);
+    console.log('\nSaved to watch-alerts.txt');
+  }
+  console.log(`\nFull results: ${opts.out}` + (results.some((r) => r.status === 'error') ? ' (some lookups failed — run again)' : ''));
 }
 
 main().catch((e) => die(e.stack ?? String(e)));
